@@ -1,0 +1,27 @@
+{
+  "name": "mibr-addons",
+  "version": "0.1.0",
+  "description": "Modular media addon architecture with independent providers",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "tsx --test tests/**/*.test.ts"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "keywords": [
+    "media",
+    "addon",
+    "providers"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2"
+  }
+}
