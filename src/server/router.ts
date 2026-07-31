@@ -1,5 +1,9 @@
 import { getManifest } from "../addon/manifest.js";
-import { getStreams, StreamRequestError } from "../services/streamService.js";
+import {
+  getDefaultStreamService,
+  StreamRequestError,
+  type StreamService,
+} from "../services/streamService.js";
 import type { ErrorResponse, StremioStreamResponse } from "../types/stremio.js";
 
 export type RouteResult =
@@ -27,7 +31,11 @@ function parseStreamPath(pathname: string): { type: string; id: string } | null 
   return { type, id };
 }
 
-export function routeRequest(method: string, pathname: string): RouteResult {
+export async function routeRequest(
+  method: string,
+  pathname: string,
+  streamService: StreamService = getDefaultStreamService(),
+): Promise<RouteResult> {
   if (method !== "GET") {
     return { status: 404, body: { error: "Not found" } };
   }
@@ -40,7 +48,7 @@ export function routeRequest(method: string, pathname: string): RouteResult {
 
   if (streamParams) {
     try {
-      const streams = getStreams(streamParams.type, streamParams.id);
+      const streams = await streamService.getStreams(streamParams.type, streamParams.id);
       return { status: 200, body: { streams } };
     } catch (error) {
       if (error instanceof StreamRequestError) {

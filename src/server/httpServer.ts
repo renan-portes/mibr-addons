@@ -17,15 +17,17 @@ function sendJson(
 
 export function createAddonServer(): Server {
   return createServer((request, response) => {
-    try {
-      const method = request.method ?? "GET";
-      const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
-      const result = routeRequest(method, pathname);
+    void (async () => {
+      try {
+        const method = request.method ?? "GET";
+        const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
+        const result = await routeRequest(method, pathname);
 
-      sendJson(response, result.status, result.body);
-    } catch {
-      sendJson(response, 500, { error: "Internal server error" });
-    }
+        sendJson(response, result.status, result.body);
+      } catch {
+        sendJson(response, 500, { error: "Internal server error" });
+      }
+    })();
   });
 }
 

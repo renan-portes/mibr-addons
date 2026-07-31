@@ -3,10 +3,18 @@ import { createAddonServer } from "./server/httpServer.js";
 import { getPort } from "./utils/env.js";
 
 export { getManifest } from "./addon/manifest.js";
-export { getStreams } from "./services/streamService.js";
+export { MockProvider } from "./providers/mockProvider.js";
+export { ProviderManager } from "./services/providerManager.js";
+export {
+  createDefaultProviderManager,
+  getDefaultStreamService,
+  getStreams,
+  StreamService,
+} from "./services/streamService.js";
 export { createAddonServer, getServerAddress, startAddonServer } from "./server/httpServer.js";
 export { routeRequest } from "./server/router.js";
 export { getPort } from "./utils/env.js";
+export type { StreamProvider, StreamQuery } from "./types/streamProvider.js";
 
 export function main(): void {
   const port = getPort();
