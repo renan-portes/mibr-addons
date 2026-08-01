@@ -100,8 +100,13 @@ deadline explícito nesse caminho. O erro é encapsulado por
 O método de fallback pode ser invocado sem que o POST alcance `/v1`, explicando
 uma correlação vazia. O harness offline `contextCancellationProbe.ts` reproduz
 esse comportamento com servidores locais e marcadores totalmente sanitizados.
-O encerramento do lado de envio pelo cliente HTTP/1.0 `printf | nc` é a causa
-provável a confirmar em runtime; nenhuma consulta adicional foi executada.
+O encerramento do lado de envio pelo antigo cliente HTTP/1.0 `printf | nc` segue
+como causa provável a confirmar em runtime. Esse transporte foi substituído por
+`tools/internal-http-client.py`, executado com o `python3` já presente no
+FlareSolverr. Ele faz uma única chamada pela rede interna, não segue redirects,
+mantém o socket aberto e consome a resposta até EOF antes de fechá-lo. Status e
+corpo são capturados separadamente, sob timeout global de 20 segundos e limite
+de 1 MiB. Nenhuma consulta adicional foi executada nesta alteração.
 
 O runtime inclui FlareSolverr `v3.3.21` somente na rede Docker, sem host port. O
 torrent-indexer recebe o endereço interno por `FLARESOLVERR_ADDRESS` e aguarda

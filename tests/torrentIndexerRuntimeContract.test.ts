@@ -466,7 +466,10 @@ describe("torrent-indexer runtime contract laboratory", () => {
       assert.match(text, /remove|Remove-Item/);
       assert.match(text, /limit=1/);
       assert.match(text, /20 \* 1000|timeout[^\n]*20s/);
-      assert.match(text, /1048576 \+ 1|maxBytes \+ 1/);
+      assert.match(text, /1048576|maxBytes/);
+      assert.match(text, /python3/);
+      assert.match(text, /internal-http-client\.py/);
+      assert.doesNotMatch(text, /\bnc\b/);
       assert.match(text, /diagnose-error\.ts/);
       assert.match(text, /FLARESOLVERR_ADDRESS/);
       assert.match(text, /FLARESOLVERR_POOL_SIZE/);
@@ -481,8 +484,12 @@ describe("torrent-indexer runtime contract laboratory", () => {
     }
   });
 
-  it("builds the HTTP request with a constant printf format and literal percent encoding", async () => {
+  it("uses one EOF-reading internal Python request without netcat or redirects", async () => {
     const encodedQuery = "q=Big%20Buck%20Bunny&filter_results=true&limit=1";
+    const client = await readFile(
+      new URL("../lab/torrent-indexer-runtime/tools/internal-http-client.py", import.meta.url),
+      "utf8",
+    );
     for (const script of ["contract-test.sh", "contract-test.ps1"]) {
       const text = await readFile(
         new URL(`../lab/torrent-indexer-runtime/scripts/${script}`, import.meta.url),
@@ -490,14 +497,20 @@ describe("torrent-indexer runtime contract laboratory", () => {
       );
       assert.equal((text.match(/Big%20Buck%20Bunny/g) ?? []).length, 1);
       assert.equal((text.match(new RegExp(encodedQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) ?? []).length, 1);
-      const constantFormat = script.endsWith(".sh")
-        ? "printf '%s\\\\r\\\\n%s\\\\r\\\\n%s\\\\r\\\\n\\\\r\\\\n'"
-        : "printf '%s\\r\\n%s\\r\\n%s\\r\\n\\r\\n'";
-      assert.equal(text.includes(constantFormat), true);
-      assert.doesNotMatch(text, /printf 'GET \/indexers\//);
-      assert.match(text, /HTTP\/1\.0' 'Host: 127\.0\.0\.1' 'Connection: close'/);
+      assert.doesNotMatch(text, /\bnc\b|Connection: close|printf[^\n]*GET \/indexers\//);
+      assert.match(text, /exec[^\n]*flaresolverr[^\n]*python3|"flaresolverr", "python3"/);
+      assert.match(text, /20[^\n]*1048576/);
       assert.equal((text.match(/CONTRACT_QUERY_ONCE/g) ?? []).length, 1);
     }
+    assert.equal((client.match(/connection\.request\(/g) ?? []).length, 1);
+    assert.match(client, /HTTPConnection\("torrent-indexer", 7006/);
+    assert.match(client, /_http_vsn = 10/);
+    assert.match(client, /while True:[\s\S]*response\.read\(64 \* 1024\)[\s\S]*if not chunk:[\s\S]*break/);
+    assert.match(client, /max_bytes \+ 1 - len\(captured\)/);
+    assert.ok(client.indexOf("response.read") < client.indexOf("connection.close"));
+    assert.match(client, /HTTP_STATUS=.*file=sys\.stderr/);
+    assert.match(client, /sys\.stdout\.buffer\.write\(captured\)/);
+    assert.doesNotMatch(client, /urllib|redirect|Connection["']?\s*:\s*["']close/);
   });
 
   it("defines a locked-down, one-shot container for TypeScript tools", async () => {

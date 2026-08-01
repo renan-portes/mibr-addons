@@ -6,6 +6,7 @@ run_contract_test() (
   LAB_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
   COMPOSE_FILE="$LAB_ROOT/compose.yml"
   TOOLS_COMPOSE_FILE="$LAB_ROOT/compose.tools.yml"
+  HTTP_CLIENT_FILE="$LAB_ROOT/tools/internal-http-client.py"
   ENV_FILE="$LAB_ROOT/.env"
   [ -f "$ENV_FILE" ] || {
     printf '%s\n' "FAILED: copy .env.example to .env and explicitly confirm authorization." >&2
@@ -21,8 +22,8 @@ run_contract_test() (
   CONTRACT_TOOLS_UID=$(id -u)
   CONTRACT_TOOLS_GID=$(id -g)
   export CONTRACT_TEMP_DIR CONTRACT_TOOLS_UID CONTRACT_TOOLS_GID
-  RAW_FILE="$CONTRACT_TEMP_DIR/http-response.raw"
   BODY_FILE="$CONTRACT_TEMP_DIR/response.json"
+  STATUS_FILE="$CONTRACT_TEMP_DIR/http-status.txt"
   LOG_FILE="$CONTRACT_TEMP_DIR/error-logs.raw"
   ENVIRONMENT_FILE="$CONTRACT_TEMP_DIR/environment.presence"
   DNS_FILE="$CONTRACT_TEMP_DIR/dns.status"
@@ -42,9 +43,8 @@ run_contract_test() (
     compose kill torrent-indexer >/dev/null 2>&1 || true
     printf '%s\n' "Cleanup: stopping containers and removing the dedicated network."
     compose down --remove-orphans || true
-    [ -z "$RAW_FILE" ] || rm -f "$RAW_FILE"
     [ -z "$BODY_FILE" ] || rm -f "$BODY_FILE"
-    rm -f "$LOG_FILE" "$ENVIRONMENT_FILE" "$DNS_FILE" "$EGRESS_FILE" "$FLARESOLVERR_LOG_FILE" "$MARKER_FILE"
+    rm -f "$STATUS_FILE" "$LOG_FILE" "$ENVIRONMENT_FILE" "$DNS_FILE" "$EGRESS_FILE" "$FLARESOLVERR_LOG_FILE" "$MARKER_FILE"
     rmdir "$CONTRACT_TEMP_DIR" 2>/dev/null || true
   }
   on_signal() {
@@ -94,9 +94,9 @@ run_contract_test() (
   START_MS=$(date +%s%3N)
   # CONTRACT_QUERY_ONCE
   set +e
-  # The outer timeout owns the local compose process group. On expiry the service
-  # is killed as well, which deterministically terminates the remote exec tree.
-  setsid timeout --signal=TERM --kill-after=2s 20s docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T torrent-indexer sh -c "exec timeout -k 1s 20s sh -c \"printf '%s\\r\\n%s\\r\\n%s\\r\\n\\r\\n' 'GET /indexers/${CONTRACT_TEST_INDEXER}?q=Big%20Buck%20Bunny&filter_results=true&limit=1 HTTP/1.0' 'Host: 127.0.0.1' 'Connection: close' | nc -w 20 127.0.0.1 7006\" | head -c $((1048576 + 1))" >"$RAW_FILE" &
+  # Python runs inside FlareSolverr on the internal network, sends one HTTP/1.0
+  # request, and consumes the complete response before closing its socket.
+  setsid timeout --signal=TERM --kill-after=2s 20s docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T flaresolverr python3 - "/indexers/${CONTRACT_TEST_INDEXER}?q=Big%20Buck%20Bunny&filter_results=true&limit=1" 20 1048576 <"$HTTP_CLIENT_FILE" >"$BODY_FILE" 2>"$STATUS_FILE" &
   QUERY_PID=$!
   wait "$QUERY_PID"
   QUERY_STATUS=$?
@@ -110,11 +110,10 @@ run_contract_test() (
   [ "$QUERY_STATUS" -eq 0 ] || fail "single contract query transport (exit $QUERY_STATUS)"
   END_MS=$(date +%s%3N)
 
-  RESPONSE_BYTES=$(wc -c <"$RAW_FILE" | tr -d ' ')
+  RESPONSE_BYTES=$(wc -c <"$BODY_FILE" | tr -d ' ')
   [ "$RESPONSE_BYTES" -le "$CONTRACT_TEST_MAX_RESPONSE_BYTES" ] || fail "response exceeded configured byte limit"
-  HTTP_CODE=$(tr -d '\r' <"$RAW_FILE" | sed -n '1s/^HTTP\/[0-9.]* \([0-9][0-9][0-9]\).*/\1/p')
+  HTTP_CODE=$(sed -n 's/^HTTP_STATUS=\([0-9][0-9][0-9]\)$/\1/p' "$STATUS_FILE")
   [ -n "$HTTP_CODE" ] || fail "response did not contain a parseable HTTP status"
-  tr -d '\r' <"$RAW_FILE" | sed '1,/^$/d' >"$BODY_FILE"
   [ -s "$BODY_FILE" ] || fail "response body was empty"
 
   printf 'HTTP status: %s\n' "$HTTP_CODE"
@@ -131,9 +130,6 @@ run_contract_test() (
     BODY_FILE=
     fail "contract endpoint returned HTTP $HTTP_CODE"
   fi
-  rm -f "$RAW_FILE"
-  RAW_FILE=
-
   printf '%s\n' "Producing the sanitized parser compatibility report..."
   set +e
   tools_compose run --rm -T contract-tools lab/torrent-indexer-runtime/tools/analyze-response.ts /contract-input/response.json

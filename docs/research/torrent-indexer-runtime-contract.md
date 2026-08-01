@@ -333,9 +333,17 @@ títulos, magnets, hashes ou payload. No upstream Go, os pontos correspondentes
 ficam imediatamente antes/depois de `GetDocument`, antes de `FlareSolverr.Get`,
 antes/depois de `httpClient.Do` e no retorno do handler.
 
-A correção recomendada é primeiro substituir o cliente `printf | nc` do teste
-por um cliente HTTP que mantenha a requisição de entrada aberta até consumir a
-resposta. Não se recomenda destacar o scraper de `r.Context()` nem usar
+A correção recomendada foi preparada sem alterar o servidor: o caminho de
+consulta não usa mais `printf | nc`. `tools/internal-http-client.py` roda com o
+`python3` já presente no FlareSolverr, conecta-se ao torrent-indexer somente pela
+rede interna, envia uma única requisição HTTP/1.0 sem header `Connection: close`
+e lê repetidamente até EOF antes de fechar o socket. `http.client` não segue
+redirects automaticamente. O status sai separado do corpo; o corpo é mantido no
+máximo até 1 MiB + 1 byte para detecção, embora toda a resposta seja drenada. O
+timeout interno e o supervisor externo permanecem em 20 segundos. A validação
+runtime dessa troca continua pendente e nenhuma consulta foi executada.
+
+Não se recomenda destacar o scraper de `r.Context()` nem usar
 `context.Background()`, pois isso perderia cancelamento legítimo do cliente. Uma
 alteração upstream só deve ser considerada se instrumentação posterior mostrar
 um cancelador diferente.

@@ -5,6 +5,7 @@ function Invoke-RuntimeContractTest {
   $labRoot = Split-Path -Parent $PSScriptRoot
   $composeFile = Join-Path $labRoot "compose.yml"
   $toolsComposeFile = Join-Path $labRoot "compose.tools.yml"
+  $httpClientFile = Join-Path $labRoot "tools/internal-http-client.py"
   $envFile = Join-Path $labRoot ".env"
   if (-not (Test-Path -LiteralPath $envFile)) {
     throw "Copy .env.example to .env and explicitly confirm authorization"
@@ -22,7 +23,6 @@ function Invoke-RuntimeContractTest {
 
   $tempDir = Join-Path ([IO.Path]::GetTempPath()) "mibr-runtime-contract-$([guid]::NewGuid().ToString('N'))"
   $null = New-Item -ItemType Directory -Path $tempDir
-  $rawFile = Join-Path $tempDir "http-response.raw"
   $bodyFile = Join-Path $tempDir "response.json"
   $stderrFile = Join-Path $tempDir "docker-stderr.log"
   $logFile = Join-Path $tempDir "error-logs.raw"
@@ -77,11 +77,12 @@ function Invoke-RuntimeContractTest {
     [IO.File]::WriteAllText($markerFile, $queryMarker)
     $timeout = [int]$env:CONTRACT_TEST_TIMEOUT_SECONDS
     $maxBytes = [int]$env:CONTRACT_TEST_MAX_RESPONSE_BYTES
-    $request = "timeout ${timeout}s sh -c `"printf '%s\r\n%s\r\n%s\r\n\r\n' 'GET /indexers/$($env:CONTRACT_TEST_INDEXER)?q=Big%20Buck%20Bunny&filter_results=true&limit=1 HTTP/1.0' 'Host: 127.0.0.1' 'Connection: close' | nc -w $timeout 127.0.0.1 7006`" | head -c $($maxBytes + 1)"
-    $arguments = @("compose", "--env-file", $envFile, "-f", $composeFile, "exec", "-T", "torrent-indexer", "sh", "-c", $request)
+    $path = "/indexers/$($env:CONTRACT_TEST_INDEXER)?q=Big%20Buck%20Bunny&filter_results=true&limit=1"
+    $arguments = @("compose", "--env-file", $envFile, "-f", $composeFile, "exec", "-T", "flaresolverr", "python3", "-", $path, "20", "1048576")
     $queryProcess = [Diagnostics.Process]::new()
     $queryProcess.StartInfo.FileName = "docker"
     $queryProcess.StartInfo.UseShellExecute = $false
+    $queryProcess.StartInfo.RedirectStandardInput = $true
     $queryProcess.StartInfo.RedirectStandardOutput = $true
     $queryProcess.StartInfo.RedirectStandardError = $true
     foreach ($argument in $arguments) { $null = $queryProcess.StartInfo.ArgumentList.Add($argument) }
@@ -89,6 +90,8 @@ function Invoke-RuntimeContractTest {
     $stopwatch = [Diagnostics.Stopwatch]::StartNew()
     $null = $queryProcess.Start()
     $queryStarted = $true
+    $queryProcess.StandardInput.Write([IO.File]::ReadAllText($httpClientFile))
+    $queryProcess.StandardInput.Close()
     $stdoutTask = $queryProcess.StandardOutput.ReadToEndAsync()
     $stderrTask = $queryProcess.StandardError.ReadToEndAsync()
     if (-not $queryProcess.WaitForExit(20 * 1000)) {
@@ -98,20 +101,18 @@ function Invoke-RuntimeContractTest {
       throw "consulta excedeu 20 segundos; the complete query process tree was terminated"
     }
     $stopwatch.Stop()
-    [IO.File]::WriteAllText($rawFile, $stdoutTask.GetAwaiter().GetResult())
-    [IO.File]::WriteAllText($stderrFile, $stderrTask.GetAwaiter().GetResult())
+    [IO.File]::WriteAllText($bodyFile, $stdoutTask.GetAwaiter().GetResult())
+    $statusOutput = $stderrTask.GetAwaiter().GetResult()
+    [IO.File]::WriteAllText($stderrFile, $statusOutput)
     if ($queryProcess.ExitCode -ne 0) { throw "Single contract query transport failed with exit $($queryProcess.ExitCode)" }
     $queryProcess = $null
 
-    $responseBytes = (Get-Item -LiteralPath $rawFile).Length
+    $responseBytes = (Get-Item -LiteralPath $bodyFile).Length
     if ($responseBytes -gt $maxBytes) { throw "Response exceeded configured byte limit" }
-    $raw = ([IO.File]::ReadAllText($rawFile) -replace "`r", "")
-    $parts = $raw -split "`n`n", 2
-    if ($parts.Count -ne 2 -or $parts[0] -notmatch '^HTTP/[0-9.]+\s+([0-9]{3})') {
+    if ($statusOutput -notmatch '(?m)^HTTP_STATUS=([0-9]{3})$') {
       throw "Response did not contain a parseable HTTP status"
     }
     $httpCode = [int]$Matches[1]
-    [IO.File]::WriteAllText($bodyFile, $parts[1])
     if ((Get-Item -LiteralPath $bodyFile).Length -eq 0) { throw "Response body was empty" }
 
     Write-Host "HTTP status: $httpCode"
@@ -135,9 +136,6 @@ function Invoke-RuntimeContractTest {
       $bodyFile = $null
       throw "Contract endpoint returned HTTP $httpCode"
     }
-    Remove-Item -LiteralPath $rawFile -Force
-    $rawFile = $null
-
     Write-Host "Producing the sanitized parser compatibility report..."
     & docker compose --env-file $envFile -f $composeFile -f $toolsComposeFile run --rm -T contract-tools lab/torrent-indexer-runtime/tools/analyze-response.ts /contract-input/response.json | ForEach-Object { Write-Host $_ }
     $analysisStatus = $LASTEXITCODE
