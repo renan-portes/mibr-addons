@@ -25,6 +25,10 @@ function Invoke-RuntimeContractTest {
   $rawFile = Join-Path $tempDir "http-response.raw"
   $bodyFile = Join-Path $tempDir "response.json"
   $stderrFile = Join-Path $tempDir "docker-stderr.log"
+  $logFile = Join-Path $tempDir "error-logs.raw"
+  $environmentFile = Join-Path $tempDir "environment.presence"
+  $dnsFile = Join-Path $tempDir "dns.status"
+  $egressFile = Join-Path $tempDir "egress.status"
   $queryProcess = $null
   $queryStarted = $false
   [Environment]::SetEnvironmentVariable("CONTRACT_TEMP_DIR", $tempDir, "Process")
@@ -109,7 +113,22 @@ function Invoke-RuntimeContractTest {
     Write-Host "HTTP status: $httpCode"
     Write-Host "Duration: $($stopwatch.ElapsedMilliseconds) ms"
     Write-Host "Response size: $responseBytes bytes"
-    if ($httpCode -ne 200) { throw "Contract endpoint returned HTTP $httpCode" }
+    if ($httpCode -ne 200) {
+      Write-Host "Collecting sanitized failure diagnostics without printing raw response or logs."
+      $logs = (& docker compose --env-file $envFile -f $composeFile logs --no-color torrent-indexer 2>$null) -join "`n"
+      [IO.File]::WriteAllText($logFile, $logs)
+      $presenceCommand = 'for name in FLARESOLVERR_URL FLARESOLVERR_POOL_SIZE REDIS_HOST REQUEST_TIMEOUT_MILLISECONDS; do if printenv "$name" >/dev/null 2>&1; then printf "%s=PRESENT\n" "$name"; else printf "%s=ABSENT\n" "$name"; fi; done'
+      $presence = (& docker compose --env-file $envFile -f $composeFile exec -T torrent-indexer sh -c $presenceCommand 2>$null) -join "`n"
+      [IO.File]::WriteAllText($environmentFile, $presence)
+      & docker compose --env-file $envFile -f $composeFile exec -T torrent-indexer sh -c 'getent hosts torrent-indexer.darklyn.org >/dev/null 2>&1'
+      [IO.File]::WriteAllText($dnsFile, $(if ($LASTEXITCODE -eq 0) { "AVAILABLE" } else { "UNAVAILABLE" }))
+      & docker compose --env-file $envFile -f $composeFile exec -T torrent-indexer sh -c 'timeout 5s wget --spider -q https://torrent-indexer.darklyn.org/'
+      [IO.File]::WriteAllText($egressFile, $(if ($LASTEXITCODE -eq 0) { "AVAILABLE" } else { "UNAVAILABLE" }))
+      & docker compose --env-file $envFile -f $composeFile -f $toolsComposeFile run --rm -T contract-tools lab/torrent-indexer-runtime/tools/diagnose-error.ts /contract-input/response.json /contract-input/error-logs.raw /contract-input/environment.presence /contract-input/dns.status /contract-input/egress.status | ForEach-Object { Write-Host $_ }
+      if ($LASTEXITCODE -ne 0) { throw "Sanitized error diagnosis failed" }
+      $bodyFile = $null
+      throw "Contract endpoint returned HTTP $httpCode"
+    }
     Remove-Item -LiteralPath $rawFile -Force
     $rawFile = $null
 

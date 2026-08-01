@@ -11,8 +11,12 @@ import {
   CONTRACT_LIMIT,
   CONTRACT_MAX_RESPONSE_BYTES,
   CONTRACT_TIMEOUT_SECONDS,
+  classifyDiagnostic,
+  createSanitizedErrorDiagnostic,
   createRuntimeContractReport,
+  diagnoseAndDeleteTemporaryFiles,
   parseRuntimeInteger,
+  sanitizeDiagnosticMessage,
   validateRuntimeContractConfig,
 } from "../lab/torrent-indexer-runtime/runtimeContractReport.js";
 
@@ -26,6 +30,68 @@ const VALID_CONFIG = {
 };
 
 describe("torrent-indexer runtime contract laboratory", () => {
+  it("classifies sanitized runtime diagnostics", () => {
+    const cases = [
+      ["Failed to list FlareSolverr sessions", "FLARESOLVERR"],
+      ["DNS name resolution failed", "DNS_NETWORK"],
+      ["external HTTP status code 502", "EXTERNAL_HTTP"],
+      ["request timeout exceeded", "TIMEOUT"],
+      ["scraper selector parse failed", "PARSER_SCRAPER"],
+      ["Redis connection failed", "REDIS"],
+      ["missing environment variable configuration", "CONFIGURATION"],
+      ["unexpected failure", "UNKNOWN"],
+    ] as const;
+    for (const [message, category] of cases) assert.equal(classifyDiagnostic(message), category);
+  });
+
+  it("sanitizes error payloads and logs without leaking sensitive values", () => {
+    const hash = "0123456789abcdef0123456789abcdef01234567";
+    const sensitive = `https://example.invalid/path?q=Big%20Buck%20Bunny magnet:?xt=urn:btih:${hash} tracker=udp://tracker.invalid title=Secret filename=movie.mkv`;
+    const diagnostic = createSanitizedErrorDiagnostic(
+      JSON.stringify({ message: sensitive, details: "must-not-appear", title: "must-not-appear" }),
+      [
+        JSON.stringify({ level: "info", message: sensitive }),
+        JSON.stringify({ level: "error", message: `FlareSolverr failed at ${sensitive}` }),
+        JSON.stringify({ level: "fatal", message: "Redis timeout" }),
+      ].join("\n"),
+      "FLARESOLVERR_URL=ABSENT\nREDIS_HOST=PRESENT\nREDIS_HOST=secret-value",
+      "AVAILABLE",
+      "UNAVAILABLE",
+    );
+    const serialized = JSON.stringify(diagnostic);
+    assert.deepEqual(diagnostic.allowedRootKeys, ["message"]);
+    assert.equal(diagnostic.logErrors.length, 2);
+    assert.deepEqual(diagnostic.environmentPresence, { FLARESOLVERR_URL: "ABSENT", REDIS_HOST: "PRESENT" });
+    assert.equal(diagnostic.dns, "AVAILABLE");
+    assert.equal(diagnostic.egress, "UNAVAILABLE");
+    for (const value of ["example.invalid", "magnet:?", hash, "tracker.invalid", "Secret", "movie.mkv", "must-not-appear", "secret-value", "Big%20Buck%20Bunny"]) {
+      assert.equal(serialized.includes(value), false);
+    }
+  });
+
+  it("limits messages and uses an opaque fallback for unsafe payloads", () => {
+    assert.ok(sanitizeDiagnosticMessage("x".repeat(500)).length <= 200);
+    const diagnostic = createSanitizedErrorDiagnostic('{"private":"value"}', "", "", "", "");
+    assert.equal(diagnostic.payloadFormat, "JSON");
+    assert.deepEqual(diagnostic.allowedRootKeys, []);
+    assert.equal(diagnostic.message, "upstream returned an opaque error payload.");
+  });
+
+  it("deletes every raw diagnostic input after producing the sanitized report", async () => {
+    const names = ["body", "logs", "environment", "dns", "egress"] as const;
+    const paths = Object.fromEntries(names.map((name) => [name, join(tmpdir(), `mibr-diagnostic-${process.pid}-${name}.tmp`)])) as Record<(typeof names)[number], string>;
+    await Promise.all([
+      writeFile(paths.body, '{"message":"Redis unavailable"}', { flag: "wx" }),
+      writeFile(paths.logs, '{"level":"error","message":"Redis unavailable"}', { flag: "wx" }),
+      writeFile(paths.environment, "REDIS_HOST=PRESENT", { flag: "wx" }),
+      writeFile(paths.dns, "AVAILABLE", { flag: "wx" }),
+      writeFile(paths.egress, "UNAVAILABLE", { flag: "wx" }),
+    ]);
+    const report = await diagnoseAndDeleteTemporaryFiles(paths);
+    assert.equal(report.logErrors[0]?.category, "REDIS");
+    await Promise.all(Object.values(paths).map((path) => assert.rejects(() => access(path))));
+  });
+
   it("requires an explicitly authorized fixed term", () => {
     assert.throws(
       () => validateRuntimeContractConfig({ ...VALID_CONFIG, authorizationConfirmed: false }),
@@ -141,6 +207,10 @@ describe("torrent-indexer runtime contract laboratory", () => {
       assert.match(text, /limit=1/);
       assert.match(text, /20 \* 1000|timeout[^\n]*20s/);
       assert.match(text, /1048576 \+ 1|maxBytes \+ 1/);
+      assert.match(text, /diagnose-error\.ts/);
+      assert.match(text, /FLARESOLVERR_URL/);
+      assert.match(text, /torrent-indexer\.darklyn\.org\//);
+      assert.doesNotMatch(text, /\/search|\/indexers\/manual|\/ui/);
     }
   });
 

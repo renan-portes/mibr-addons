@@ -45,3 +45,13 @@ pode haver bloqueio, rate limit, configuração ou dependência ambiental. Da me
 forma, falha no self-host pode indicar ausência de FlareSolverr ou restrição de
 egress. A comparação dos seis resultados, cada um autorizado separadamente, deve
 ser usada apenas como evidência operacional pontual.
+
+## Resultados controlados
+
+- `bludv`: HTTP `200`, JSON válido, `OK_ZERO_RESULTS`, aproximadamente 4,1 s;
+- `torrent-dos-filmes`: HTTP `200`, JSON válido, `OK_ZERO_RESULTS`, aproximadamente 2,1 s;
+- `comando_torrents`: HTTP `500`, JSON válido, `HTTP_ERROR`, aproximadamente 302 ms.
+
+Cada resultado veio de uma execução separada e única, sem retry. Nenhum payload
+ou valor sensível foi persistido. A resposta pública do `bludv` reforça a
+hipótese de que o HTTP `500` no self-host decorre de ambiente ou configuração.

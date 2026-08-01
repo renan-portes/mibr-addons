@@ -141,3 +141,30 @@ formatação. O timeout não foi acionado, o cleanup funcionou, nenhuma consulta
 repetida e nenhum payload foi persistido. A construção foi corrigida para usar
 uma format string constante, mantendo a URL somente como argumento. O contrato
 real continua **não validado** até uma nova execução controlada após revisão.
+
+## Diagnóstico sanitizado de HTTP 500
+
+As sondagens públicas controladas, sem retry ou persistência de payload, tiveram:
+
+- `bludv`: HTTP `200`, JSON válido, `OK_ZERO_RESULTS`, aproximadamente 4,1 s;
+- `torrent-dos-filmes`: HTTP `200`, JSON válido, `OK_ZERO_RESULTS`, aproximadamente 2,1 s;
+- `comando_torrents`: HTTP `500`, JSON válido, `HTTP_ERROR`, aproximadamente 302 ms.
+
+Isso comprova operação pública do contrato para `bludv` e
+`torrent-dos-filmes`. Como o `bludv` público respondeu `200`, o `500` observado
+no self-host é provavelmente ambiental ou de configuração, não evidência de uma
+quebra global do indexer.
+
+Em HTTP diferente de `200`, o laboratório agora produz somente diagnóstico
+sanitizado. O corpo é classificado como JSON ou texto, apenas as chaves raiz
+`error`, `message`, `status`, `code` e `type` podem aparecer, e a mensagem é
+mascarada e limitada a 200 caracteres. Conteúdo inseguro vira
+`upstream returned an opaque error payload.`
+
+Somente logs `error`/`fatal` são considerados e classificados como
+`FLARESOLVERR`, `DNS_NETWORK`, `EXTERNAL_HTTP`, `TIMEOUT`, `PARSER_SCRAPER`,
+`REDIS`, `CONFIGURATION` ou `UNKNOWN`. Variáveis relevantes são registradas
+apenas como `PRESENT`/`ABSENT`, com atenção a `FLARESOLVERR_URL`. DNS e egress são
+checados sem nova busca: resolução do host público e `wget --spider` somente na
+raiz `https://torrent-indexer.darklyn.org/`. Nenhuma página de resultados é
+acessada, a consulta `bludv` continua única e todos os temporários são apagados.

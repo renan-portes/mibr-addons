@@ -23,6 +23,10 @@ run_contract_test() (
   export CONTRACT_TEMP_DIR CONTRACT_TOOLS_UID CONTRACT_TOOLS_GID
   RAW_FILE="$CONTRACT_TEMP_DIR/http-response.raw"
   BODY_FILE="$CONTRACT_TEMP_DIR/response.json"
+  LOG_FILE="$CONTRACT_TEMP_DIR/error-logs.raw"
+  ENVIRONMENT_FILE="$CONTRACT_TEMP_DIR/environment.presence"
+  DNS_FILE="$CONTRACT_TEMP_DIR/dns.status"
+  EGRESS_FILE="$CONTRACT_TEMP_DIR/egress.status"
   QUERY_PID=
   CLEANED_UP=0
   cleanup() {
@@ -38,6 +42,7 @@ run_contract_test() (
     compose down --remove-orphans || true
     [ -z "$RAW_FILE" ] || rm -f "$RAW_FILE"
     [ -z "$BODY_FILE" ] || rm -f "$BODY_FILE"
+    rm -f "$LOG_FILE" "$ENVIRONMENT_FILE" "$DNS_FILE" "$EGRESS_FILE"
     rmdir "$CONTRACT_TEMP_DIR" 2>/dev/null || true
   }
   on_signal() {
@@ -111,7 +116,16 @@ run_contract_test() (
   printf 'HTTP status: %s\n' "$HTTP_CODE"
   printf 'Duration: %s ms\n' "$((END_MS - START_MS))"
   printf 'Response size: %s bytes\n' "$RESPONSE_BYTES"
-  [ "$HTTP_CODE" = "200" ] || fail "contract endpoint returned HTTP $HTTP_CODE"
+  if [ "$HTTP_CODE" != "200" ]; then
+    printf '%s\n' "Collecting sanitized failure diagnostics without printing raw response or logs."
+    compose logs --no-color torrent-indexer >"$LOG_FILE" 2>/dev/null || :
+    compose exec -T torrent-indexer sh -c 'for name in FLARESOLVERR_URL FLARESOLVERR_POOL_SIZE REDIS_HOST REQUEST_TIMEOUT_MILLISECONDS; do if printenv "$name" >/dev/null 2>&1; then printf "%s=PRESENT\n" "$name"; else printf "%s=ABSENT\n" "$name"; fi; done' >"$ENVIRONMENT_FILE" 2>/dev/null || :
+    if compose exec -T torrent-indexer sh -c 'getent hosts torrent-indexer.darklyn.org >/dev/null 2>&1'; then printf '%s\n' AVAILABLE >"$DNS_FILE"; else printf '%s\n' UNAVAILABLE >"$DNS_FILE"; fi
+    if compose exec -T torrent-indexer sh -c 'timeout 5s wget --spider -q https://torrent-indexer.darklyn.org/'; then printf '%s\n' AVAILABLE >"$EGRESS_FILE"; else printf '%s\n' UNAVAILABLE >"$EGRESS_FILE"; fi
+    tools_compose run --rm -T contract-tools lab/torrent-indexer-runtime/tools/diagnose-error.ts /contract-input/response.json /contract-input/error-logs.raw /contract-input/environment.presence /contract-input/dns.status /contract-input/egress.status || fail "sanitized error diagnosis"
+    BODY_FILE=
+    fail "contract endpoint returned HTTP $HTTP_CODE"
+  fi
   rm -f "$RAW_FILE"
   RAW_FILE=
 
