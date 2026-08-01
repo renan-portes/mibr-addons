@@ -33,7 +33,7 @@ services:
       dockerfile: Dockerfile.flaresolverr
     user: "1000:1000"
     restart: "on-failure:3"
-    read_only: true
+    read_only: false
     tmpfs:
       - /tmp:rw,nosuid,nodev,size=128m
       - /app/config:rw,nosuid,nodev,size=16m

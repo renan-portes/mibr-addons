@@ -276,10 +276,24 @@ describe("torrent-indexer runtime contract laboratory", () => {
       new URL("../lab/torrent-indexer-runtime/Dockerfile.flaresolverr.dockerignore", import.meta.url),
       "utf8",
     );
+    const redisBlock = compose.slice(compose.indexOf("  redis:"), compose.indexOf("\n  flaresolverr:"));
+    const flaresolverrBlock = compose.slice(
+      compose.indexOf("  flaresolverr:"),
+      compose.indexOf("\n  torrent-indexer:"),
+    );
+    const torrentIndexerBlock = compose.slice(
+      compose.indexOf("  torrent-indexer:"),
+      compose.indexOf("\nnetworks:"),
+    );
     assert.match(compose, /flaresolverr:[\s\S]*image: mibr-lab\/flaresolverr-runtime:v3\.3\.21/);
     assert.match(compose, /build:[\s\S]*context: \.[\s\S]*dockerfile: Dockerfile\.flaresolverr/);
     assert.match(compose, /flaresolverr:[\s\S]*user: "1000:1000"/);
-    assert.match(compose, /flaresolverr:[\s\S]*read_only: true/);
+    assert.match(flaresolverrBlock, /read_only: false/);
+    assert.doesNotMatch(flaresolverrBlock, /read_only: true/);
+    assert.match(redisBlock, /read_only: true/);
+    assert.match(torrentIndexerBlock, /read_only: true/);
+    assert.equal((compose.match(/read_only: false/g) ?? []).length, 1);
+    assert.equal((compose.match(/read_only: true/g) ?? []).length, 2);
     assert.match(
       compose,
       /flaresolverr:[\s\S]*tmpfs:[\s\S]*\/app\/\.local:rw,exec,nosuid,nodev,size=64m,mode=0700,uid=1000,gid=1000/,

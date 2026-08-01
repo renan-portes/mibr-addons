@@ -25,14 +25,16 @@ com `docker compose exec`. A rede bridge `runtime-contract` permite egress
 exclusivamente porque a consulta aprovada precisa alcançar o indexer; ela não é
 `internal`, ao contrário do laboratório puramente isolado.
 
-Os containers mantêm filesystem read-only, tmpfs, limites de CPU/memória/PIDs,
-`no-new-privileges` e todas as capabilities removidas. Não há privileged, Docker
-socket, host network, volumes persistentes, credenciais ou exposição pública.
+Redis e torrent-indexer mantêm filesystem read-only. Todos os serviços preservam
+tmpfs, limites de CPU/memória/PIDs, `no-new-privileges` e todas as capabilities
+removidas. Não há privileged, Docker socket, host network, volumes persistentes,
+credenciais ou exposição pública. Somente o FlareSolverr usa `read_only: false`,
+pela necessidade runtime confirmada abaixo.
 
 O primeiro start do FlareSolverr no docker-server confirmou a falha
 `Read-only file system: '/app/.local'`: o Chromium era encontrado e iniciado,
 mas o processo encerrava com código `1` ao tentar gravar nesse diretório. A causa
-é o `read_only: true`, que permanece habilitado. A correção mínima adiciona
+era o `read_only: true`, inicialmente mantido. A primeira correção adicionou
 somente `/app/.local` como tmpfs não persistente, privado (`mode=0700`) e com
 `uid=1000,gid=1000`, correspondentes ao usuário `flaresolverr` criado pela imagem.
 Não foram adicionados tmpfs para caches ou homes sem evidência de necessidade.
@@ -48,6 +50,17 @@ Por isso, o laboratório constrói uma derivação mínima de
 tmpfs a cada inicialização antes de executar o `dumb-init` e comando Python
 originais com `exec`. O tmpfs permite execução porque agora contém o binário; ele
 continua privado, limitado, `nosuid`, `nodev` e desaparece com o container.
+
+A matriz diagnóstica fechou a causa sem acessar indexers: `A` (imagem oficial,
+sem hardening adicional) foi funcional; `B` (derivada, read-only,
+`no-new-privileges`, sem `cap_drop`) falhou; `C-no-nnp` (derivada, read-only, sem
+`no-new-privileges` e sem `cap_drop`) também falhou; e `D` (derivada,
+`read_only: false`, usuário não-root e `no-new-privileges`) foi funcional. Isso
+isola `read_only` como bloqueador e exclui `no-new-privileges`, o wrapper e a
+cópia efêmera do ChromeDriver como causas. O Chromium da `v3.3.21` requer outras
+escritas no root filesystem além dos tmpfs identificados. A exceção mínima é
+`read_only: false` somente no FlareSolverr; usuário `1000:1000`, tmpfs,
+`no-new-privileges`, `cap_drop: ALL` e os demais controles continuam ativos.
 
 O runtime inclui FlareSolverr `v3.3.21` somente na rede Docker, sem host port. O
 torrent-indexer usa `http://flaresolverr:8191` e aguarda seu healthcheck. Essa
@@ -117,8 +130,8 @@ docker compose -f lab/torrent-indexer-runtime/compose.yml down --remove-orphans
 ```
 
 Essa execução precisa ser repetida no docker-server após revisão do novo timeout.
-Ela também deve confirmar o start do FlareSolverr com a cópia efêmera do driver;
-essa validação runtime permanece pendente e não autoriza uma consulta adicional.
+Ela também deve validar o start do FlareSolverr com a exceção de filesystem já
+isolada pela matriz; isso não autoriza uma consulta adicional.
 
 ## Dados que nunca devem aparecer
 

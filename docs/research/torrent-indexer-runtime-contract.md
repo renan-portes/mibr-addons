@@ -188,9 +188,25 @@ pré-aplicar o patch. No build, o driver original passa a
 `0755` e usa `exec` para preservar a sequência oficial
 `/usr/bin/dumb-init -- /usr/local/bin/python -u /app/flaresolverr.py`. Como o
 driver agora é executado no tmpfs, somente `noexec` foi retirado desse mount;
-`nosuid`, `nodev`, limite, ownership e `read_only` do restante permanecem. A
-validação runtime dessa segunda correção ainda está pendente e nenhuma consulta
-real foi executada.
+`nosuid`, `nodev`, limite e ownership permanecem.
+
+A matriz runtime posterior isolou a restrição restante sem consultar indexers:
+
+- `A`, imagem oficial sem hardening adicional: `FUNCTIONAL`;
+- `B`, derivada com `read_only` e `no-new-privileges`, sem `cap_drop`: falha;
+- `C-no-nnp`, derivada com `read_only`, sem `no-new-privileges` e sem
+  `cap_drop`: falha;
+- `D`, derivada com `read_only: false`, usuário não-root e
+  `no-new-privileges`: `FUNCTIONAL`.
+
+O contraste entre `B`, `C-no-nnp` e `D` confirma que `read_only` é o bloqueador;
+`no-new-privileges` não é a causa, e o wrapper com ChromeDriver efêmero funciona.
+Na `v3.3.21`, o Chromium precisa realizar escritas adicionais no root filesystem
+que não foram cobertas pelos tmpfs estritamente identificados. A exceção mínima
+define `read_only: false` somente no FlareSolverr. Redis e torrent-indexer seguem
+read-only, enquanto o FlareSolverr preserva usuário `1000:1000`, tmpfs,
+`no-new-privileges`, `cap_drop: ALL`, limites, rede interna e zero portas
+publicadas. Nenhuma consulta real foi executada para chegar a essa conclusão.
 
 Em HTTP diferente de `200`, o laboratório agora produz somente diagnóstico
 sanitizado. O corpo é classificado como JSON ou texto, apenas as chaves raiz
