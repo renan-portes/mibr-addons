@@ -1,0 +1,51 @@
+{
+  "streams": [
+    {
+      "type": "movie",
+      "id": "tt0111161",
+      "title": "The Shawshank Redemption",
+      "quality": "1080p",
+      "language": "Português",
+      "url": "https://example.com/fixtures/tt0111161-1080p.mp4"
+    },
+    {
+      "type": "movie",
+      "id": "tt0111161",
+      "title": "The Shawshank Redemption",
+      "quality": "720p",
+      "language": "English",
+      "url": "https://example.com/fixtures/tt0111161-720p.mp4"
+    },
+    {
+      "type": "series",
+      "id": "tt0903747:1:1",
+      "title": "Breaking Bad S01E01",
+      "quality": "1080p",
+      "language": "Português",
+      "url": "https://example.com/fixtures/tt0903747-s01e01.mp4"
+    },
+    {
+      "type": "movie",
+      "id": "tt0111161",
+      "title": "Missing language",
+      "quality": "480p",
+      "url": "https://example.com/fixtures/missing-language.mp4"
+    },
+    {
+      "type": "movie",
+      "id": "tt0111161",
+      "title": "Unsafe URL",
+      "quality": "1080p",
+      "language": "Português",
+      "url": "javascript:alert(1)"
+    },
+    {
+      "type": "movie",
+      "id": "tt0111161",
+      "title": "   ",
+      "quality": "1080p",
+      "language": "Português",
+      "url": "https://example.com/fixtures/blank-title.mp4"
+    }
+  ]
+}
