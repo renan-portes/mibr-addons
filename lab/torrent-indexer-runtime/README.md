@@ -37,6 +37,18 @@ somente `/app/.local` como tmpfs não persistente, privado (`mode=0700`) e com
 `uid=1000,gid=1000`, correspondentes ao usuário `flaresolverr` criado pela imagem.
 Não foram adicionados tmpfs para caches ou homes sem evidência de necessidade.
 
+Essa montagem resolveu a primeira escrita. O start seguinte avançou até o
+`undetected-chromedriver` tentar modificar `/app/chromedriver` in-place e falhar
+com `Read-only file system`. Na imagem oficial `v3.3.21`, esse caminho é fixo e
+não há variável ou configuração oficial para redirecioná-lo ou impedir o patch.
+Por isso, o laboratório constrói uma derivação mínima de
+`ghcr.io/flaresolverr/flaresolverr:v3.3.21`: o binário imutável é preservado como
+`/app/chromedriver.original`, `/app/chromedriver` vira um symlink para
+`/app/.local/chromedriver`, e um entrypoint não-root repõe uma cópia limpa no
+tmpfs a cada inicialização antes de executar o `dumb-init` e comando Python
+originais com `exec`. O tmpfs permite execução porque agora contém o binário; ele
+continua privado, limitado, `nosuid`, `nodev` e desaparece com o container.
+
 O runtime inclui FlareSolverr `v3.3.21` somente na rede Docker, sem host port. O
 torrent-indexer usa `http://flaresolverr:8191` e aguarda seu healthcheck. Essa
 dependência corrige a causa confirmada do challenge HTTP `500` do BluDV no
@@ -105,8 +117,8 @@ docker compose -f lab/torrent-indexer-runtime/compose.yml down --remove-orphans
 ```
 
 Essa execução precisa ser repetida no docker-server após revisão do novo timeout.
-Ela também deve confirmar o start do FlareSolverr com o novo tmpfs; essa validação
-runtime permanece pendente e não autoriza uma consulta adicional.
+Ela também deve confirmar o start do FlareSolverr com a cópia efêmera do driver;
+essa validação runtime permanece pendente e não autoriza uma consulta adicional.
 
 ## Dados que nunca devem aparecer
 

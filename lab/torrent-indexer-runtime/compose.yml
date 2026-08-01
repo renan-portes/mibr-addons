@@ -27,13 +27,17 @@ services:
     stop_grace_period: 10s
 
   flaresolverr:
-    image: ghcr.io/flaresolverr/flaresolverr:v3.3.21
+    image: mibr-lab/flaresolverr-runtime:v3.3.21
+    build:
+      context: .
+      dockerfile: Dockerfile.flaresolverr
+    user: "1000:1000"
     restart: "on-failure:3"
     read_only: true
     tmpfs:
       - /tmp:rw,nosuid,nodev,size=128m
       - /app/config:rw,nosuid,nodev,size=16m
-      - /app/.local:rw,noexec,nosuid,nodev,size=64m,mode=0700,uid=1000,gid=1000
+      - /app/.local:rw,exec,nosuid,nodev,size=64m,mode=0700,uid=1000,gid=1000
     shm_size: 128m
     environment:
       LOG_LEVEL: info

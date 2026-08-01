@@ -264,11 +264,25 @@ describe("torrent-indexer runtime contract laboratory", () => {
       new URL("../lab/torrent-indexer-runtime/compose.yml", import.meta.url),
       "utf8",
     );
-    assert.match(compose, /flaresolverr:[\s\S]*image: ghcr\.io\/flaresolverr\/flaresolverr:v3\.3\.21/);
+    const dockerfile = await readFile(
+      new URL("../lab/torrent-indexer-runtime/Dockerfile.flaresolverr", import.meta.url),
+      "utf8",
+    );
+    const entrypoint = await readFile(
+      new URL("../lab/torrent-indexer-runtime/flaresolverr-entrypoint.sh", import.meta.url),
+      "utf8",
+    );
+    const dockerignore = await readFile(
+      new URL("../lab/torrent-indexer-runtime/Dockerfile.flaresolverr.dockerignore", import.meta.url),
+      "utf8",
+    );
+    assert.match(compose, /flaresolverr:[\s\S]*image: mibr-lab\/flaresolverr-runtime:v3\.3\.21/);
+    assert.match(compose, /build:[\s\S]*context: \.[\s\S]*dockerfile: Dockerfile\.flaresolverr/);
+    assert.match(compose, /flaresolverr:[\s\S]*user: "1000:1000"/);
     assert.match(compose, /flaresolverr:[\s\S]*read_only: true/);
     assert.match(
       compose,
-      /flaresolverr:[\s\S]*tmpfs:[\s\S]*\/app\/\.local:rw,noexec,nosuid,nodev,size=64m,mode=0700,uid=1000,gid=1000/,
+      /flaresolverr:[\s\S]*tmpfs:[\s\S]*\/app\/\.local:rw,exec,nosuid,nodev,size=64m,mode=0700,uid=1000,gid=1000/,
     );
     assert.match(compose, /flaresolverr:[\s\S]*no-new-privileges:true/);
     assert.match(compose, /flaresolverr:[\s\S]*cap_drop:[\s\S]*- ALL/);
@@ -281,7 +295,29 @@ describe("torrent-indexer runtime contract laboratory", () => {
     assert.match(compose, /FLARESOLVERR_URL: http:\/\/flaresolverr:8191/);
     assert.match(compose, /depends_on:[\s\S]*flaresolverr:[\s\S]*condition: service_healthy/);
     assert.doesNotMatch(compose, /flaresolverr:[\s\S]*?ports:/);
-    assert.doesNotMatch(compose, /privileged:|docker\.sock|:latest/);
+    assert.doesNotMatch(compose, /privileged:|docker\.sock|:latest|volumes:/);
+    assert.match(dockerfile, /^FROM ghcr\.io\/flaresolverr\/flaresolverr:v3\.3\.21$/m);
+    assert.match(dockerfile, /mv \/app\/chromedriver \/app\/chromedriver\.original/);
+    assert.match(dockerfile, /ln -s \/app\/\.local\/chromedriver \/app\/chromedriver/);
+    assert.match(dockerfile, /USER flaresolverr/);
+    assert.doesNotMatch(dockerfile, /USER (?:0|root)/);
+    assert.match(
+      dockerfile,
+      /ENTRYPOINT \["\/app\/flaresolverr-entrypoint\.sh", "\/usr\/bin\/dumb-init", "--"\]/,
+    );
+    assert.match(
+      dockerfile,
+      /CMD \["\/usr\/local\/bin\/python", "-u", "\/app\/flaresolverr\.py"\]/,
+    );
+    assert.doesNotMatch(dockerfile, /COPY\s+(?:--\S+\s+)*src|patch_exe|utils\.py|patcher\.py/);
+    assert.match(entrypoint, /\[ "\$\(id -u\)" -eq 0 \]/);
+    assert.match(entrypoint, /\[ ! -w "\$runtime_dir" \]/);
+    assert.match(entrypoint, /cp "\$driver_original" "\$driver_runtime"/);
+    assert.match(entrypoint, /chmod 0755 "\$driver_runtime"/);
+    assert.match(entrypoint, /exec "\$@"/);
+    assert.equal((entrypoint.match(/cp "\$driver_original" "\$driver_runtime"/g) ?? []).length, 1);
+    assert.match(dockerignore, /^\*\*$/m);
+    assert.match(dockerignore, /^!flaresolverr-entrypoint\.sh$/m);
   });
 
   it("uses idempotent POSIX signal cleanup and exits without resuming", async () => {

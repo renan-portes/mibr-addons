@@ -173,6 +173,25 @@ evidência técnica para adicionar `/app/.cache` ou caminhos sob
 base Python 3.11. Uma nova validação de start no docker-server ainda está
 pendente; nenhuma nova consulta foi executada nesta alteração.
 
+A validação seguinte confirmou que `/app/.local` resolveu a primeira escrita,
+mas revelou outra em `/app/chromedriver`. O `undetected-chromedriver` incluído na
+imagem abre esse executável em modo de leitura e escrita para aplicar seu patch
+in-place. A versão `v3.3.21` fixa esse caminho no código e não expõe variável ou
+configuração oficial para redirecioná-lo ou desabilitar a alteração. Como tmpfs
+não pode substituir diretamente um arquivo, foi escolhida uma imagem derivada
+mínima, ainda baseada exatamente em
+`ghcr.io/flaresolverr/flaresolverr:v3.3.21`, sem alterar código upstream nem
+pré-aplicar o patch. No build, o driver original passa a
+`/app/chromedriver.original` e o caminho esperado vira symlink para
+`/app/.local/chromedriver`. Em cada start, um entrypoint executado como
+`flaresolverr` (`1000:1000`) confirma o tmpfs gravável, copia o original com modo
+`0755` e usa `exec` para preservar a sequência oficial
+`/usr/bin/dumb-init -- /usr/local/bin/python -u /app/flaresolverr.py`. Como o
+driver agora é executado no tmpfs, somente `noexec` foi retirado desse mount;
+`nosuid`, `nodev`, limite, ownership e `read_only` do restante permanecem. A
+validação runtime dessa segunda correção ainda está pendente e nenhuma consulta
+real foi executada.
+
 Em HTTP diferente de `200`, o laboratório agora produz somente diagnóstico
 sanitizado. O corpo é classificado como JSON ou texto, apenas as chaves raiz
 `error`, `message`, `status`, `code` e `type` podem aparecer, e a mensagem é
