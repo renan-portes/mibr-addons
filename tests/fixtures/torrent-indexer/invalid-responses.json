@@ -1,0 +1,29 @@
+[
+  null,
+  {},
+  {
+    "results": "not-an-array",
+    "count": 1
+  },
+  {
+    "results": [],
+    "count": -1
+  },
+  {
+    "results": [
+      {
+        "title": "",
+        "details": "javascript:alert(1)",
+        "magnet_link": "not-a-magnet",
+        "date": "not-a-date",
+        "info_hash": "not-a-hash",
+        "trackers": "not-an-array",
+        "seed_count": "many"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "error": "synthetic upstream failure"
+  }
+]
