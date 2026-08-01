@@ -108,6 +108,27 @@ mantém o socket aberto e consome a resposta até EOF antes de fechá-lo. Status
 corpo são capturados separadamente, sob timeout global de 20 segundos e limite
 de 1 MiB. Nenhuma consulta adicional foi executada nesta alteração.
 
+## Milestone runtime concluída
+
+A execução controlada do commit
+`b926b710e773ec1f4b271f573593a08df110a8eb` validou a infraestrutura completa:
+FlareSolverr, Redis e torrent-indexer ficaram `healthy`, sem portas publicadas, e
+o cleanup removeu todos os containers e a rede. O ChromeDriver efêmero iniciou
+corretamente; para esta imagem `v3.3.21` e este ambiente, o FlareSolverr continua
+exigindo `read_only: false`, enquanto os outros serviços permanecem read-only.
+`FLARESOLVERR_ADDRESS` foi confirmado como a variável operacional correta.
+
+O cliente Python consumiu a resposta até EOF e eliminou o cancelamento prematuro
+de `r.Context()` causado pelo antigo `printf | nc`. A única consulta autorizada
+ao `bludv` respondeu HTTP `200` em aproximadamente 2.880 ms, com 25 bytes de JSON
+válido, `count: 0`, nenhum item aceito ou rejeitado pelo parser e status
+`PARTIAL_ZERO_RESULTS`; o código final `2` é o resultado parcial esperado. Não
+houve retry, segunda consulta ou troca de termo.
+
+Esta milestone comprova infraestrutura e compatibilidade do envelope vazio, não
+um resultado positivo com item real. Conteúdo comercial segue fora do escopo e
+nenhuma funcionalidade de playback foi testada ou validada.
+
 O runtime inclui FlareSolverr `v3.3.21` somente na rede Docker, sem host port. O
 torrent-indexer recebe o endereço interno por `FLARESOLVERR_ADDRESS` e aguarda
 seu healthcheck. Essa
@@ -161,12 +182,13 @@ rejeitados, chaves, tipos e valores vazios, e apaga o JSON em `finally`. O clean
 do script também remove todos os temporários, containers e rede em sucesso ou
 falha.
 
-O primeiro teste no docker-server encerrou antes da consulta com `npx: not
+Historicamente, o primeiro teste no docker-server encerrou antes da consulta com `npx: not
 found`. Isso confirmou que a versão anterior dependia indevidamente de tooling no
 host. Após essa correção, uma única execução real chegou à consulta, mas ficou
 presa até ser suspensa manualmente. O código `148` veio de `SIGTSTP`, não do
 indexer. O cleanup posterior removeu containers e rede, não houve repetição nem
-payload persistido, mas o contrato real ainda não foi validado.
+payload persistido. Esses resultados foram superados pela validação parcial bem-sucedida
+registrada acima.
 
 O serviço `contract-tools` fica em `compose.tools.yml`; assim o Compose principal
 não depende de `CONTRACT_TEMP_DIR`. Recuperação manual segura, inclusive após a
@@ -176,8 +198,9 @@ perda do diretório temporário:
 docker compose -f lab/torrent-indexer-runtime/compose.yml down --remove-orphans
 ```
 
-Essa execução precisa ser repetida no docker-server após revisão do novo timeout.
-Ela também deve validar o start do FlareSolverr com a exceção de filesystem já
+Uma futura execução só é necessária para investigar resultados com itens dentro
+de um escopo previamente autorizado. A execução concluída validou o start do
+FlareSolverr com a exceção de filesystem já
 isolada pela matriz; isso não autoriza uma consulta adicional.
 
 ## Dados que nunca devem aparecer

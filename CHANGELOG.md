@@ -13,6 +13,7 @@
 - Parsing defensivo e fixtures sintéticas para respostas do torrent-indexer.
 - Laboratório Docker isolado e descartável do torrent-indexer, validado em runtime sem consultas a indexadores.
 - Laboratório manual para comparação sanitizada e controlada do contrato runtime do torrent-indexer.
+- Infraestrutura do laboratório runtime-contract validada no docker-server com FlareSolverr, Redis e torrent-indexer healthy, zero portas publicadas e resposta HTTP 200 válida com zero resultados.
 - Sondagem manual sanitizada, de uma chamada por execução, para a instância pública oficial do torrent-indexer.
 - Timeout e cancelamento por provider.
 
@@ -26,3 +27,6 @@
 
 - Isolamento de falhas para impedir que um provider com erro ou timeout derrube os demais.
 - Validação estrita da porta configurada por ambiente.
+- Inicialização do FlareSolverr v3.3.21 com ChromeDriver efêmero e exceção `read_only: false` restrita ao serviço.
+- Endereço interno do FlareSolverr configurado pela variável upstream correta, `FLARESOLVERR_ADDRESS`.
+- Cliente bruto `printf | nc` substituído por cliente Python que lê até EOF, eliminando o cancelamento prematuro de `r.Context()` no teste runtime.

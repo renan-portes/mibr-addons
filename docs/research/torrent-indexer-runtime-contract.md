@@ -347,3 +347,34 @@ Não se recomenda destacar o scraper de `r.Context()` nem usar
 `context.Background()`, pois isso perderia cancelamento legítimo do cliente. Uma
 alteração upstream só deve ser considerada se instrumentação posterior mostrar
 um cancelador diferente.
+
+## Fechamento da milestone runtime
+
+A validação controlada no docker-server executou o commit
+`b926b710e773ec1f4b271f573593a08df110a8eb` e encerrou a milestone com o resultado
+parcial esperado:
+
+- FlareSolverr, Redis e torrent-indexer `healthy`;
+- ChromeDriver efêmero funcional;
+- zero portas publicadas;
+- `FLARESOLVERR_ADDRESS` presente e confirmado como variável correta;
+- uma única consulta autorizada ao `bludv`, sem retry ou troca de termo;
+- HTTP `200` em aproximadamente 2.880 ms;
+- resposta de 25 bytes, JSON válido, `count: 0` e `results: 0`;
+- parser com zero itens aceitos e zero rejeitados;
+- status `PARTIAL_ZERO_RESULTS` e código final `2`;
+- ausência de `context canceled` e HTTP `500`;
+- cleanup completo, sem container ou rede residual.
+
+O contraste com a execução anterior confirma operacionalmente que o antigo
+`printf | nc` encerrava prematuramente `r.Context()`: após o cliente Python passar
+a ler até EOF, o cancelamento desapareceu sem qualquer mudança no servidor Go.
+A imagem derivada e a cópia efêmera do ChromeDriver funcionaram, mas o Chromium
+da FlareSolverr `v3.3.21` neste ambiente ainda exige `read_only: false`; essa
+exceção permanece restrita ao serviço FlareSolverr.
+
+HTTP `200` com zero resultados é uma validação parcial válida do transporte, da
+infraestrutura e do envelope aceito pelo parser. Não comprova retorno positivo
+de item real. Não houve segunda consulta nem substituição do termo autorizado.
+Consultas de conteúdo comercial continuam fora do escopo e nenhuma capacidade
+de playback, magnet, torrent, debrid ou reprodução foi validada.
