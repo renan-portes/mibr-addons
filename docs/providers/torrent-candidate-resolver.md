@@ -76,10 +76,12 @@ Somente itens com IMDb correspondente e `infoHash` válido chegam ao resolver.
 Hashes duplicados são descartados preservando a ordem original. Quando o item
 declara arquivos, pelo menos um path relativo, seguro e com extensão de vídeo
 plausível é obrigatório. Paths absolutos, traversal, segmentos vazios, controles
-e paths de drive são rejeitados. Percent-encoding relevante, double encoding,
-UNC, barras invertidas, separadores Unicode confundíveis e segmentos terminados
-em ponto ou espaço também são rejeitados. No máximo 100 arquivos são inspecionados
-por candidato. Arquivos identificados deterministicamente como `sample` ou
+e paths de drive são rejeitados. Paths são tratados como texto já normalizado:
+qualquer `%` é rejeitado, sem decode ou encaminhamento de percent-encoding.
+Double encoding, UNC, barras invertidas, separadores Unicode confundíveis e
+segmentos terminados em ponto ou espaço também são rejeitados. O limite de
+aceitação é de 100 arquivos; acima disso, o candidato inteiro é descartado sem
+copiar ou encaminhar um subconjunto. Arquivos identificados deterministicamente como `sample` ou
 `trailer` pelo basename são evitados; um item que contenha somente esses arquivos
 não é enviado ao resolver.
 
@@ -94,6 +96,9 @@ candidato. Erro do resolver é isolado e também continua. Timeout individual
 filho e continua mesmo se o resolver não cooperar; respostas ou rejeições tardias
 são ignoradas com segurança. Cancelamento global aborta o filho, interrompe todo
 o fluxo e não é convertido em timeout ou resultado vazio.
+
+Em qualquer disputa, o cancelamento global é revalidado antes da validação e de
+qualquer emissão, independentemente do primeiro evento observado pela race.
 
 ## Feature flag e compatibilidade
 

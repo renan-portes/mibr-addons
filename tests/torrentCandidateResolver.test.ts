@@ -98,6 +98,28 @@ function success(overrides: Partial<ResolvedTorrentCandidate> = {}): ResolvedTor
 
 const QUERY = Object.freeze({ type: "movie" as const, id: "tt0000001" });
 
+function instrumentAbortSignal(controller = new AbortController()): {
+  readonly controller: AbortController;
+  readonly signal: AbortSignal;
+  readonly added: () => number;
+  readonly removed: () => number;
+} {
+  const signal = controller.signal;
+  const originalAdd = signal.addEventListener.bind(signal) as (...args: unknown[]) => void;
+  const originalRemove = signal.removeEventListener.bind(signal) as (...args: unknown[]) => void;
+  let added = 0;
+  let removed = 0;
+  Object.defineProperty(signal, "addEventListener", {
+    configurable: true,
+    value: (...args: unknown[]) => { added += 1; originalAdd(...args); },
+  });
+  Object.defineProperty(signal, "removeEventListener", {
+    configurable: true,
+    value: (...args: unknown[]) => { removed += 1; originalRemove(...args); },
+  });
+  return { controller, signal, added: () => added, removed: () => removed };
+}
+
 describe("resolved torrent candidate validation", () => {
   it("accepts only sanitized public HTTP/HTTPS outputs", () => {
     assert.equal(validateResolvedTorrentCandidate(success())?.url, "https://media.example.invalid/video.mp4");
@@ -303,15 +325,40 @@ describe("TorrentIndexerProvider candidate resolution", () => {
     assert.deepEqual(fake.requests.map((request) => request.infoHash), [HASH_A, HASH_B]);
   });
 
-  it("bounds the normalized file array passed to the resolver", async () => {
-    const files = Array.from({ length: 1_000 }, (_, index) => ({
+  it("accepts exactly 100 files but rejects 101 without forwarding a subset", async () => {
+    const files = Array.from({ length: 100 }, (_, index) => ({
       path: `folder/video-${index}.mkv`,
       size: "1 MB",
     }));
-    const fake = new FakeTorrentCandidateResolver([null]);
-    await provider([rawItem(HASH_A, { files })], fake, { enabled: true })
+    const accepted = new FakeTorrentCandidateResolver([null]);
+    await provider([rawItem(HASH_A, { files })], accepted, { enabled: true })
       .getStreams(QUERY, new AbortController().signal);
-    assert.equal(fake.requests[0]?.files.length, 100);
+    assert.equal(accepted.requests[0]?.files.length, 100);
+
+    const rejected = new FakeTorrentCandidateResolver([success()]);
+    await provider([rawItem(HASH_A, { files: [...files, { path: "folder/extra.mkv" }] })], rejected, { enabled: true })
+      .getStreams(QUERY, new AbortController().signal);
+    assert.equal(rejected.callCount, 0);
+  });
+
+  it("rejects a very large file array before iterating it and can process the next candidate", async () => {
+    const oversized = new Proxy([], {
+      get(target, property, receiver) {
+        if (property === "length") return 1_000_000;
+        if (property === Symbol.iterator || property === "flatMap" || property === "slice") {
+          throw new Error("oversized array must not be copied or iterated");
+        }
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const fake = new FakeTorrentCandidateResolver([success()]);
+    const streams = await providerWithParsedItems([
+      parsedItem(HASH_A, { files: oversized }),
+      parsedItem(HASH_B, { files: [] }),
+    ], fake).getStreams(QUERY, new AbortController().signal);
+    assert.equal(streams.length, 1);
+    assert.equal(fake.callCount, 1);
+    assert.equal(fake.requests[0]?.infoHash, HASH_B);
   });
 
   it("rejects dangerous paths and accepts a mixed-case video extension", async () => {
@@ -320,6 +367,14 @@ describe("TorrentIndexerProvider candidate resolution", () => {
       "%2e%2e/video.mkv",
       "%252e%252e/video.mkv",
       "%2E%2E/video.mkv",
+      "folder/video%20name.mkv",
+      "folder/%76ideo.mkv",
+      "folder/video%2fpart.mkv",
+      "folder/video%5cpart.mkv",
+      "folder/vid%20eo.mkv",
+      "folder/video.%6d%6bv",
+      "folder/video%.mkv",
+      "folder/video%zz.mkv",
       "\\\\server\\share\\video.mkv",
       "C:\\video.mkv",
       "/video.mkv",
@@ -412,27 +467,60 @@ describe("TorrentIndexerProvider candidate resolution", () => {
 
   it("removes the parent listener and clears the timeout after success", async (context) => {
     context.mock.timers.enable({ apis: ["setTimeout"] });
-    const controller = new AbortController();
-    const signal = controller.signal;
-    const originalAdd = signal.addEventListener.bind(signal) as (...args: unknown[]) => void;
-    const originalRemove = signal.removeEventListener.bind(signal) as (...args: unknown[]) => void;
-    let added = 0;
-    let removed = 0;
-    Object.defineProperty(signal, "addEventListener", {
-      configurable: true,
-      value: (...args: unknown[]) => { added += 1; originalAdd(...args); },
-    });
-    Object.defineProperty(signal, "removeEventListener", {
-      configurable: true,
-      value: (...args: unknown[]) => { removed += 1; originalRemove(...args); },
-    });
+    const observed = instrumentAbortSignal();
 
     const fake = new FakeTorrentCandidateResolver([success()]);
-    assert.equal((await provider([rawItem()], fake, { enabled: true }).getStreams(QUERY, signal)).length, 1);
-    assert.equal(added, 1);
-    assert.equal(removed, 1);
+    assert.equal((await provider([rawItem()], fake, { enabled: true }).getStreams(QUERY, observed.signal)).length, 1);
+    assert.equal(observed.added(), 1);
+    assert.equal(observed.removed(), 1);
     context.mock.timers.tick(5_000);
     assert.equal(fake.requests[0]?.signal.aborted, false);
+  });
+
+  it("revalidates cancellation when resolution and cancellation share the microtask queue", async () => {
+    const deferred = createDeferred<ResolvedTorrentCandidate | null>();
+    const fake = new FakeTorrentCandidateResolver([deferred.promise, success()]);
+    const controller = new AbortController();
+    const pending = provider([
+      rawItem(HASH_A, { files: [] }),
+      rawItem(HASH_B, { files: [] }),
+    ], fake, { enabled: true }).getStreams(QUERY, controller.signal);
+    await fake.waitForCall();
+    deferred.resolve(success());
+    queueMicrotask(() => controller.abort(new DOMException("cancelled", "AbortError")));
+    await assert.rejects(() => pending, (error: unknown) => error instanceof DOMException && error.name === "AbortError");
+    assert.equal(fake.callCount, 1);
+  });
+
+  it("revalidates cancellation after the resolver wins and before StreamResult creation", async () => {
+    const controller = new AbortController();
+    const result = {
+      get url() {
+        controller.abort(new DOMException("cancelled before emission", "AbortError"));
+        return "https://media.example.invalid/video.mp4";
+      },
+      source: "local-test" as const,
+    };
+    const fake = new FakeTorrentCandidateResolver([result, success()]);
+    const pending = provider([
+      rawItem(HASH_A, { files: [] }),
+      rawItem(HASH_B, { files: [] }),
+    ], fake, { enabled: true }).getStreams(QUERY, controller.signal);
+    await assert.rejects(() => pending, /cancelled before emission/);
+    assert.equal(fake.callCount, 1);
+  });
+
+  it("gives timeout priority when timeout and resolution occur in the same timer tick", async (context) => {
+    context.mock.timers.enable({ apis: ["setTimeout"] });
+    const deferred = createDeferred<ResolvedTorrentCandidate | null>();
+    const fake = new FakeTorrentCandidateResolver([deferred.promise]);
+    const pending = provider([rawItem()], fake, { enabled: true, timeoutMs: 5_000 })
+      .getStreams(QUERY, new AbortController().signal);
+    await fake.waitForCall();
+    setTimeout(() => deferred.resolve(success()), 5_000);
+    context.mock.timers.tick(5_000);
+    assert.deepEqual(await pending, []);
+    assert.equal(fake.callCount, 1);
   });
 
   it("times out a non-cooperative resolver and continues sequentially", async (context) => {
@@ -449,6 +537,37 @@ describe("TorrentIndexerProvider candidate resolution", () => {
     assert.equal((await pending).length, 1);
     assert.equal(fake.callCount, 2);
     assert.equal(fake.requests[0]?.signal.aborted, true);
+  });
+
+  it("cleans the parent listener and timeout after timeout", async (context) => {
+    context.mock.timers.enable({ apis: ["setTimeout"] });
+    const observed = instrumentAbortSignal();
+    const never = createDeferred<ResolvedTorrentCandidate | null>();
+    const fake = new FakeTorrentCandidateResolver([never.promise]);
+    const pending = provider([rawItem()], fake, { enabled: true, timeoutMs: 5_000 })
+      .getStreams(QUERY, observed.signal);
+    await fake.waitForCall();
+    context.mock.timers.tick(5_000);
+    assert.deepEqual(await pending, []);
+    assert.equal(observed.added(), 1);
+    assert.equal(observed.removed(), 1);
+    const reason = fake.requests[0]?.signal.reason;
+    context.mock.timers.tick(5_000);
+    assert.equal(fake.requests[0]?.signal.reason, reason);
+  });
+
+  it("cleans the parent listener and timeout after resolver error", async (context) => {
+    context.mock.timers.enable({ apis: ["setTimeout"] });
+    const observed = instrumentAbortSignal();
+    const fake = new FakeTorrentCandidateResolver([new Error("synthetic")]);
+    assert.deepEqual(
+      await provider([rawItem()], fake, { enabled: true }).getStreams(QUERY, observed.signal),
+      [],
+    );
+    assert.equal(observed.added(), 1);
+    assert.equal(observed.removed(), 1);
+    context.mock.timers.tick(5_000);
+    assert.equal(fake.requests[0]?.signal.aborted, false);
   });
 
   it("accepts a response before the timeout and ignores a response after it", async (context) => {
@@ -524,6 +643,21 @@ describe("TorrentIndexerProvider candidate resolution", () => {
     await assert.rejects(() => pending, (error: unknown) => error instanceof DOMException && error.name === "AbortError");
     assert.equal(fake.requests[0]?.signal.aborted, true);
     assert.equal(fake.callCount, 1);
+  });
+
+  it("cleans the parent listener and timeout after cancellation", async (context) => {
+    context.mock.timers.enable({ apis: ["setTimeout"] });
+    const observed = instrumentAbortSignal();
+    const fake = new FakeTorrentCandidateResolver(["wait-for-abort"]);
+    const pending = provider([rawItem()], fake, { enabled: true }).getStreams(QUERY, observed.signal);
+    await fake.waitForCall();
+    observed.controller.abort(new DOMException("cancelled", "AbortError"));
+    await assert.rejects(() => pending, /cancelled/);
+    assert.equal(observed.added(), 1);
+    assert.equal(observed.removed(), 1);
+    const reason = fake.requests[0]?.signal.reason;
+    context.mock.timers.tick(5_000);
+    assert.equal(fake.requests[0]?.signal.reason, reason);
   });
 
   it("copies a mutable resolver result before returning StreamResult", async () => {

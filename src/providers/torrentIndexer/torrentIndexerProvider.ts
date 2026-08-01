@@ -128,12 +128,15 @@ export class TorrentIndexerProvider implements StreamProvider {
         );
       });
 
+      signal.throwIfAborted();
       if (outcome.type === "cancelled") signal.throwIfAborted();
       if (outcome.type === "resolved") {
         const validated = outcome.value === null
           ? null
           : validateResolvedTorrentCandidate(outcome.value);
+        signal.throwIfAborted();
         if (validated !== null) {
+          signal.throwIfAborted();
           return [{
             name: "Torrent candidate resolver",
             title: validated.name ?? "Resolved media",

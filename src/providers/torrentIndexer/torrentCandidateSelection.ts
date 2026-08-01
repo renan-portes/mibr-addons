@@ -10,7 +10,6 @@ const VIDEO_EXTENSION_PATTERN = /\.(?:avi|m2ts|m4v|mkv|mov|mp4|mpeg|mpg|ts|webm)
 const MAX_PATH_LENGTH = 1_024;
 const MAX_PATH_SEGMENT_LENGTH = 255;
 const MAX_FILES_PER_CANDIDATE = 100;
-const ENCODED_PATH_META_PATTERN = /%(?:2e|2f|5c|25)/i;
 const CONFUSABLE_SEPARATOR_PATTERN = /[∕⁄＼]/u;
 const SAMPLE_OR_TRAILER_PATTERN = /(?:^|[._ -])(?:sample|trailer)(?:[._ -]|$)/i;
 const SIZE_PATTERN = /^(\d+(?:\.\d+)?)\s*(B|KB|MB|GB|TB)$/i;
@@ -42,7 +41,7 @@ function normalizeVideoFile(file: TorrentIndexerFile): TorrentCandidateFile | nu
     || path.includes("\\")
     || /^[a-z]:/i.test(path)
     || /[\u0000-\u001f\u007f]/.test(path)
-    || ENCODED_PATH_META_PATTERN.test(path)
+    || path.includes("%")
     || CONFUSABLE_SEPARATOR_PATTERN.test(path)
     || segments.some((segment) => segment === ""
       || segment === "."
@@ -79,7 +78,8 @@ export function selectTorrentCandidates(
       continue;
     }
 
-    const files = item.files.slice(0, MAX_FILES_PER_CANDIDATE).flatMap((file) => {
+    if (item.files.length > MAX_FILES_PER_CANDIDATE) continue;
+    const files = item.files.flatMap((file) => {
       const normalized = normalizeVideoFile(file);
       return normalized === null ? [] : [normalized];
     });
