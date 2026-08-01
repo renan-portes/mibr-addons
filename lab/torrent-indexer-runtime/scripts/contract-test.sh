@@ -87,7 +87,7 @@ run_contract_test() (
   set +e
   # The outer timeout owns the local compose process group. On expiry the service
   # is killed as well, which deterministically terminates the remote exec tree.
-  setsid timeout --signal=TERM --kill-after=2s 20s docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T torrent-indexer sh -c "exec timeout -k 1s 20s sh -c \"printf 'GET /indexers/${CONTRACT_TEST_INDEXER}?q=Big%20Buck%20Bunny&filter_results=true&limit=1 HTTP/1.0\\r\\nHost: 127.0.0.1\\r\\nConnection: close\\r\\n\\r\\n' | nc -w 20 127.0.0.1 7006\" | head -c $((1048576 + 1))" >"$RAW_FILE" &
+  setsid timeout --signal=TERM --kill-after=2s 20s docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T torrent-indexer sh -c "exec timeout -k 1s 20s sh -c \"printf '%s\\r\\n%s\\r\\n%s\\r\\n\\r\\n' 'GET /indexers/${CONTRACT_TEST_INDEXER}?q=Big%20Buck%20Bunny&filter_results=true&limit=1 HTTP/1.0' 'Host: 127.0.0.1' 'Connection: close' | nc -w 20 127.0.0.1 7006\" | head -c $((1048576 + 1))" >"$RAW_FILE" &
   QUERY_PID=$!
   wait "$QUERY_PID"
   QUERY_STATUS=$?

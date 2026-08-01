@@ -144,6 +144,25 @@ describe("torrent-indexer runtime contract laboratory", () => {
     }
   });
 
+  it("builds the HTTP request with a constant printf format and literal percent encoding", async () => {
+    const encodedQuery = "q=Big%20Buck%20Bunny&filter_results=true&limit=1";
+    for (const script of ["contract-test.sh", "contract-test.ps1"]) {
+      const text = await readFile(
+        new URL(`../lab/torrent-indexer-runtime/scripts/${script}`, import.meta.url),
+        "utf8",
+      );
+      assert.equal((text.match(/Big%20Buck%20Bunny/g) ?? []).length, 1);
+      assert.equal((text.match(new RegExp(encodedQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) ?? []).length, 1);
+      const constantFormat = script.endsWith(".sh")
+        ? "printf '%s\\\\r\\\\n%s\\\\r\\\\n%s\\\\r\\\\n\\\\r\\\\n'"
+        : "printf '%s\\r\\n%s\\r\\n%s\\r\\n\\r\\n'";
+      assert.equal(text.includes(constantFormat), true);
+      assert.doesNotMatch(text, /printf 'GET \/indexers\//);
+      assert.match(text, /HTTP\/1\.0' 'Host: 127\.0\.0\.1' 'Connection: close'/);
+      assert.equal((text.match(/CONTRACT_QUERY_ONCE/g) ?? []).length, 1);
+    }
+  });
+
   it("defines a locked-down, one-shot container for TypeScript tools", async () => {
     const compose = await readFile(
       new URL("../lab/torrent-indexer-runtime/compose.tools.yml", import.meta.url),

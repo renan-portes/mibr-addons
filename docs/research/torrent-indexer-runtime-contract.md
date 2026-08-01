@@ -133,3 +133,11 @@ interpola nem exige `CONTRACT_TEMP_DIR` e pode ser usado para recuperação manu
 ```sh
 docker compose -f lab/torrent-indexer-runtime/compose.yml down --remove-orphans
 ```
+
+Uma execução real posterior chegou corretamente à consulta única. Ela terminou
+em 110 ms com HTTP `400` e resposta de 103 bytes porque o script usava a request
+codificada como format string de `printf`: `%20` foi interpretado localmente como
+formatação. O timeout não foi acionado, o cleanup funcionou, nenhuma consulta foi
+repetida e nenhum payload foi persistido. A construção foi corrigida para usar
+uma format string constante, mantendo a URL somente como argumento. O contrato
+real continua **não validado** até uma nova execução controlada após revisão.

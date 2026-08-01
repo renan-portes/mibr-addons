@@ -69,7 +69,7 @@ function Invoke-RuntimeContractTest {
     Write-Host "Executing the single authorized contract query (no retry)..."
     $timeout = [int]$env:CONTRACT_TEST_TIMEOUT_SECONDS
     $maxBytes = [int]$env:CONTRACT_TEST_MAX_RESPONSE_BYTES
-    $request = "timeout ${timeout}s sh -c `"printf 'GET /indexers/$($env:CONTRACT_TEST_INDEXER)?q=Big%20Buck%20Bunny&filter_results=true&limit=1 HTTP/1.0\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n' | nc -w $timeout 127.0.0.1 7006`" | head -c $($maxBytes + 1)"
+    $request = "timeout ${timeout}s sh -c `"printf '%s\r\n%s\r\n%s\r\n\r\n' 'GET /indexers/$($env:CONTRACT_TEST_INDEXER)?q=Big%20Buck%20Bunny&filter_results=true&limit=1 HTTP/1.0' 'Host: 127.0.0.1' 'Connection: close' | nc -w $timeout 127.0.0.1 7006`" | head -c $($maxBytes + 1)"
     $arguments = @("compose", "--env-file", $envFile, "-f", $composeFile, "exec", "-T", "torrent-indexer", "sh", "-c", $request)
     $queryProcess = [Diagnostics.Process]::new()
     $queryProcess.StartInfo.FileName = "docker"
