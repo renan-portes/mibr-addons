@@ -37,14 +37,21 @@ títulos, magnets, hashes, trackers, files ou URLs da resposta.
 |---|---|---|
 | Operação | Mantida por terceiro e sujeita a limites/mudanças | Revisão e recursos controlados localmente |
 | Isolamento | Cliente defensivo, sem controle do servidor | Containers e rede sob controle do operador |
-| FlareSolverr | Pode já estar configurado pelo operador público | Ausência de URL gerou ruído e pode afetar indexers dependentes |
+| FlareSolverr | Pode já estar configurado pelo operador público | O upstream fixado consome `FLARESOLVERR_ADDRESS`; `FLARESOLVERR_URL` não é consumida nessa revisão. A configuração incorreta foi corrigida posteriormente no runtime-contract |
 | Diagnóstico | Erro pode refletir serviço, bloqueio ou indexer | Permite separar configuração local, egress e falha do scraper |
 
 Um indexer quebrado na instância pública não prova sozinho defeito do código:
-pode haver bloqueio, rate limit, configuração ou dependência ambiental. Da mesma
-forma, falha no self-host pode indicar ausência de FlareSolverr ou restrição de
-egress. A comparação dos seis resultados, cada um autorizado separadamente, deve
-ser usada apenas como evidência operacional pontual.
+pode haver bloqueio, rate limit, configuração ou dependência ambiental. A
+“ausência de URL” foi uma hipótese histórica de um estado intermediário do
+self-host: a variável operacional correta é `FLARESOLVERR_ADDRESS`, e sua
+configuração foi corrigida posteriormente no runtime-contract. Ela não representa
+um problema atual. A comparação dos resultados, cada um autorizado separadamente,
+deve ser usada apenas como evidência operacional pontual.
+
+No estado consolidado do self-host, FlareSolverr, Redis e torrent-indexer ficaram
+healthy. A consulta única retornou HTTP `200`, `PARTIAL_ZERO_RESULTS` e código final
+`2`. Esse resultado valida a infraestrutura parcialmente, sem comprovar resultado
+positivo com item real.
 
 ## Resultados controlados
 
@@ -53,5 +60,6 @@ ser usada apenas como evidência operacional pontual.
 - `comando_torrents`: HTTP `500`, JSON válido, `HTTP_ERROR`, aproximadamente 302 ms.
 
 Cada resultado veio de uma execução separada e única, sem retry. Nenhum payload
-ou valor sensível foi persistido. A resposta pública do `bludv` reforça a
-hipótese de que o HTTP `500` no self-host decorre de ambiente ou configuração.
+ou valor sensível foi persistido. A associação do HTTP `500` do self-host com
+ambiente ou configuração pertence ao estado intermediário da investigação e foi
+superada pela validação runtime consolidada descrita acima.
