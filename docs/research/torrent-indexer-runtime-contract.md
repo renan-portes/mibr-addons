@@ -29,6 +29,22 @@ Ela exige cópia local de `.env.example` e confirmação explícita. Se retornar
 zero resultados ou falhar, o operador registra o ocorrido e encerra; não troca o
 termo, não tenta outro indexer e não repete aleatoriamente.
 
+## Container de ferramentas
+
+O docker-server requer somente Docker Compose; Node.js, npm, npx e tsx não são
+requisitos do host. O primeiro runtime falhou antes de qualquer consulta com
+`npx: not found`, revelando a dependência indevida.
+
+Validação e análise agora executam pontualmente com `docker compose run --rm`
+no serviço `contract-tools`. Sua imagem usa `node:24.4.1-bookworm-slim` e uma
+camada cacheável criada por `npm ci --ignore-scripts` a partir do lockfile. O
+container não possui rede ou portas, roda com filesystem read-only, tmpfs,
+`no-new-privileges`, capabilities removidas e limites de recursos. O repositório
+é montado read-only; somente o diretório temporário dedicado é gravável.
+
+A tag Node está fixada por versão, não em `latest`. O digest da imagem-base ainda
+não foi fixado e deve ser reavaliado caso o laboratório deixe de ser descartável.
+
 ## Política de sanitização
 
 O payload bruto existe apenas em arquivo temporário fora do repositório. A

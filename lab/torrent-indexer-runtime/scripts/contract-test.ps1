@@ -3,7 +3,6 @@ $ErrorActionPreference = "Stop"
 function Invoke-RuntimeContractTest {
   $script:ContractExitCode = 1
   $labRoot = Split-Path -Parent $PSScriptRoot
-  $repoRoot = Split-Path -Parent (Split-Path -Parent $labRoot)
   $composeFile = Join-Path $labRoot "compose.yml"
   $envFile = Join-Path $labRoot ".env"
   if (-not (Test-Path -LiteralPath $envFile)) {
@@ -20,9 +19,14 @@ function Invoke-RuntimeContractTest {
     }
   }
 
-  $rawFile = [IO.Path]::GetTempFileName()
-  $bodyFile = [IO.Path]::GetTempFileName()
-  $stderrFile = [IO.Path]::GetTempFileName()
+  $tempDir = Join-Path ([IO.Path]::GetTempPath()) "mibr-runtime-contract-$([guid]::NewGuid().ToString('N'))"
+  $null = New-Item -ItemType Directory -Path $tempDir
+  $rawFile = Join-Path $tempDir "http-response.raw"
+  $bodyFile = Join-Path $tempDir "response.json"
+  $stderrFile = Join-Path $tempDir "docker-stderr.log"
+  [Environment]::SetEnvironmentVariable("CONTRACT_TEMP_DIR", $tempDir, "Process")
+  [Environment]::SetEnvironmentVariable("CONTRACT_TOOLS_UID", "1000", "Process")
+  [Environment]::SetEnvironmentVariable("CONTRACT_TOOLS_GID", "1000", "Process")
 
   function Invoke-Compose {
     & docker compose --env-file $envFile -f $composeFile @args
@@ -39,11 +43,8 @@ function Invoke-RuntimeContractTest {
 
   try {
     Write-Host "Validating the fixed, explicitly authorized query configuration..."
-    Push-Location $repoRoot
-    try {
-      & npx --no-install tsx lab/torrent-indexer-runtime/tools/validate-config.ts
-      if ($LASTEXITCODE -ne 0) { throw "Configuration validation failed" }
-    } finally { Pop-Location }
+    Invoke-Compose build contract-tools
+    Invoke-Compose run --rm -T contract-tools lab/torrent-indexer-runtime/tools/validate-config.ts
 
     Write-Host "Starting the pinned runtime-contract laboratory..."
     Invoke-Compose up -d --build --wait --wait-timeout 120
@@ -97,13 +98,12 @@ function Invoke-RuntimeContractTest {
     Write-Host "Duration: $($stopwatch.ElapsedMilliseconds) ms"
     Write-Host "Response size: $responseBytes bytes"
     if ($httpCode -ne 200) { throw "Contract endpoint returned HTTP $httpCode" }
+    Remove-Item -LiteralPath $rawFile -Force
+    $rawFile = $null
 
     Write-Host "Producing the sanitized parser compatibility report..."
-    Push-Location $repoRoot
-    try {
-      & npx --no-install tsx lab/torrent-indexer-runtime/tools/analyze-response.ts $bodyFile | ForEach-Object { Write-Host $_ }
-      $analysisStatus = $LASTEXITCODE
-    } finally { Pop-Location }
+    & docker compose --env-file $envFile -f $composeFile run --rm -T contract-tools lab/torrent-indexer-runtime/tools/analyze-response.ts /contract-input/response.json | ForEach-Object { Write-Host $_ }
+    $analysisStatus = $LASTEXITCODE
     $bodyFile = $null
 
     if ($analysisStatus -eq 2) {
@@ -117,9 +117,7 @@ function Invoke-RuntimeContractTest {
     Write-Host "Contract test completed. No response values, magnets, hashes, trackers, titles, or URLs were printed."
   } finally {
     Write-Host "Cleanup: deleting temporary payloads, stopping containers, and removing the dedicated network."
-    foreach ($path in @($rawFile, $bodyFile, $stderrFile)) {
-      if (-not [string]::IsNullOrWhiteSpace($path)) { Remove-Item -LiteralPath $path -Force -ErrorAction SilentlyContinue }
-    }
+    if (Test-Path -LiteralPath $tempDir) { Remove-Item -LiteralPath $tempDir -Recurse -Force -ErrorAction SilentlyContinue }
     & docker compose --env-file $envFile -f $composeFile down --remove-orphans
     if ($LASTEXITCODE -ne 0) { Write-Warning "docker compose down failed" }
   }

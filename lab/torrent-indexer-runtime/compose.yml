@@ -67,6 +67,42 @@ services:
       start_period: 10s
     stop_grace_period: 15s
 
+  contract-tools:
+    image: mibr-lab/torrent-indexer-contract-tools:node-24.4.1
+    build:
+      context: ../..
+      dockerfile: lab/torrent-indexer-runtime/Dockerfile.contract-tools
+    profiles:
+      - tools
+    network_mode: none
+    user: "${CONTRACT_TOOLS_UID:-1000}:${CONTRACT_TOOLS_GID:-1000}"
+    working_dir: /workspace
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m
+    environment:
+      CONTRACT_TEST_AUTHORIZED: ${CONTRACT_TEST_AUTHORIZED}
+      CONTRACT_TEST_INDEXER: ${CONTRACT_TEST_INDEXER}
+      CONTRACT_TEST_TERM: ${CONTRACT_TEST_TERM}
+      CONTRACT_TEST_LIMIT: ${CONTRACT_TEST_LIMIT}
+      CONTRACT_TEST_TIMEOUT_SECONDS: ${CONTRACT_TEST_TIMEOUT_SECONDS}
+      CONTRACT_TEST_MAX_RESPONSE_BYTES: ${CONTRACT_TEST_MAX_RESPONSE_BYTES}
+    volumes:
+      - type: bind
+        source: ../..
+        target: /workspace
+        read_only: true
+      - type: bind
+        source: ${CONTRACT_TEMP_DIR:?CONTRACT_TEMP_DIR must reference the dedicated temporary directory}
+        target: /contract-input
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 256m
+    cpus: 0.50
+    pids_limit: 64
+
 networks:
   runtime-contract:
     driver: bridge

@@ -31,6 +31,16 @@ socket, host network, volumes persistentes, credenciais ou exposição pública.
 
 ## Execução manual
 
+O host requer somente Docker com o plugin Docker Compose. Node.js, npm, npx e
+tsx não são instalados nem exigidos no host.
+
+As ferramentas TypeScript rodam em `contract-tools`, uma imagem auxiliar baseada
+em `node:24.4.1-bookworm-slim`. A imagem instala uma vez, em camada cacheável, as
+dependências exatas de `package-lock.json`; não executa `npm install` a cada
+comando. O serviço usa `docker compose run --rm`, não permanece ativo, não tem
+rede nem portas, monta o repositório read-only e recebe como único mount gravável
+o diretório temporário da execução.
+
 1. Revise este documento e os scripts.
 2. Copie `.env.example` para `.env`.
 3. Altere somente `CONTRACT_TEST_AUTHORIZED=false` para `true`.
@@ -62,6 +72,11 @@ ferramenta TypeScript reutiliza `TorrentIndexerParser`, informa itens aceitos e
 rejeitados, chaves, tipos e valores vazios, e apaga o JSON em `finally`. O cleanup
 do script também remove todos os temporários, containers e rede em sucesso ou
 falha.
+
+O primeiro teste no docker-server encerrou antes da consulta com `npx: not
+found`. Isso confirmou que a versão anterior dependia indevidamente de tooling no
+host. A estratégia atual move validação e análise para `contract-tools`; essa
+execução precisa ser repetida no docker-server.
 
 ## Dados que nunca devem aparecer
 

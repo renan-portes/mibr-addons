@@ -4,7 +4,6 @@ run_contract_test() (
   set -eu
 
   LAB_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-  REPO_ROOT=$(CDPATH= cd -- "$LAB_ROOT/../.." && pwd)
   COMPOSE_FILE="$LAB_ROOT/compose.yml"
   ENV_FILE="$LAB_ROOT/.env"
   [ -f "$ENV_FILE" ] || {
@@ -17,13 +16,18 @@ run_contract_test() (
   . "$ENV_FILE"
   set +a
 
-  RAW_FILE=$(mktemp)
-  BODY_FILE=$(mktemp)
+  CONTRACT_TEMP_DIR=$(mktemp -d)
+  CONTRACT_TOOLS_UID=$(id -u)
+  CONTRACT_TOOLS_GID=$(id -g)
+  export CONTRACT_TEMP_DIR CONTRACT_TOOLS_UID CONTRACT_TOOLS_GID
+  RAW_FILE="$CONTRACT_TEMP_DIR/http-response.raw"
+  BODY_FILE="$CONTRACT_TEMP_DIR/response.json"
   CLEANED_UP=0
   cleanup() {
     [ "$CLEANED_UP" -eq 0 ] || return 0
     CLEANED_UP=1
     rm -f "$RAW_FILE" "$BODY_FILE"
+    rmdir "$CONTRACT_TEMP_DIR" 2>/dev/null || true
     printf '%s\n' "Cleanup: stopping containers and removing the dedicated network."
     compose down --remove-orphans || true
   }
@@ -47,7 +51,8 @@ run_contract_test() (
   }
 
   printf '%s\n' "Validating the fixed, explicitly authorized query configuration..."
-  (cd "$REPO_ROOT" && npx --no-install tsx lab/torrent-indexer-runtime/tools/validate-config.ts) || fail "configuration validation"
+  compose build contract-tools || fail "contract-tools image build"
+  compose run --rm -T contract-tools lab/torrent-indexer-runtime/tools/validate-config.ts || fail "configuration validation"
 
   printf '%s\n' "Starting the pinned runtime-contract laboratory..."
   compose up -d --build --wait --wait-timeout 120 || fail "build/start/health wait"
@@ -79,10 +84,12 @@ run_contract_test() (
   printf 'Duration: %s ms\n' "$((END_MS - START_MS))"
   printf 'Response size: %s bytes\n' "$RESPONSE_BYTES"
   [ "$HTTP_CODE" = "200" ] || fail "contract endpoint returned HTTP $HTTP_CODE"
+  rm -f "$RAW_FILE"
+  RAW_FILE=
 
   printf '%s\n' "Producing the sanitized parser compatibility report..."
   set +e
-  (cd "$REPO_ROOT" && npx --no-install tsx lab/torrent-indexer-runtime/tools/analyze-response.ts "$BODY_FILE")
+  compose run --rm -T contract-tools lab/torrent-indexer-runtime/tools/analyze-response.ts /contract-input/response.json
   ANALYSIS_STATUS=$?
   set -e
   BODY_FILE=

@@ -135,11 +135,35 @@ describe("torrent-indexer runtime contract laboratory", () => {
       assert.equal((text.match(/indexers\//g) ?? []).length, 1);
       assert.doesNotMatch(text, /RETRY_COUNT|MAX_RETRIES|while\s+.*CONTRACT_QUERY|for\s+.*CONTRACT_QUERY/i);
       assert.match(text, /validate-config\.ts/);
+      assert.doesNotMatch(text, /\bnpx\b/);
+      assert.match(text, /(?:compose|docker compose)[^\n]*run --rm -T contract-tools/);
       assert.match(text, /remove|Remove-Item/);
       assert.match(text, /limit=1/);
       assert.match(text, /20 \* 1000|timeout 20s/);
       assert.match(text, /1048576 \+ 1|maxBytes \+ 1/);
     }
+  });
+
+  it("defines a locked-down, one-shot container for TypeScript tools", async () => {
+    const compose = await readFile(
+      new URL("../lab/torrent-indexer-runtime/compose.yml", import.meta.url),
+      "utf8",
+    );
+    const dockerfile = await readFile(
+      new URL("../lab/torrent-indexer-runtime/Dockerfile.contract-tools", import.meta.url),
+      "utf8",
+    );
+    assert.match(compose, /contract-tools:/);
+    assert.match(compose, /network_mode: none/);
+    assert.match(compose, /source: \.\.\/\.\./);
+    assert.match(compose, /target: \/workspace[\s\S]*read_only: true/);
+    assert.match(compose, /target: \/contract-input/);
+    assert.match(compose, /no-new-privileges:true/);
+    assert.match(compose, /cap_drop:[\s\S]*- ALL/);
+    assert.doesNotMatch(compose, /docker\.sock/);
+    assert.match(dockerfile, /FROM node:24\.4\.1-bookworm-slim/);
+    assert.match(dockerfile, /npm ci --ignore-scripts/);
+    assert.doesNotMatch(dockerfile, /:latest/);
   });
 
   it("uses idempotent POSIX signal cleanup and exits without resuming", async () => {
