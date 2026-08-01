@@ -1,0 +1,7 @@
+FROM node:24.4.1-bookworm-slim
+
+WORKDIR /tools
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts && npm cache clean --force
+
+ENTRYPOINT ["/tools/node_modules/.bin/tsx"]

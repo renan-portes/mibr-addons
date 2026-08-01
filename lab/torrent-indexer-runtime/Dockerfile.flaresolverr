@@ -1,0 +1,11 @@
+FROM ghcr.io/flaresolverr/flaresolverr:v3.3.21
+
+RUN mv /app/chromedriver /app/chromedriver.original \
+    && ln -s /app/.local/chromedriver /app/chromedriver
+
+COPY --chown=flaresolverr:flaresolverr --chmod=0755 flaresolverr-entrypoint.sh /app/flaresolverr-entrypoint.sh
+
+USER flaresolverr
+
+ENTRYPOINT ["/app/flaresolverr-entrypoint.sh", "/usr/bin/dumb-init", "--"]
+CMD ["/usr/local/bin/python", "-u", "/app/flaresolverr.py"]

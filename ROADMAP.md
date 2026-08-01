@@ -16,7 +16,14 @@
 - [x] Pesquisa arquitetural do torrent-indexer
 - [x] Cliente/provider experimental do torrent-indexer (somente descoberta local)
 - [x] Laboratório self-host isolado do torrent-indexer
-- [ ] Consulta real aos indexadores no self-host
+- [x] Validação controlada do contrato runtime do torrent-indexer (HTTP 200 e `PARTIAL_ZERO_RESULTS`)
+- [x] Sondagem operacional sanitizada da instância pública executada manualmente:
+  - `bludv`: HTTP `200` / `OK_ZERO_RESULTS`;
+  - `torrent-dos-filmes`: HTTP `200` / `OK_ZERO_RESULTS`;
+  - `comando_torrents`: HTTP `500` / `HTTP_ERROR`;
+  - nenhuma nova sondagem está pendente nesta milestone; não houve consulta em massa, fallback ou troca automática de indexer.
+- [ ] Resultado positivo com item real no self-host (não comprovado pela validação parcial)
+- [ ] Consultas funcionais a conteúdo comercial (fora de escopo)
 - [ ] Self-host de produção do torrent-indexer
 - [ ] Integração de playback/debrid
 - [ ] BluDV

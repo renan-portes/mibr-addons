@@ -1,0 +1,109 @@
+name: mibr-torrent-indexer-runtime-contract
+
+services:
+  redis:
+    image: redis:7.4.2-alpine
+    user: redis
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--protected-mode", "no"]
+    restart: "on-failure:3"
+    read_only: true
+    tmpfs:
+      - /data:rw,noexec,nosuid,nodev,size=64m,mode=0770,uid=999,gid=999
+    networks:
+      - runtime-contract
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 128m
+    cpus: 0.25
+    pids_limit: 64
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    stop_grace_period: 10s
+
+  flaresolverr:
+    image: mibr-lab/flaresolverr-runtime:v3.3.21
+    build:
+      context: .
+      dockerfile: Dockerfile.flaresolverr
+    user: "1000:1000"
+    restart: "on-failure:3"
+    read_only: false
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=128m
+      - /app/config:rw,nosuid,nodev,size=16m
+      - /app/.local:rw,exec,nosuid,nodev,size=64m,mode=0700,uid=1000,gid=1000
+    shm_size: 128m
+    environment:
+      LOG_LEVEL: info
+      LOG_HTML: "false"
+      CAPTCHA_SOLVER: none
+    networks:
+      - runtime-contract
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 256
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8191/', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+    stop_grace_period: 15s
+
+  torrent-indexer:
+    image: mibr-lab/torrent-indexer:0ba84b16c63a
+    build:
+      context: "https://github.com/felipemarinho97/torrent-indexer.git#0ba84b16c63a4add68534d1abba7c21660a8e959"
+    restart: "on-failure:3"
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=32m
+    environment:
+      PORT: "7006"
+      METRICS_PORT: "8081"
+      REDIS_HOST: redis
+      LOG_LEVEL: "1"
+      LOG_FORMAT: json
+      REQUEST_TIMEOUT_MILLISECONDS: "5000"
+      SHORT_LIVED_CACHE_EXPIRATION: 5m
+      LONG_LIVED_CACHE_EXPIRATION: 1h
+      FLARESOLVERR_POOL_SIZE: "1"
+      FLARESOLVERR_ADDRESS: http://flaresolverr:8191
+      FALLBACK_TITLE_ENABLED: "false"
+      MAGNET_METADATA_API_ENABLED: "false"
+    depends_on:
+      redis:
+        condition: service_healthy
+      flaresolverr:
+        condition: service_healthy
+    networks:
+      - runtime-contract
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 256m
+    cpus: 0.50
+    pids_limit: 128
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:7006/"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+    stop_grace_period: 15s
+
+networks:
+  runtime-contract:
+    driver: bridge

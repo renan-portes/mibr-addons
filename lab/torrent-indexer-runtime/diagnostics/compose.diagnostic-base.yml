@@ -1,0 +1,5 @@
+name: mibr-flaresolverr-diagnostic
+
+networks:
+  diagnostic:
+    driver: bridge
