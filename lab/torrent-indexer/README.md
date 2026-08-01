@@ -17,8 +17,7 @@ upstream nessa revisão.
 
 - rede bridge própria marcada como `internal`, sem egress no runtime;
 - Redis acessível apenas dentro da rede e sem porta publicada;
-- aplicação e métricas publicadas exclusivamente em `127.0.0.1`;
-- portas padrão do laboratório: `17006` e `17081`;
+- nenhuma porta da aplicação, das métricas ou do Redis publicada no host;
 - filesystem read-only e `tmpfs` para `/tmp` e `/data`;
 - todas as capabilities removidas e `no-new-privileges` habilitado;
 - limites de CPU, memória e PIDs;
@@ -43,8 +42,8 @@ docker compose --env-file lab/torrent-indexer/.env.example \
 
 ## Execução manual autorizada
 
-Copie `.env.example` para `.env` apenas se quiser alterar as portas. Não adicione
-secrets: Redis não é publicado e o laboratório não configura autenticação.
+O `.env.example` documenta que não há configuração de portas. Não adicione
+secrets: nenhum serviço é publicado e o laboratório não configura autenticação.
 
 PowerShell:
 
@@ -58,10 +57,17 @@ POSIX shell:
 ./lab/torrent-indexer/scripts/smoke-test.sh
 ```
 
-Os scripts constroem e sobem o ambiente, verificam containers, Redis, bindings,
-`/`, `/search/health` e `/metrics`, examinam logs por valores semelhantes a
+Os scripts constroem e sobem o ambiente, verificam containers, Redis e a ausência
+de bindings via `docker inspect`; `/`, `/search/health` e `/metrics` são consultados
+por `docker compose exec -T torrent-indexer`, dentro do container. Também examinam logs por valores semelhantes a
 credenciais, coletam um snapshot de `docker stats` e sempre executam
 `docker compose down --remove-orphans`.
+
+No primeiro teste no docker-server, o build terminou, ambos os containers ficaram
+healthy e a rede `internal` impediu a publicação das portas declaradas. O smoke
+test falhou porque dependia de `docker compose port`, que nessa versão retornou
+`invalid IP:0`. Os recursos foram removidos pelo cleanup. A versão atual não usa
+esse comando nem requer acesso pelo host.
 
 Eles deliberadamente não chamam `/search`, `/indexers/*` ou `/indexers/manual`.
 

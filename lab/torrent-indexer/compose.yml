@@ -35,9 +35,6 @@ services:
     read_only: true
     tmpfs:
       - /tmp:rw,noexec,nosuid,nodev,size=32m
-    ports:
-      - "127.0.0.1:${TORRENT_INDEXER_HOST_PORT:-17006}:7006"
-      - "127.0.0.1:${TORRENT_INDEXER_METRICS_HOST_PORT:-17081}:8081"
     environment:
       PORT: "7006"
       METRICS_PORT: "8081"

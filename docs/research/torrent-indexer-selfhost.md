@@ -1,8 +1,8 @@
 # Laboratório self-host do torrent-indexer
 
-Avaliação preparada em 31 de julho de 2026. Nenhum container foi iniciado porque
-Docker/Compose não estão instalados no ambiente de execução. Nenhum indexador,
-tracker, torrent, magnet ou serviço público foi consultado.
+Avaliação preparada em 31 de julho de 2026 e posteriormente executada no
+docker-server. Nenhum indexador, tracker, torrent, magnet ou serviço público foi
+consultado.
 
 ## Revisão upstream
 
@@ -44,8 +44,9 @@ feito nesta milestone para evitar copiar/modificar código GPL no MIBR Addons.
 | `torrent-indexer` | build do SHA fixado | 0,50 | 256 MiB | 128 | `on-failure:3` |
 | `redis` | `redis:7.4.2-alpine` | 0,25 | 128 MiB | 64 | `on-failure:3` |
 
-Os limites são tetos configurados, não consumo medido. Sem runtime, CPU real,
-memória real e tempo de inicialização permanecem desconhecidos.
+Os limites são tetos configurados. O build e a inicialização foram concluídos e
+ambos os containers ficaram healthy; CPU real, memória real e tempo de
+inicialização ainda não foram registrados de forma confiável.
 
 Ambos usam filesystem read-only, `tmpfs`, `no-new-privileges`, todas as Linux
 capabilities removidas, healthcheck e período de encerramento. Não existem
@@ -66,13 +67,15 @@ capabilities removidas e filesystem read-only reduzem, mas não eliminam, o risc
 - Rede: bridge própria `lab-internal`, marcada como `internal`.
 - Aplicação no container: TCP `7006`.
 - Métricas no container: TCP `8081`.
-- Bindings padrão no host: `127.0.0.1:17006` e `127.0.0.1:17081`.
+- Bindings no host: nenhum para aplicação, métricas ou Redis.
 - Redis: TCP `6379` somente na rede Docker, sem publicação no host.
 - Persistência: nenhuma; Redis usa `/data` em tmpfs e sem AOF/snapshots.
 - Temporários da aplicação: `/tmp` em tmpfs.
 
-As portas do host são configuráveis por `.env`; os defaults foram escolhidos
-fora das portas 7000, 7006, 8080 e 8081 já associadas ao projeto/upstream.
+No runtime observado, a rede `internal` funcionou e as portas anteriormente
+declaradas no Compose não receberam bindings: `NetworkSettings.Ports` mostrou
+somente `7006/tcp` e `8081/tcp` internos. Os bindings foram removidos do Compose
+por serem desnecessários ao laboratório isolado.
 
 ## Configuração
 
@@ -116,8 +119,10 @@ O health do container consulta somente o root local. O health de `/search/health
 com endereço MeiliSearch vazio falha na criação da requisição e não consulta uma
 fonte externa.
 
-Esses resultados são inferidos do código da revisão; não foram observados em
-runtime nesta máquina.
+O primeiro runtime confirmou build, containers healthy e isolamento da rede,
+mas a validação dos endpoints não terminou: `docker compose port` retornou
+`invalid IP:0` e interrompeu o smoke test. O cleanup removeu os recursos. A nova
+estratégia consulta esses endpoints dentro do container e precisa ser repetida.
 
 ## Endpoints deliberadamente não chamados
 
@@ -165,7 +170,8 @@ Comparação com `docs/research/torrent-indexer.md` e
   `200` não prova que uma rota específica existe.
 
 Compatibilidade estimada com o cliente defensivo: **parcial**. O contrato de
-indexer é compatível por inspeção, mas não houve teste runtime e não há playback.
+indexer é compatível por inspeção, mas os endpoints de indexação não foram nem
+serão exercitados neste laboratório e não há playback.
 
 ## Smoke tests e limpeza
 
@@ -173,9 +179,9 @@ Os scripts PowerShell e POSIX:
 
 1. constroem e iniciam os dois containers;
 2. confirmam containers em execução e `PONG` do Redis;
-3. confirmam que Redis não possui porta publicada;
-4. confirmam bindings `127.0.0.1` da aplicação e métricas;
-5. validam root, health MeiliSearch e métricas;
+3. confirmam por `docker inspect` que nenhum dos containers possui porta publicada;
+4. validam root, health MeiliSearch e métricas por `docker compose exec -T`,
+   usando apenas loopback dentro do container;
 6. coletam um snapshot de `docker stats`;
 7. examinam logs sem imprimir dados de resultados;
 8. executam `docker compose down --remove-orphans` em bloco de limpeza.
@@ -194,10 +200,10 @@ Riscos restantes:
 - dependência operacional de Redis;
 - scrapers e trackers ampliam a superfície quando egress for habilitado;
 - contrato não versionado;
-- limites Compose e suporte a healthcheck precisam de validação runtime.
+- os limites Compose e o consumo efetivo ainda precisam de medição completa.
 
-Recomendação: manter como laboratório estático **parcialmente aprovado**, mas não
-promover a self-host real antes de validar `docker compose config`, build, startup,
-healthchecks, uso de recursos e encerramento em um host Docker autorizado. Mesmo
+Recomendação: manter como laboratório isolado **parcialmente aprovado**, mas não
+promover a self-host real antes de repetir os smoke tests internos, confirmar os
+endpoints seguros, registrar uso de recursos e validar o encerramento. Mesmo
 depois disso, o serviço deve permanecer interno, sem bootstrap e sem egress até
 aprovação específica para fontes reais.
