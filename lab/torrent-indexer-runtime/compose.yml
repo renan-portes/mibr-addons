@@ -33,6 +33,7 @@ services:
     tmpfs:
       - /tmp:rw,nosuid,nodev,size=128m
       - /app/config:rw,nosuid,nodev,size=16m
+      - /app/.local:rw,noexec,nosuid,nodev,size=64m,mode=0700,uid=1000,gid=1000
     shm_size: 128m
     environment:
       LOG_LEVEL: info

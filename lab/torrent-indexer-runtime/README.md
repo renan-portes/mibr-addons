@@ -29,6 +29,14 @@ Os containers mantêm filesystem read-only, tmpfs, limites de CPU/memória/PIDs,
 `no-new-privileges` e todas as capabilities removidas. Não há privileged, Docker
 socket, host network, volumes persistentes, credenciais ou exposição pública.
 
+O primeiro start do FlareSolverr no docker-server confirmou a falha
+`Read-only file system: '/app/.local'`: o Chromium era encontrado e iniciado,
+mas o processo encerrava com código `1` ao tentar gravar nesse diretório. A causa
+é o `read_only: true`, que permanece habilitado. A correção mínima adiciona
+somente `/app/.local` como tmpfs não persistente, privado (`mode=0700`) e com
+`uid=1000,gid=1000`, correspondentes ao usuário `flaresolverr` criado pela imagem.
+Não foram adicionados tmpfs para caches ou homes sem evidência de necessidade.
+
 O runtime inclui FlareSolverr `v3.3.21` somente na rede Docker, sem host port. O
 torrent-indexer usa `http://flaresolverr:8191` e aguarda seu healthcheck. Essa
 dependência corrige a causa confirmada do challenge HTTP `500` do BluDV no
@@ -97,6 +105,8 @@ docker compose -f lab/torrent-indexer-runtime/compose.yml down --remove-orphans
 ```
 
 Essa execução precisa ser repetida no docker-server após revisão do novo timeout.
+Ela também deve confirmar o start do FlareSolverr com o novo tmpfs; essa validação
+runtime permanece pendente e não autoriza uma consulta adicional.
 
 ## Dados que nunca devem aparecer
 

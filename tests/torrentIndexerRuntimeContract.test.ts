@@ -266,9 +266,18 @@ describe("torrent-indexer runtime contract laboratory", () => {
     );
     assert.match(compose, /flaresolverr:[\s\S]*image: ghcr\.io\/flaresolverr\/flaresolverr:v3\.3\.21/);
     assert.match(compose, /flaresolverr:[\s\S]*read_only: true/);
+    assert.match(
+      compose,
+      /flaresolverr:[\s\S]*tmpfs:[\s\S]*\/app\/\.local:rw,noexec,nosuid,nodev,size=64m,mode=0700,uid=1000,gid=1000/,
+    );
     assert.match(compose, /flaresolverr:[\s\S]*no-new-privileges:true/);
     assert.match(compose, /flaresolverr:[\s\S]*cap_drop:[\s\S]*- ALL/);
     assert.match(compose, /flaresolverr:[\s\S]*mem_limit: 512m[\s\S]*cpus: 1\.0[\s\S]*pids_limit: 256/);
+    assert.match(compose, /flaresolverr:[\s\S]*networks:[\s\S]*- runtime-contract/);
+    assert.match(
+      compose,
+      /flaresolverr:[\s\S]*healthcheck:[\s\S]*test: \["CMD", "python3", "-c"/,
+    );
     assert.match(compose, /FLARESOLVERR_URL: http:\/\/flaresolverr:8191/);
     assert.match(compose, /depends_on:[\s\S]*flaresolverr:[\s\S]*condition: service_healthy/);
     assert.doesNotMatch(compose, /flaresolverr:[\s\S]*?ports:/);

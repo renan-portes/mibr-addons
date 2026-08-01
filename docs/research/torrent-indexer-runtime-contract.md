@@ -162,6 +162,17 @@ DNS/egress disponíveis e Redis funcional. O laboratório runtime agora inclui
 configura `FLARESOLVERR_URL=http://flaresolverr:8191`. O torrent-indexer aguarda o
 healthcheck desse serviço antes de iniciar.
 
+O start seguinte no docker-server isolou uma falha anterior à consulta: o
+FlareSolverr encontrou e iniciou o Chromium, mas encerrou com código `1` ao tentar
+gravar em `/app/.local`, recebendo `Read-only file system`. A causa confirmada é
+o filesystem `read_only`. O hardening foi preservado e a correção mínima monta
+somente `/app/.local` como tmpfs não persistente, com `mode=0700` e
+`uid=1000,gid=1000` para o usuário real `flaresolverr` da imagem. Não houve
+evidência técnica para adicionar `/app/.cache` ou caminhos sob
+`/home/flaresolverr`. O healthcheck continua usando `python3`, presente na imagem
+base Python 3.11. Uma nova validação de start no docker-server ainda está
+pendente; nenhuma nova consulta foi executada nesta alteração.
+
 Em HTTP diferente de `200`, o laboratório agora produz somente diagnóstico
 sanitizado. O corpo é classificado como JSON ou texto, apenas as chaves raiz
 `error`, `message`, `status`, `code` e `type` podem aparecer, e a mensagem é
