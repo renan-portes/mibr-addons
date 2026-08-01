@@ -1,0 +1,24 @@
+services:
+  flaresolverr:
+    image: mibr-lab/flaresolverr-runtime:v3.3.21
+    build:
+      context: ..
+      dockerfile: Dockerfile.flaresolverr
+    user: "1000:1000"
+    restart: "no"
+    read_only: false
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=128m
+      - /app/config:rw,nosuid,nodev,size=16m
+      - /app/.local:rw,exec,nosuid,nodev,size=64m,mode=0700,uid=1000,gid=1000
+    shm_size: 128m
+    networks:
+      - diagnostic
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8191/', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s

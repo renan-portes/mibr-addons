@@ -320,6 +320,41 @@ describe("torrent-indexer runtime contract laboratory", () => {
     assert.match(dockerignore, /^!flaresolverr-entrypoint\.sh$/m);
   });
 
+  it("defines isolated single-start FlareSolverr diagnostic scenarios", async () => {
+    const diagnosticUrl = new URL("../lab/torrent-indexer-runtime/diagnostics/", import.meta.url);
+    const [baseline, derived, capDrop, noNnp, writable, runner] = await Promise.all([
+      readFile(new URL("compose.a.yml", diagnosticUrl), "utf8"),
+      readFile(new URL("compose.b.yml", diagnosticUrl), "utf8"),
+      readFile(new URL("compose.c-cap-drop.yml", diagnosticUrl), "utf8"),
+      readFile(new URL("compose.c-no-nnp.yml", diagnosticUrl), "utf8"),
+      readFile(new URL("compose.d.yml", diagnosticUrl), "utf8"),
+      readFile(new URL("run-scenario.sh", diagnosticUrl), "utf8"),
+    ]);
+    const scenarios = [baseline, derived, capDrop, noNnp, writable];
+
+    for (const scenario of scenarios) {
+      assert.doesNotMatch(scenario, /ports:|privileged:|docker\.sock|volumes:|\/v1|indexers/);
+      assert.match(scenario, /restart: "no"/);
+      assert.match(scenario, /127\.0\.0\.1:8191/);
+    }
+
+    assert.match(baseline, /image: ghcr\.io\/flaresolverr\/flaresolverr:v3\.3\.21/);
+    assert.doesNotMatch(baseline, /read_only:|cap_drop:|security_opt:|user:|build:/);
+    assert.match(derived, /user: "1000:1000"[\s\S]*read_only: true/);
+    assert.match(derived, /\/app\/\.local:rw,exec,nosuid,nodev,size=64m/);
+    assert.match(derived, /no-new-privileges:true/);
+    assert.doesNotMatch(derived, /cap_drop:/);
+    assert.match(capDrop, /no-new-privileges:true[\s\S]*cap_drop:[\s\S]*- ALL/);
+    assert.doesNotMatch(noNnp, /no-new-privileges|cap_drop:/);
+    assert.match(writable, /user: "1000:1000"[\s\S]*read_only: false/);
+    assert.doesNotMatch(writable, /cap_add:|cap_drop:/);
+    assert.match(runner, /deadline=\$\(\(started_at \+ 120\)\)/);
+    assert.match(runner, /docker top "\$container_id"/);
+    assert.match(runner, /cat "\/proc\/\$pid\/status"/);
+    assert.match(runner, /'\{\{\.RestartCount\}\}'/);
+    assert.doesNotMatch(runner, /POST|\/v1|torrent-indexer|BluDV|indexers/);
+  });
+
   it("uses idempotent POSIX signal cleanup and exits without resuming", async () => {
     const text = await readFile(
       new URL("../lab/torrent-indexer-runtime/scripts/contract-test.sh", import.meta.url),
