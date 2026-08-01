@@ -1,0 +1,26 @@
+{
+  "response": {
+    "numFound": 3,
+    "start": 0,
+    "docs": [
+      {
+        "identifier": "public-domain-film-one",
+        "title": "Public Domain Film One",
+        "mediatype": "movies",
+        "external_identifier": ["urn:imdb:tt0000001"]
+      },
+      {
+        "identifier": "public-domain-film-no-video",
+        "title": "Public Domain Film Without Video",
+        "mediatype": "movies",
+        "external_identifier": ["urn:imdb:tt0000002"]
+      },
+      {
+        "identifier": "different-film",
+        "title": "Different Film",
+        "mediatype": "movies",
+        "external_identifier": ["urn:imdb:tt9999999"]
+      }
+    ]
+  }
+}

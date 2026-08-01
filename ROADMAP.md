@@ -12,6 +12,7 @@
 
 - [x] FixtureProvider
 - [x] HttpFixtureProvider
+- [x] Internet Archive Provider experimental (filmes)
 - [ ] BluDV
 - [ ] Torrentio
 - [ ] Outros providers externos

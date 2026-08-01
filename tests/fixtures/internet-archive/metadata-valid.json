@@ -1,0 +1,65 @@
+{
+  "metadata": {
+    "identifier": "public-domain-film-one",
+    "title": "Public Domain Film One",
+    "mediatype": "movies",
+    "external-identifier": "urn:imdb:tt0000001",
+    "licenseurl": "https://creativecommons.org/publicdomain/mark/1.0/"
+  },
+  "files": [
+    {
+      "name": "film-720p.webm",
+      "format": "WebM",
+      "source": "derivative",
+      "width": "1280",
+      "height": "720",
+      "size": "900000"
+    },
+    {
+      "name": "film-480p.mp4",
+      "format": "512Kb MPEG4",
+      "source": "derivative",
+      "width": "854",
+      "height": "480",
+      "size": "700000"
+    },
+    {
+      "name": "film-1080p.mp4",
+      "format": "h.264",
+      "source": "original",
+      "width": "1920",
+      "height": "1080",
+      "size": "1800000"
+    },
+    {
+      "name": "film-1080p.mp4",
+      "format": "h.264",
+      "source": "original",
+      "height": "1080"
+    },
+    {
+      "name": "__ia_thumb.jpg",
+      "format": "JPEG Thumb"
+    },
+    {
+      "name": "public-domain-film-one_meta.xml",
+      "format": "Metadata"
+    },
+    {
+      "name": "public-domain-film-one_archive.torrent",
+      "format": "Archive BitTorrent"
+    },
+    {
+      "name": "captions.vtt",
+      "format": "Web Video Text Tracks"
+    },
+    {
+      "name": "https://invalid.example/video.mp4",
+      "format": "MPEG4"
+    },
+    {
+      "name": "../unsafe.mp4",
+      "format": "MPEG4"
+    }
+  ]
+}
