@@ -280,3 +280,62 @@ acessada, a consulta `bludv` continua única e todos os temporários são apagad
 `logErrors` nunca reutiliza a linha original: prefixo do container, JSON,
 timestamp, IP, path, user-agent e query são descartados. Cada entrada contém
 somente categoria e uma mensagem curta normalizada.
+
+## Auditoria do `context canceled`
+
+O runtime com `FLARESOLVERR_ADDRESS` correto encerrou a consulta única em cerca
+de 116 ms com `failed to do request for url [redacted-url] context canceled` e
+sem evento correlacionado no FlareSolverr. A revisão integral do commit
+`0ba84b16c63a4add68534d1abba7c21660a8e959` encontrou esta cadeia:
+
+1. `api/bludv.go::HandlerBluDVIndexer` obtém `ctx := r.Context()` e o entrega a
+   `Requster.GetDocument`. O handler não cria filho, deadline ou cancelador.
+2. `requester/requester.go::GetDocument` reutiliza o mesmo contexto no Redis, no
+   GET direto e em `FlareSolverr.Get`. Seu `http.Client.Timeout` é 5.000 ms,
+   configurado por `REQUEST_TIMEOUT_MILLISECONDS`; não é um deadline no contexto
+   pai e não explica 116 ms.
+3. Uma falha de transporte no GET direto ou a detecção de challenge chama
+   `FlareSolverr.Get(ctx, url, 3)`. As expressões que criam o erro observado são
+   `fmt.Errorf("failed to do request for url %s: %w", url, err)` nas duas rotas
+   de fallback de `GetDocument`.
+4. `requester/flaresolverr.go::FlareSolverr.Get` consulta `ctx.Done()` enquanto
+   espera uma sessão e usa o mesmo contexto em
+   `http.NewRequestWithContext(ctx, "POST", .../v1, ...)`. Se o contexto já foi
+   cancelado, `RetrieveSession` ou `http.Client.Do` devolve `context.Canceled`;
+   o método Go foi invocado, mas o POST pode não chegar ao servidor. Portanto,
+   `correlatedEvents: []` é compatível com esta execução.
+5. O middleware de logging apenas envolve `ServeHTTP`; não cria nem cancela
+   contexto. `ParallelFlatMap`, suas goroutines e channels só são alcançados
+   depois que o documento inicial foi obtido, logo não participam deste erro.
+
+Não existem `context.WithCancel`, `context.WithTimeout`, `context.WithDeadline`,
+`cancel()`, `errgroup` ou helper de cancelamento compartilhado nesse caminho. O
+único proprietário do contexto é o servidor `net/http`: o contexto da requisição
+de entrada é cancelado quando a conexão do cliente termina, quando a requisição é
+cancelada pelo protocolo ou quando `ServeHTTP` retorna. Como o handler ainda
+estava executando, o limite causal restante é o encerramento/cancelamento da
+conexão de entrada. O cliente do laboratório envia HTTP/1.0 por `printf | nc`;
+o EOF imediato no stdin do `nc` é o mecanismo provável para o encerramento do
+lado de envio. A atribuição específica dos ~116 ms a esse EOF ainda requer os
+marcadores preparados abaixo em uma futura execução; não foi feita nova consulta.
+
+O harness offline `contextCancellationProbe.ts` usa somente servidores locais e
+barreiras. Ele cobre fluxo normal, cancelamento do pai durante o GET, deadline,
+cancelamento entre challenge e fallback, uma única invocação do fallback,
+ausência de POST recebido quando o contexto já está cancelado e fechamento de
+todas as operações. O erro encapsulado e a ausência de POST foram reproduzidos.
+
+Para uma validação futura, os marcadores sanitizados registram exclusivamente:
+etapa, estado do contexto, causa equivalente a `context.Cause`, presença de
+deadline, tempo restante arredondado, início do fallback, início/conclusão do
+POST e duração. Não há campos para URL, termo, query, cookies, headers, HTML,
+títulos, magnets, hashes ou payload. No upstream Go, os pontos correspondentes
+ficam imediatamente antes/depois de `GetDocument`, antes de `FlareSolverr.Get`,
+antes/depois de `httpClient.Do` e no retorno do handler.
+
+A correção recomendada é primeiro substituir o cliente `printf | nc` do teste
+por um cliente HTTP que mantenha a requisição de entrada aberta até consumir a
+resposta. Não se recomenda destacar o scraper de `r.Context()` nem usar
+`context.Background()`, pois isso perderia cancelamento legítimo do cliente. Uma
+alteração upstream só deve ser considerada se instrumentação posterior mostrar
+um cancelador diferente.

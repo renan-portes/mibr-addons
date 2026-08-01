@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { access, readFile, writeFile } from "node:fs/promises";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
@@ -20,6 +22,7 @@ import {
   sanitizeDiagnosticMessage,
   validateRuntimeContractConfig,
 } from "../lab/torrent-indexer-runtime/runtimeContractReport.js";
+import { runOfflineContextFlow } from "../lab/torrent-indexer-runtime/contextCancellationProbe.js";
 
 const VALID_CONFIG = {
   authorizationConfirmed: true,
@@ -31,6 +34,106 @@ const VALID_CONFIG = {
 };
 
 describe("torrent-indexer runtime contract laboratory", () => {
+  it("reproduces normal, parent, timeout, and premature cancellation around the fallback offline", async () => {
+    let directRequests = 0;
+    let fallbackPosts = 0;
+    let activeRequests = 0;
+    let blockDirect = false;
+    let releaseDirect: (() => void) | undefined;
+    let directReceived: (() => void) | undefined;
+
+    const directServer = createServer(async (_request, response) => {
+      directRequests++;
+      activeRequests++;
+      response.on("close", () => activeRequests--);
+      directReceived?.();
+      if (blockDirect) await new Promise<void>((resolve) => { releaseDirect = resolve; });
+      if (!response.destroyed) response.end("<html>Just a moment</html>");
+    });
+    const flareServer = createServer((_request, response) => {
+      fallbackPosts++;
+      activeRequests++;
+      response.on("close", () => activeRequests--);
+      response.end("<html>solved</html>");
+    });
+    await Promise.all([
+      new Promise<void>((resolve) => directServer.listen(0, "127.0.0.1", resolve)),
+      new Promise<void>((resolve) => flareServer.listen(0, "127.0.0.1", resolve)),
+    ]);
+    const directEndpoint = `http://127.0.0.1:${(directServer.address() as AddressInfo).port}`;
+    const flaresolverrEndpoint = `http://127.0.0.1:${(flareServer.address() as AddressInfo).port}/v1`;
+
+    try {
+      const normal = await runOfflineContextFlow({
+        directEndpoint, flaresolverrEndpoint, signal: new AbortController().signal,
+      });
+      assert.equal(normal.error, null);
+      assert.equal(normal.fallbackCalls, 1);
+      assert.equal(fallbackPosts, 1);
+
+      const parent = new AbortController();
+      blockDirect = true;
+      const received = new Promise<void>((resolve) => { directReceived = resolve; });
+      const parentRun = runOfflineContextFlow({ directEndpoint, flaresolverrEndpoint, signal: parent.signal });
+      await received;
+      parent.abort("parent-canceled");
+      const parentResult = await parentRun;
+      releaseDirect?.();
+      assert.match(parentResult.error ?? "", /context canceled/);
+      assert.equal(parentResult.fallbackCalls, 1);
+      assert.equal(fallbackPosts, 1);
+      assert.equal(parentResult.markers.at(-1)?.cause, "PARENT_CANCELED");
+
+      blockDirect = false;
+      directReceived = undefined;
+      const premature = new AbortController();
+      const prematureResult = await runOfflineContextFlow({
+        directEndpoint,
+        flaresolverrEndpoint,
+        signal: premature.signal,
+        beforeFallback: () => premature.abort("parent-canceled"),
+      });
+      assert.match(prematureResult.error ?? "", /context canceled/);
+      assert.equal(prematureResult.fallbackCalls, 1);
+      assert.equal(fallbackPosts, 1);
+
+      const timeout = new AbortController();
+      const timeoutResult = await runOfflineContextFlow({
+        directEndpoint,
+        flaresolverrEndpoint,
+        signal: timeout.signal,
+        deadlineAtMs: Date.now() + 5_000,
+        beforeFallback: () => timeout.abort(new DOMException("deadline", "TimeoutError")),
+      });
+      assert.match(timeoutResult.error ?? "", /context canceled/);
+      assert.equal(timeoutResult.markers.at(-1)?.cause, "TIMEOUT");
+      assert.equal(timeoutResult.markers.every((event) => Object.keys(event).every((key) => [
+        "stage", "contextState", "cause", "deadlinePresent", "remainingMsRounded",
+        "fallbackStarted", "postV1Started", "postV1Completed", "durationMs",
+      ].includes(key))), true);
+      assert.equal(fallbackPosts, 1);
+
+      const guarded = new AbortController();
+      const guardedResult = await runOfflineContextFlow({
+        directEndpoint,
+        flaresolverrEndpoint,
+        signal: guarded.signal,
+        beforeFallback: () => guarded.abort("parent-canceled"),
+        skipFallbackWhenCanceled: true,
+      });
+      assert.equal(guardedResult.fallbackCalls, 0);
+      assert.equal(fallbackPosts, 1);
+      assert.equal(directRequests, 5);
+    } finally {
+      releaseDirect?.();
+      await Promise.all([
+        new Promise<void>((resolve, reject) => directServer.close((error) => error ? reject(error) : resolve())),
+        new Promise<void>((resolve, reject) => flareServer.close((error) => error ? reject(error) : resolve())),
+      ]);
+    }
+    assert.equal(activeRequests, 0);
+  });
+
   it("classifies sanitized runtime diagnostics", () => {
     const cases = [
       ["Failed to list FlareSolverr sessions", "FLARESOLVERR"],
