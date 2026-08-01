@@ -1,0 +1,99 @@
+# Validação runtime do contrato torrent-indexer
+
+## Objetivo
+
+Comparar uma única resposta JSON real do torrent-indexer self-hosted com o
+`TorrentIndexerParser` existente, observando apenas HTTP, envelope, chaves, tipos,
+valores opcionais/vazios, tempo, tamanho e aceitação pelo parser.
+
+A revisão planejada é
+`0ba84b16c63a4add68534d1abba7c21660a8e959`, a mesma validada no laboratório
+self-host isolado.
+
+## Consulta planejada
+
+- indexer: `bludv`, somente um indexer;
+- termo: `Big Buck Bunny`, obra aberta escolhida para evitar pesquisa deliberada
+  por conteúdo comercial;
+- endpoint: `GET /indexers/bludv` via loopback dentro do container;
+- query: `q`, `filter_results=true` e `limit=1`;
+- limite fixo: um resultado; outros valores são rejeitados;
+- timeout global fixo: 20 segundos, incluindo o `docker compose exec`; outros
+  valores são rejeitados;
+- resposta máxima fixa: 1 MiB, com leitura de 1 MiB + 1 byte para detectar
+  excesso; outros valores são rejeitados;
+- repetição automática: nenhuma.
+
+A consulta real não faz parte do `npm test` e não deve ser executada no Codex.
+Ela exige cópia local de `.env.example` e confirmação explícita. Se retornar
+zero resultados ou falhar, o operador registra o ocorrido e encerra; não troca o
+termo, não tenta outro indexer e não repete aleatoriamente.
+
+## Política de sanitização
+
+O payload bruto existe apenas em arquivo temporário fora do repositório. A
+ferramenta manual informa somente:
+
+- `count` e `indexed_count`, quando inteiros válidos;
+- quantidade de elementos em `results`;
+- nomes das chaves da raiz e dos resultados;
+- tipos observados por chave;
+- quantidade de valores nulos, strings vazias e arrays vazios;
+- quantidade de itens aceitos e rejeitados por `TorrentIndexerParser`;
+- nomes dos campos sensíveis omitidos.
+
+Valores de `title`, `original_title`, `details`, `magnet_link`, `info_hash`,
+`trackers`, `files` e URLs nunca entram no relatório. O arquivo JSON é removido
+pela ferramenta em `finally`; o script remove novamente todos os temporários no
+cleanup defensivo. Nenhum payload real deve ser versionado.
+
+## Campos comparados
+
+O relatório permite verificar a presença e o tipo de `results`, `count`,
+`indexed_count`, `title`, `original_title`, `details`, `year`, `imdb`, `audio`,
+`magnet_link`, `info_hash`, `trackers`, `size`, `files`, `seed_count` e
+`leech_count`, sem mostrar seus valores sensíveis.
+
+## Critérios
+
+Sucesso completo exige:
+
+- build e containers healthy;
+- zero portas publicadas;
+- exatamente uma requisição dentro do container;
+- resposta HTTP `200`, dentro de 20 segundos e 1 MiB;
+- JSON válido com envelope observável;
+- relatório sanitizado produzido pelo parser real;
+- temporários, containers e rede removidos.
+
+Resposta `200` com zero resultados valida envelope e erro nulo, mas deixa a
+compatibilidade de itens **parcial**. Timeout, HTTP diferente de `200`, JSON
+inválido, resposta acima do limite, configuração divergente ou risco de exposição
+interrompem o teste sem retry.
+
+Convenção de saída:
+
+- `0`: contrato validado com pelo menos um resultado;
+- `1`: falha técnica ou de política;
+- `2`: `PARTIAL_ZERO_RESULTS`, resposta válida com zero resultados.
+
+O status parcial é exibido como “validação parcial: zero resultados” e encerra
+imediatamente sem alterar termo/indexer ou repetir a consulta. Cleanup ocorre nos
+três casos.
+
+## Limites e riscos
+
+- A rede dedicada permite egress durante o runtime controlado.
+- O indexer upstream pode mudar seletores ou contrato sem versionamento.
+- A requisição pode falhar ou retornar zero itens para a obra aberta.
+- O upstream pode registrar metadados internamente; seus logs são deliberadamente
+  não exibidos durante a consulta para evitar vazamento de payload.
+- O teste não abre magnets, segue URLs da resposta, consulta trackers manualmente,
+  baixa arquivos ou cria `StreamResult`.
+- O provider continua fora do bootstrap; não há Real-Debrid ou playback.
+
+## Cleanup
+
+Subshell POSIX e `finally` PowerShell removem os arquivos temporários e executam
+`docker compose down --remove-orphans` em sucesso, falha ou interrupção. A imagem
+de build pode permanecer no cache Docker; nenhum volume nomeado é criado.

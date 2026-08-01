@@ -1,0 +1,111 @@
+#!/usr/bin/env sh
+
+run_contract_test() (
+  set -eu
+
+  LAB_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+  REPO_ROOT=$(CDPATH= cd -- "$LAB_ROOT/../.." && pwd)
+  COMPOSE_FILE="$LAB_ROOT/compose.yml"
+  ENV_FILE="$LAB_ROOT/.env"
+  [ -f "$ENV_FILE" ] || {
+    printf '%s\n' "FAILED: copy .env.example to .env and explicitly confirm authorization." >&2
+    exit 1
+  }
+
+  set -a
+  # shellcheck disable=SC1090
+  . "$ENV_FILE"
+  set +a
+
+  RAW_FILE=$(mktemp)
+  BODY_FILE=$(mktemp)
+  CLEANED_UP=0
+  cleanup() {
+    [ "$CLEANED_UP" -eq 0 ] || return 0
+    CLEANED_UP=1
+    rm -f "$RAW_FILE" "$BODY_FILE"
+    printf '%s\n' "Cleanup: stopping containers and removing the dedicated network."
+    compose down --remove-orphans || true
+  }
+  on_signal() {
+    SIGNAL_STATUS=$1
+    trap - EXIT INT TERM
+    cleanup
+    exit "$SIGNAL_STATUS"
+  }
+  trap cleanup EXIT
+  trap 'on_signal 130' INT
+  trap 'on_signal 143' TERM
+
+  fail() {
+    printf 'FAILED: %s\n' "$1" >&2
+    exit 1
+  }
+
+  compose() {
+    docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"
+  }
+
+  printf '%s\n' "Validating the fixed, explicitly authorized query configuration..."
+  (cd "$REPO_ROOT" && npx --no-install tsx lab/torrent-indexer-runtime/tools/validate-config.ts) || fail "configuration validation"
+
+  printf '%s\n' "Starting the pinned runtime-contract laboratory..."
+  compose up -d --build --wait --wait-timeout 120 || fail "build/start/health wait"
+
+  printf '%s\n' "Confirming that neither container publishes a host port..."
+  for SERVICE in redis torrent-indexer; do
+    CONTAINER_ID=$(compose ps -q "$SERVICE") || fail "$SERVICE container ID lookup"
+    [ -n "$CONTAINER_ID" ] || fail "$SERVICE container ID lookup"
+    HOST_BINDINGS=$(docker inspect --format '{{json .HostConfig.PortBindings}}' "$CONTAINER_ID") || fail "$SERVICE HostConfig inspection"
+    RUNTIME_PORTS=$(docker inspect --format '{{json .NetworkSettings.Ports}}' "$CONTAINER_ID") || fail "$SERVICE NetworkSettings inspection"
+    [ "$HOST_BINDINGS" = "{}" ] || fail "$SERVICE has configured host bindings"
+    if printf '%s' "$RUNTIME_PORTS" | grep -q 'HostIp'; then fail "$SERVICE has runtime host bindings"; fi
+  done
+
+  printf '%s\n' "Executing the single authorized contract query (no retry)..."
+  START_MS=$(date +%s%3N)
+  # CONTRACT_QUERY_ONCE
+  timeout 20s docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T torrent-indexer sh -c "timeout 20s sh -c \"printf 'GET /indexers/${CONTRACT_TEST_INDEXER}?q=Big%20Buck%20Bunny&filter_results=true&limit=1 HTTP/1.0\\r\\nHost: 127.0.0.1\\r\\nConnection: close\\r\\n\\r\\n' | nc -w 20 127.0.0.1 7006\" | head -c $((1048576 + 1))" >"$RAW_FILE" || fail "single contract query transport/timeout"
+  END_MS=$(date +%s%3N)
+
+  RESPONSE_BYTES=$(wc -c <"$RAW_FILE" | tr -d ' ')
+  [ "$RESPONSE_BYTES" -le "$CONTRACT_TEST_MAX_RESPONSE_BYTES" ] || fail "response exceeded configured byte limit"
+  HTTP_CODE=$(tr -d '\r' <"$RAW_FILE" | sed -n '1s/^HTTP\/[0-9.]* \([0-9][0-9][0-9]\).*/\1/p')
+  [ -n "$HTTP_CODE" ] || fail "response did not contain a parseable HTTP status"
+  tr -d '\r' <"$RAW_FILE" | sed '1,/^$/d' >"$BODY_FILE"
+  [ -s "$BODY_FILE" ] || fail "response body was empty"
+
+  printf 'HTTP status: %s\n' "$HTTP_CODE"
+  printf 'Duration: %s ms\n' "$((END_MS - START_MS))"
+  printf 'Response size: %s bytes\n' "$RESPONSE_BYTES"
+  [ "$HTTP_CODE" = "200" ] || fail "contract endpoint returned HTTP $HTTP_CODE"
+
+  printf '%s\n' "Producing the sanitized parser compatibility report..."
+  set +e
+  (cd "$REPO_ROOT" && npx --no-install tsx lab/torrent-indexer-runtime/tools/analyze-response.ts "$BODY_FILE")
+  ANALYSIS_STATUS=$?
+  set -e
+  BODY_FILE=
+  case "$ANALYSIS_STATUS" in
+    0)
+      printf '%s\n' "Contract validated with at least one result."
+      ;;
+    2)
+      printf '%s\n' "Validação parcial: zero resultados. No second query was attempted."
+      exit 2
+      ;;
+    *)
+      fail "JSON/parser analysis"
+      ;;
+  esac
+
+  printf '%s\n' "Contract test completed. No response values, magnets, hashes, trackers, titles, or URLs were printed."
+)
+
+run_contract_test
+STATUS=$?
+case "$STATUS" in
+  0) exit 0 ;;
+  2) printf '%s\n' "Contract test ended with partial validation (exit 2)."; exit 2 ;;
+  *) printf 'Contract test failed (exit %s); no automatic query retry was attempted.\n' "$STATUS" >&2; exit 1 ;;
+esac

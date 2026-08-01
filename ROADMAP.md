@@ -16,7 +16,9 @@
 - [x] Pesquisa arquitetural do torrent-indexer
 - [x] Cliente/provider experimental do torrent-indexer (somente descoberta local)
 - [x] Laboratório self-host isolado do torrent-indexer
+- [ ] Validação controlada do contrato runtime do torrent-indexer (em andamento)
 - [ ] Consulta real aos indexadores no self-host
+- [ ] Consultas funcionais a conteúdo comercial (fora de escopo)
 - [ ] Self-host de produção do torrent-indexer
 - [ ] Integração de playback/debrid
 - [ ] BluDV

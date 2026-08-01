@@ -12,6 +12,7 @@
 - Cliente e provider experimental, em modo descoberta, para a API JSON do torrent-indexer.
 - Parsing defensivo e fixtures sintéticas para respostas do torrent-indexer.
 - Laboratório Docker isolado e descartável do torrent-indexer, validado em runtime sem consultas a indexadores.
+- Laboratório manual para comparação sanitizada e controlada do contrato runtime do torrent-indexer.
 - Timeout e cancelamento por provider.
 
 ### Changed
