@@ -67,7 +67,8 @@ browser e a API interna do FlareSolverr ativos, `FLARESOLVERR_URL=PRESENT`, DNS 
 egress disponíveis e zero bindings. A única consulta retornou HTTP `500` em 117
 ms com `{"error":"response is a challange"}`, seguida de cleanup sem repetição.
 Logo, a infraestrutura deixou de ser o bloqueador e o diagnóstico anterior de
-URL ausente era um falso positivo.
+URL ausente era um falso positivo. Esse registro é histórico: a variável não é
+consumida pelo upstream fixado.
 
 No commit upstream fixado, a mensagem é criada em `requester/requester.go`, na
 função `Requster.GetDocument`, quando a resposta final ainda é detectada como
@@ -76,8 +77,10 @@ challenge, está vazia ou não é HTML válido após o caminho do FlareSolverr.
 fallback chama `requester/flaresolverr.go::FlareSolverr.Get`, que usa sessão e
 faz `request.get` em `/v1`. A grafia `challange` é literal do torrent-indexer,
 não do site nem do FlareSolverr. Também foi constatado que `main.go` lê
-`FLARESOLVERR_ADDRESS`, enquanto o laboratório hoje observa `FLARESOLVERR_URL`;
-essa diferença foi registrada para investigação, sem mudar o Compose ou o fluxo.
+`FLARESOLVERR_ADDRESS`. O laboratório agora fornece exatamente
+`FLARESOLVERR_ADDRESS=http://flaresolverr:8191`; o diagnóstico ambiental acompanha
+essa variável, `FLARESOLVERR_POOL_SIZE`, `REDIS_HOST` e
+`REQUEST_TIMEOUT_MILLISECONDS` apenas como presença.
 
 O diagnóstico agora classifica esse payload como
 `FLARESOLVERR_CHALLENGE_UNRESOLVED`. Antes da consulta única, os scripts registram
@@ -91,7 +94,8 @@ query, cookies, HTML, headers e demais dados sensíveis nunca são reproduzidos.
 Linhas antigas, sem timestamp ou com timestamp inválido são ignoradas.
 
 O runtime inclui FlareSolverr `v3.3.21` somente na rede Docker, sem host port. O
-torrent-indexer usa `http://flaresolverr:8191` e aguarda seu healthcheck. Essa
+torrent-indexer recebe o endereço interno por `FLARESOLVERR_ADDRESS` e aguarda
+seu healthcheck. Essa
 dependência corrige a causa confirmada do challenge HTTP `500` do BluDV no
 self-host; não altera o laboratório isolado anterior.
 

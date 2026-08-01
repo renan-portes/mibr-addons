@@ -57,7 +57,7 @@ describe("torrent-indexer runtime contract laboratory", () => {
         `torrent-indexer | ${JSON.stringify({ level: "error", time: "2026-08-01T12:00:00Z", client_ip: "192.0.2.10", path: "/indexers/bludv", query: "Big Buck Bunny", user_agent: "secret-agent", message: `FlareSolverr failed at ${sensitive}` })}`,
         JSON.stringify({ level: "fatal", message: "Redis timeout" }),
       ].join("\n"),
-      "FLARESOLVERR_URL=ABSENT\nREDIS_HOST=PRESENT\nREDIS_HOST=secret-value",
+      "FLARESOLVERR_ADDRESS=PRESENT\nFLARESOLVERR_POOL_SIZE=PRESENT\nREDIS_HOST=PRESENT\nREQUEST_TIMEOUT_MILLISECONDS=PRESENT\nREDIS_HOST=secret-value",
       "AVAILABLE",
       "UNAVAILABLE",
     );
@@ -68,7 +68,12 @@ describe("torrent-indexer runtime contract laboratory", () => {
       category: "FLARESOLVERR",
       message: "A FlareSolverr operation failed.",
     });
-    assert.deepEqual(diagnostic.environmentPresence, { FLARESOLVERR_URL: "ABSENT", REDIS_HOST: "PRESENT" });
+    assert.deepEqual(diagnostic.environmentPresence, {
+      FLARESOLVERR_ADDRESS: "PRESENT",
+      FLARESOLVERR_POOL_SIZE: "PRESENT",
+      REDIS_HOST: "PRESENT",
+      REQUEST_TIMEOUT_MILLISECONDS: "PRESENT",
+    });
     assert.equal(diagnostic.dns, "AVAILABLE");
     assert.equal(diagnostic.egress, "UNAVAILABLE");
     for (const value of ["torrent-indexer |", "2026-08-01", "client_ip", "192.0.2.10", "/indexers/bludv", "query", "secret-agent", "example.invalid", "magnet:?", hash, "tracker.invalid", "Secret", "movie.mkv", "must-not-appear", "secret-value", "Big%20Buck%20Bunny"]) {
@@ -77,23 +82,34 @@ describe("torrent-indexer runtime contract laboratory", () => {
   });
 
   it("keeps FLARESOLVERR_ADDRESS presence as metadata and classifies from execution evidence", () => {
-    for (const urlPresence of ["PRESENT", "ABSENT"] as const) {
-      const diagnostic = createSanitizedErrorDiagnostic(
-        '{"error":"response is a challange"}',
-        '2026-08-01T12:00:00.117Z {"level":"error","message":"response is a challange"}',
-        `FLARESOLVERR_ADDRESS=PRESENT\nFLARESOLVERR_URL=${urlPresence}`,
-        "AVAILABLE",
-        "AVAILABLE",
-      );
-      const serialized = JSON.stringify(diagnostic);
+    const diagnostic = createSanitizedErrorDiagnostic(
+      '{"error":"response is a challange"}',
+      '2026-08-01T12:00:00.117Z {"level":"error","message":"response is a challange"}',
+      "FLARESOLVERR_ADDRESS=PRESENT\nFLARESOLVERR_POOL_SIZE=PRESENT\nREDIS_HOST=PRESENT\nREQUEST_TIMEOUT_MILLISECONDS=PRESENT",
+      "AVAILABLE",
+      "AVAILABLE",
+    );
+    const serialized = JSON.stringify(diagnostic);
 
-      assert.equal(diagnostic.category, "FLARESOLVERR_CHALLENGE_UNRESOLVED");
-      assert.equal(diagnostic.environmentPresence.FLARESOLVERR_ADDRESS, "PRESENT");
-      assert.equal(diagnostic.environmentPresence.FLARESOLVERR_URL, urlPresence);
-      assert.equal(diagnostic.logErrors.some((event) => event.category === "CONFIGURATION"), false);
-      assert.equal(serialized.includes("URL is not configured"), false);
-      assert.equal(serialized.includes("URL ausente"), false);
-    }
+    assert.equal(diagnostic.category, "FLARESOLVERR_CHALLENGE_UNRESOLVED");
+    assert.equal(diagnostic.environmentPresence.FLARESOLVERR_ADDRESS, "PRESENT");
+    assert.equal(diagnostic.logErrors.some((event) => event.category === "CONFIGURATION"), false);
+    assert.equal(serialized.includes("URL is not configured"), false);
+    assert.equal(serialized.includes("URL ausente"), false);
+  });
+
+  it("does not infer a configuration cause when FLARESOLVERR_ADDRESS is absent", () => {
+    const diagnostic = createSanitizedErrorDiagnostic(
+      '{"error":"unexpected failure"}',
+      "",
+      "FLARESOLVERR_ADDRESS=ABSENT\nFLARESOLVERR_POOL_SIZE=PRESENT\nREDIS_HOST=PRESENT\nREQUEST_TIMEOUT_MILLISECONDS=PRESENT",
+      "AVAILABLE",
+      "AVAILABLE",
+    );
+
+    assert.equal(diagnostic.environmentPresence.FLARESOLVERR_ADDRESS, "ABSENT");
+    assert.equal(diagnostic.category, "UNKNOWN");
+    assert.equal(diagnostic.logErrors.some((event) => event.category === "CONFIGURATION"), false);
   });
 
   it("ignores untimestamped, invalid, and pre-marker log lines completely", () => {
@@ -109,7 +125,7 @@ describe("torrent-indexer runtime contract laboratory", () => {
     const diagnostic = createSanitizedErrorDiagnostic(
       '{"error":"response is a challange"}',
       logs,
-      "FLARESOLVERR_ADDRESS=ABSENT\nFLARESOLVERR_URL=PRESENT",
+      "FLARESOLVERR_ADDRESS=ABSENT\nFLARESOLVERR_POOL_SIZE=PRESENT\nREDIS_HOST=PRESENT\nREQUEST_TIMEOUT_MILLISECONDS=PRESENT",
       "AVAILABLE",
       "AVAILABLE",
       { torrentIndexerLogs: "", flaresolverrLogs: logs, marker },
@@ -187,7 +203,7 @@ describe("torrent-indexer runtime contract laboratory", () => {
     const diagnostic = createSanitizedErrorDiagnostic(
       '{"error":"response is a challange"}',
       torrentLogs,
-      "FLARESOLVERR_URL=PRESENT\nFLARESOLVERR_ADDRESS=ABSENT",
+      "FLARESOLVERR_ADDRESS=ABSENT\nFLARESOLVERR_POOL_SIZE=PRESENT\nREDIS_HOST=PRESENT\nREQUEST_TIMEOUT_MILLISECONDS=PRESENT",
       "AVAILABLE",
       "AVAILABLE",
       { torrentIndexerLogs: torrentLogs, flaresolverrLogs, marker },
@@ -195,7 +211,7 @@ describe("torrent-indexer runtime contract laboratory", () => {
     const serialized = JSON.stringify(diagnostic);
 
     assert.equal(diagnostic.category, "FLARESOLVERR_CHALLENGE_UNRESOLVED");
-    assert.equal(diagnostic.environmentPresence.FLARESOLVERR_URL, "PRESENT");
+    assert.equal(diagnostic.environmentPresence.FLARESOLVERR_ADDRESS, "ABSENT");
     assert.equal(serialized.includes("URL is not configured"), false);
     assert.equal(events.some((event) => event.service === "TORRENT_INDEXER" && event.stage === "SESSION"), true);
     assert.equal(events.some((event) => event.service === "FLARESOLVERR" && event.stage === "INTERNAL_HTTP" && event.statusHttp === 200 && event.durationMs === 7), true);
@@ -349,8 +365,11 @@ describe("torrent-indexer runtime contract laboratory", () => {
       assert.match(text, /20 \* 1000|timeout[^\n]*20s/);
       assert.match(text, /1048576 \+ 1|maxBytes \+ 1/);
       assert.match(text, /diagnose-error\.ts/);
-      assert.match(text, /FLARESOLVERR_URL/);
       assert.match(text, /FLARESOLVERR_ADDRESS/);
+      assert.match(text, /FLARESOLVERR_POOL_SIZE/);
+      assert.match(text, /REDIS_HOST/);
+      assert.match(text, /REQUEST_TIMEOUT_MILLISECONDS/);
+      assert.doesNotMatch(text, /FLARESOLVERR_URL/);
       assert.match(text, /query-marker\.txt/);
       assert.match(text, /logs --no-color --timestamps --since/);
       assert.match(text, /flaresolverr-logs\.raw/);
@@ -447,7 +466,8 @@ describe("torrent-indexer runtime contract laboratory", () => {
       compose,
       /flaresolverr:[\s\S]*healthcheck:[\s\S]*test: \["CMD", "python3", "-c"/,
     );
-    assert.match(compose, /FLARESOLVERR_URL: http:\/\/flaresolverr:8191/);
+    assert.match(torrentIndexerBlock, /FLARESOLVERR_ADDRESS: http:\/\/flaresolverr:8191/);
+    assert.doesNotMatch(compose, /FLARESOLVERR_URL/);
     assert.match(compose, /depends_on:[\s\S]*flaresolverr:[\s\S]*condition: service_healthy/);
     assert.doesNotMatch(compose, /flaresolverr:[\s\S]*?ports:/);
     assert.doesNotMatch(compose, /privileged:|docker\.sock|:latest|volumes:/);

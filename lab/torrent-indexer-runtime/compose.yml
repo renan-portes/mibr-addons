@@ -79,7 +79,7 @@ services:
       SHORT_LIVED_CACHE_EXPIRATION: 5m
       LONG_LIVED_CACHE_EXPIRATION: 1h
       FLARESOLVERR_POOL_SIZE: "1"
-      FLARESOLVERR_URL: http://flaresolverr:8191
+      FLARESOLVERR_ADDRESS: http://flaresolverr:8191
       FALLBACK_TITLE_ENABLED: "false"
       MAGNET_METADATA_API_ENABLED: "false"
     depends_on:

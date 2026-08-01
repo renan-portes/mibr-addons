@@ -155,12 +155,13 @@ Isso comprova operação pública do contrato para `bludv` e
 no self-host é provavelmente ambiental ou de configuração, não evidência de uma
 quebra global do indexer.
 
-O diagnóstico self-host posterior confirmou a causa: HTTP `500`, payload JSON
-com erro de challenge, categoria `FLARESOLVERR`, `FLARESOLVERR_URL` ausente,
-DNS/egress disponíveis e Redis funcional. O laboratório runtime agora inclui
-`ghcr.io/flaresolverr/flaresolverr:v3.3.21` na mesma rede, sem porta publicada, e
-configura `FLARESOLVERR_URL=http://flaresolverr:8191`. O torrent-indexer aguarda o
-healthcheck desse serviço antes de iniciar.
+O diagnóstico self-host posterior registrou HTTP `500`, payload JSON com erro de
+challenge, categoria `FLARESOLVERR`, `FLARESOLVERR_URL` ausente, DNS/egress
+disponíveis e Redis funcional. Esse uso de `FLARESOLVERR_URL` foi parte histórica
+da investigação e depois se confirmou incompatível com o upstream fixado. O
+laboratório runtime inclui `ghcr.io/flaresolverr/flaresolverr:v3.3.21` na mesma
+rede, sem porta publicada, e o torrent-indexer aguarda o healthcheck desse
+serviço antes de iniciar.
 
 O start seguinte no docker-server isolou uma falha anterior à consulta: o
 FlareSolverr encontrou e iniciou o Chromium, mas encerrou com código `1` ao tentar
@@ -240,7 +241,9 @@ aceitável, mas isoladamente não prova se uma chamada válida ao FlareSolverr
 ocorreu. O código fixado ainda revela uma diferença importante: `main.go` passa
 `FLARESOLVERR_ADDRESS` a `NewFlareSolverr`, enquanto o Compose e o diagnóstico
 anteriores observam `FLARESOLVERR_URL`. Isso permanece como hipótese de
-configuração a correlacionar, sem alteração de Compose nesta etapa.
+configuração naquele ponto da investigação. A correção posterior substituiu a
+variável no Compose por `FLARESOLVERR_ADDRESS=http://flaresolverr:8191`, sem
+alterar o restante do fluxo.
 
 A categoria passou a `FLARESOLVERR_CHALLENGE_UNRESOLVED`. Ela se apoia no erro
 literal e não afirma variável ausente. Imediatamente antes da única consulta, os
@@ -265,9 +268,10 @@ mascarada e limitada a 200 caracteres. Conteúdo inseguro vira
 Somente logs `error`/`fatal` da janela atual são considerados e classificados
 como `FLARESOLVERR_CHALLENGE_UNRESOLVED`, `FLARESOLVERR`, `DNS_NETWORK`,
 `EXTERNAL_HTTP`, `TIMEOUT`, `PARSER_SCRAPER`, `REDIS`, `CONFIGURATION` ou
-`UNKNOWN`. Variáveis relevantes são registradas
-apenas como `PRESENT`/`ABSENT`, incluindo separadamente `FLARESOLVERR_URL` e
-`FLARESOLVERR_ADDRESS`; sua presença é metadado e não determina a categoria.
+`UNKNOWN`. Variáveis operacionais relevantes são registradas apenas como
+`PRESENT`/`ABSENT`: `FLARESOLVERR_ADDRESS`, `FLARESOLVERR_POOL_SIZE`, `REDIS_HOST`
+e `REQUEST_TIMEOUT_MILLISECONDS`. Sua presença é metadado e não determina a
+categoria; `FLARESOLVERR_URL` permanece apenas no histórico da investigação.
 DNS e egress são
 checados sem nova busca: resolução do host público e `wget --spider` somente na
 raiz `https://torrent-indexer.darklyn.org/`. Nenhuma página de resultados é

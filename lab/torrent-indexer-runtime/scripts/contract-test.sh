@@ -124,7 +124,7 @@ run_contract_test() (
     printf '%s\n' "Collecting sanitized failure diagnostics without printing raw response or logs."
     compose logs --no-color --timestamps --since "$QUERY_MARKER" torrent-indexer >"$LOG_FILE" 2>/dev/null || :
     compose logs --no-color --timestamps --since "$QUERY_MARKER" flaresolverr >"$FLARESOLVERR_LOG_FILE" 2>/dev/null || :
-    compose exec -T torrent-indexer sh -c 'for name in FLARESOLVERR_URL FLARESOLVERR_ADDRESS FLARESOLVERR_POOL_SIZE REDIS_HOST REQUEST_TIMEOUT_MILLISECONDS; do if printenv "$name" >/dev/null 2>&1; then printf "%s=PRESENT\n" "$name"; else printf "%s=ABSENT\n" "$name"; fi; done' >"$ENVIRONMENT_FILE" 2>/dev/null || :
+    compose exec -T torrent-indexer sh -c 'for name in FLARESOLVERR_ADDRESS FLARESOLVERR_POOL_SIZE REDIS_HOST REQUEST_TIMEOUT_MILLISECONDS; do if printenv "$name" >/dev/null 2>&1; then printf "%s=PRESENT\n" "$name"; else printf "%s=ABSENT\n" "$name"; fi; done' >"$ENVIRONMENT_FILE" 2>/dev/null || :
     if compose exec -T torrent-indexer sh -c 'getent hosts torrent-indexer.darklyn.org >/dev/null 2>&1'; then printf '%s\n' AVAILABLE >"$DNS_FILE"; else printf '%s\n' UNAVAILABLE >"$DNS_FILE"; fi
     if compose exec -T torrent-indexer sh -c 'timeout 5s wget --spider -q https://torrent-indexer.darklyn.org/'; then printf '%s\n' AVAILABLE >"$EGRESS_FILE"; else printf '%s\n' UNAVAILABLE >"$EGRESS_FILE"; fi
     tools_compose run --rm -T contract-tools lab/torrent-indexer-runtime/tools/diagnose-error.ts /contract-input/response.json /contract-input/error-logs.raw /contract-input/environment.presence /contract-input/dns.status /contract-input/egress.status /contract-input/error-logs.raw /contract-input/flaresolverr-logs.raw /contract-input/query-marker.txt || fail "sanitized error diagnosis"

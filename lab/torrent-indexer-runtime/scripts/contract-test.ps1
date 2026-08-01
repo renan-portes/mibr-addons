@@ -123,7 +123,7 @@ function Invoke-RuntimeContractTest {
       [IO.File]::WriteAllText($logFile, $logs)
       $flaresolverrLogs = (& docker compose --env-file $envFile -f $composeFile logs --no-color --timestamps --since $queryMarker flaresolverr 2>$null) -join "`n"
       [IO.File]::WriteAllText($flaresolverrLogFile, $flaresolverrLogs)
-      $presenceCommand = 'for name in FLARESOLVERR_URL FLARESOLVERR_ADDRESS FLARESOLVERR_POOL_SIZE REDIS_HOST REQUEST_TIMEOUT_MILLISECONDS; do if printenv "$name" >/dev/null 2>&1; then printf "%s=PRESENT\n" "$name"; else printf "%s=ABSENT\n" "$name"; fi; done'
+      $presenceCommand = 'for name in FLARESOLVERR_ADDRESS FLARESOLVERR_POOL_SIZE REDIS_HOST REQUEST_TIMEOUT_MILLISECONDS; do if printenv "$name" >/dev/null 2>&1; then printf "%s=PRESENT\n" "$name"; else printf "%s=ABSENT\n" "$name"; fi; done'
       $presence = (& docker compose --env-file $envFile -f $composeFile exec -T torrent-indexer sh -c $presenceCommand 2>$null) -join "`n"
       [IO.File]::WriteAllText($environmentFile, $presence)
       & docker compose --env-file $envFile -f $composeFile exec -T torrent-indexer sh -c 'getent hosts torrent-indexer.darklyn.org >/dev/null 2>&1'
