@@ -62,6 +62,34 @@ escritas no root filesystem além dos tmpfs identificados. A exceção mínima �
 `read_only: false` somente no FlareSolverr; usuário `1000:1000`, tmpfs,
 `no-new-privileges`, `cap_drop: ALL` e os demais controles continuam ativos.
 
+A execução runtime posterior confirmou os três serviços `healthy`, o teste do
+browser e a API interna do FlareSolverr ativos, `FLARESOLVERR_URL=PRESENT`, DNS e
+egress disponíveis e zero bindings. A única consulta retornou HTTP `500` em 117
+ms com `{"error":"response is a challange"}`, seguida de cleanup sem repetição.
+Logo, a infraestrutura deixou de ser o bloqueador e o diagnóstico anterior de
+URL ausente era um falso positivo.
+
+No commit upstream fixado, a mensagem é criada em `requester/requester.go`, na
+função `Requster.GetDocument`, quando a resposta final ainda é detectada como
+challenge, está vazia ou não é HTML válido após o caminho do FlareSolverr.
+`api/bludv.go::HandlerBluDVIndexer` recebe esse erro e responde HTTP `500`. O
+fallback chama `requester/flaresolverr.go::FlareSolverr.Get`, que usa sessão e
+faz `request.get` em `/v1`. A grafia `challange` é literal do torrent-indexer,
+não do site nem do FlareSolverr. Também foi constatado que `main.go` lê
+`FLARESOLVERR_ADDRESS`, enquanto o laboratório hoje observa `FLARESOLVERR_URL`;
+essa diferença foi registrada para investigação, sem mudar o Compose ou o fluxo.
+
+O diagnóstico agora classifica esse payload como
+`FLARESOLVERR_CHALLENGE_UNRESOLVED`. Antes da consulta única, os scripts registram
+um marcador UTC e coletam separadamente os logs dos dois serviços com
+`--since <marcador> --timestamps`. O relatório retém apenas eventos estruturados
+de sessão, chamada interna e resolução de challenge, com resultado, status HTTP
+e duração quando observáveis. No formato real da `v3.3.21`, `Response in <n> s`
+é associado, dentro do mesmo serviço e da mesma janela, ao `Incoming request =>
+POST /v1` pendente; segundos são convertidos para milissegundos inteiros. URLs,
+query, cookies, HTML, headers e demais dados sensíveis nunca são reproduzidos.
+Linhas antigas, sem timestamp ou com timestamp inválido são ignoradas.
+
 O runtime inclui FlareSolverr `v3.3.21` somente na rede Docker, sem host port. O
 torrent-indexer usa `http://flaresolverr:8191` e aguarda seu healthcheck. Essa
 dependência corrige a causa confirmada do challenge HTTP `500` do BluDV no

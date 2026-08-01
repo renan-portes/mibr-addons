@@ -208,16 +208,67 @@ read-only, enquanto o FlareSolverr preserva usuário `1000:1000`, tmpfs,
 `no-new-privileges`, `cap_drop: ALL`, limites, rede interna e zero portas
 publicadas. Nenhuma consulta real foi executada para chegar a essa conclusão.
 
+## Origem do challenge não resolvido
+
+A execução controlada seguinte confirmou FlareSolverr, Redis e torrent-indexer
+`healthy`, browser test e API interna do FlareSolverr funcionais,
+`FLARESOLVERR_URL=PRESENT`, DNS/egress disponíveis e zero host bindings. A
+consulta única ao `bludv` retornou HTTP `500` em 117 ms com o payload sanitizado
+`{"error":"response is a challange"}`; houve cleanup completo e nenhuma
+repetição. Portanto, a infraestrutura não é mais o bloqueador, e a mensagem
+anterior de URL ausente foi um falso positivo do classificador.
+
+No torrent-indexer `0ba84b16c63a4add68534d1abba7c21660a8e959`, o fluxo é:
+
+1. `main.go` registra `/indexers/bludv` em
+   `api/bludv.go::HandlerBluDVIndexer`.
+2. O handler monta a busca e chama `requester.GetDocument`.
+3. `requester/requester.go::Requster.GetDocument` tenta o cliente HTTP direto;
+   ao detectar challenge, chama `requester/flaresolverr.go::FlareSolverr.Get`.
+4. `FlareSolverr.Get` obtém uma sessão e envia `request.get` para `/v1`. Um HTTP
+   `500` interno pode acionar as tentativas recursivas implementadas pelo próprio
+   upstream. A resposta `ok` fornece HTML ou, quando vazio com cookies, provoca
+   uma requisição complementar usando esses cookies.
+5. De volta a `GetDocument`, se o corpo final ainda casa com o regex de
+   challenge, está vazio ou não é HTML válido, a função cria literalmente
+   `response is a challange`.
+6. `HandlerBluDVIndexer` serializa esse erro e devolve HTTP `500`.
+
+Assim, a string vem do torrent-indexer, não diretamente do site, scraper ou
+FlareSolverr. Ela prova que o caminho de obtenção não produziu um documento
+aceitável, mas isoladamente não prova se uma chamada válida ao FlareSolverr
+ocorreu. O código fixado ainda revela uma diferença importante: `main.go` passa
+`FLARESOLVERR_ADDRESS` a `NewFlareSolverr`, enquanto o Compose e o diagnóstico
+anteriores observam `FLARESOLVERR_URL`. Isso permanece como hipótese de
+configuração a correlacionar, sem alteração de Compose nesta etapa.
+
+A categoria passou a `FLARESOLVERR_CHALLENGE_UNRESOLVED`. Ela se apoia no erro
+literal e não afirma variável ausente. Imediatamente antes da única consulta, os
+scripts persistem um marcador UTC; depois coletam, separadamente, logs do
+torrent-indexer e FlareSolverr com timestamps e `--since` esse marcador. O
+processador rejeita também qualquer linha anterior ou sem timestamp e produz
+somente eventos estruturados de sessão, HTTP interno e challenge, incluindo
+sucesso/falha, status e duração quando observáveis. O par de linhas real da
+`v3.3.21`, `Incoming request => POST /v1` e `Response in <n> s`, é correlacionado
+por serviço e por ordem dentro da janela; a duração em segundos é convertida
+para milissegundos inteiros. Linhas antigas, sem timestamp ou com timestamp
+inválido são rejeitadas. Texto bruto, URL externa, termo, query, cookies, HTML,
+headers, títulos, magnets, hashes e trackers são omitidos e os temporários
+continuam apagados no cleanup.
+
 Em HTTP diferente de `200`, o laboratório agora produz somente diagnóstico
 sanitizado. O corpo é classificado como JSON ou texto, apenas as chaves raiz
 `error`, `message`, `status`, `code` e `type` podem aparecer, e a mensagem é
 mascarada e limitada a 200 caracteres. Conteúdo inseguro vira
 `upstream returned an opaque error payload.`
 
-Somente logs `error`/`fatal` são considerados e classificados como
-`FLARESOLVERR`, `DNS_NETWORK`, `EXTERNAL_HTTP`, `TIMEOUT`, `PARSER_SCRAPER`,
-`REDIS`, `CONFIGURATION` ou `UNKNOWN`. Variáveis relevantes são registradas
-apenas como `PRESENT`/`ABSENT`, com atenção a `FLARESOLVERR_URL`. DNS e egress são
+Somente logs `error`/`fatal` da janela atual são considerados e classificados
+como `FLARESOLVERR_CHALLENGE_UNRESOLVED`, `FLARESOLVERR`, `DNS_NETWORK`,
+`EXTERNAL_HTTP`, `TIMEOUT`, `PARSER_SCRAPER`, `REDIS`, `CONFIGURATION` ou
+`UNKNOWN`. Variáveis relevantes são registradas
+apenas como `PRESENT`/`ABSENT`, incluindo separadamente `FLARESOLVERR_URL` e
+`FLARESOLVERR_ADDRESS`; sua presença é metadado e não determina a categoria.
+DNS e egress são
 checados sem nova busca: resolução do host público e `wget --spider` somente na
 raiz `https://torrent-indexer.darklyn.org/`. Nenhuma página de resultados é
 acessada, a consulta `bludv` continua única e todos os temporários são apagados.

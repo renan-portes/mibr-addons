@@ -12,6 +12,7 @@ import {
   CONTRACT_MAX_RESPONSE_BYTES,
   CONTRACT_TIMEOUT_SECONDS,
   classifyDiagnostic,
+  correlateRuntimeLogs,
   createSanitizedErrorDiagnostic,
   createRuntimeContractReport,
   diagnoseAndDeleteTemporaryFiles,
@@ -33,6 +34,8 @@ describe("torrent-indexer runtime contract laboratory", () => {
   it("classifies sanitized runtime diagnostics", () => {
     const cases = [
       ["Failed to list FlareSolverr sessions", "FLARESOLVERR"],
+      ["response is a challange", "FLARESOLVERR_CHALLENGE_UNRESOLVED"],
+      ["response is a challenge", "FLARESOLVERR_CHALLENGE_UNRESOLVED"],
       ["DNS name resolution failed", "DNS_NETWORK"],
       ["external HTTP status code 502", "EXTERNAL_HTTP"],
       ["request timeout exceeded", "TIMEOUT"],
@@ -63,13 +66,144 @@ describe("torrent-indexer runtime contract laboratory", () => {
     assert.equal(diagnostic.logErrors.length, 2);
     assert.deepEqual(diagnostic.logErrors[0], {
       category: "FLARESOLVERR",
-      message: "FlareSolverr session initialization failed because its URL is not configured.",
+      message: "A FlareSolverr operation failed.",
     });
     assert.deepEqual(diagnostic.environmentPresence, { FLARESOLVERR_URL: "ABSENT", REDIS_HOST: "PRESENT" });
     assert.equal(diagnostic.dns, "AVAILABLE");
     assert.equal(diagnostic.egress, "UNAVAILABLE");
     for (const value of ["torrent-indexer |", "2026-08-01", "client_ip", "192.0.2.10", "/indexers/bludv", "query", "secret-agent", "example.invalid", "magnet:?", hash, "tracker.invalid", "Secret", "movie.mkv", "must-not-appear", "secret-value", "Big%20Buck%20Bunny"]) {
       assert.equal(serialized.includes(value), false);
+    }
+  });
+
+  it("keeps FLARESOLVERR_ADDRESS presence as metadata and classifies from execution evidence", () => {
+    for (const urlPresence of ["PRESENT", "ABSENT"] as const) {
+      const diagnostic = createSanitizedErrorDiagnostic(
+        '{"error":"response is a challange"}',
+        '2026-08-01T12:00:00.117Z {"level":"error","message":"response is a challange"}',
+        `FLARESOLVERR_ADDRESS=PRESENT\nFLARESOLVERR_URL=${urlPresence}`,
+        "AVAILABLE",
+        "AVAILABLE",
+      );
+      const serialized = JSON.stringify(diagnostic);
+
+      assert.equal(diagnostic.category, "FLARESOLVERR_CHALLENGE_UNRESOLVED");
+      assert.equal(diagnostic.environmentPresence.FLARESOLVERR_ADDRESS, "PRESENT");
+      assert.equal(diagnostic.environmentPresence.FLARESOLVERR_URL, urlPresence);
+      assert.equal(diagnostic.logErrors.some((event) => event.category === "CONFIGURATION"), false);
+      assert.equal(serialized.includes("URL is not configured"), false);
+      assert.equal(serialized.includes("URL ausente"), false);
+    }
+  });
+
+  it("ignores untimestamped, invalid, and pre-marker log lines completely", () => {
+    const marker = "2026-08-01T12:00:00.000Z";
+    const logs = [
+      'Incoming request => POST /v1 body: {"url":"https://untimestamped.invalid/?query=secret"}',
+      "not-a-timestamp Error solving the challenge Cookie: invalid-secret",
+      "2026-99-99T99:99:99Z Response in 99 s Headers: invalid-secret",
+      "2026-08-01T11:59:59.999Z Response in 88 s <html>old-secret</html>",
+      '2026-08-01T12:00:00.100Z Incoming request => POST /v1 body: {"url":"https://current.invalid/?query=secret"}',
+    ].join("\n");
+    const events = correlateRuntimeLogs("", logs, marker);
+    const diagnostic = createSanitizedErrorDiagnostic(
+      '{"error":"response is a challange"}',
+      logs,
+      "FLARESOLVERR_ADDRESS=ABSENT\nFLARESOLVERR_URL=PRESENT",
+      "AVAILABLE",
+      "AVAILABLE",
+      { torrentIndexerLogs: "", flaresolverrLogs: logs, marker },
+    );
+    const serialized = JSON.stringify(diagnostic);
+
+    assert.equal(events.length, 1);
+    assert.deepEqual(events[0], {
+      service: "FLARESOLVERR",
+      stage: "INTERNAL_HTTP",
+      result: "OBSERVED",
+      statusHttp: null,
+      durationMs: null,
+    });
+    assert.equal(diagnostic.category, "FLARESOLVERR_CHALLENGE_UNRESOLVED");
+    assert.equal(diagnostic.logErrors.length, 0);
+    for (const forbidden of ["untimestamped.invalid", "invalid-secret", "99 s", "88 s", "old-secret", "current.invalid", "query=secret"]) {
+      assert.equal(serialized.includes(forbidden), false);
+    }
+  });
+
+  it("correlates real FlareSolverr v3.3.21 success logs and access status", () => {
+    const marker = "2026-08-01T12:00:00.000Z";
+    const logs = [
+      '2026-08-01T12:00:00.100Z Incoming request => POST /v1 body: {"url":"https://example.invalid/?q=secret","cookies":"secret"}',
+      "2026-08-01T12:00:01.000Z Challenge solved!",
+      "2026-08-01T12:00:02.445Z Response in 2.345 s",
+      '2026-08-01T12:00:02.446Z 127.0.0.1 - - "POST /v1 HTTP/1.1" 200 -',
+    ].join("\n");
+    const events = correlateRuntimeLogs("", logs, marker);
+    assert.deepEqual(events, [
+      { service: "FLARESOLVERR", stage: "INTERNAL_HTTP", result: "SUCCESS", statusHttp: 200, durationMs: 2345 },
+      { service: "FLARESOLVERR", stage: "CHALLENGE", result: "SUCCESS", statusHttp: null, durationMs: null },
+    ]);
+    assert.equal(JSON.stringify(events).includes("example.invalid"), false);
+  });
+
+  it("correlates real FlareSolverr v3.3.21 failure logs without crossing requests", () => {
+    const marker = "2026-08-01T12:00:00.000Z";
+    const logs = [
+      "2026-08-01T12:00:00.100Z Incoming request => POST /v1 body: secret-first",
+      "2026-08-01T12:00:00.200Z Error solving the challenge secret-first",
+      "2026-08-01T12:00:05.300Z Response in 5.2 s",
+      '2026-08-01T12:00:05.301Z 127.0.0.1 - - "POST /v1 HTTP/1.1" 500 -',
+      "2026-08-01T12:00:06.000Z Incoming request => POST /v1 body: secret-second",
+      "2026-08-01T12:00:07.000Z Response in 1 s",
+      '2026-08-01T12:00:07.001Z 127.0.0.1 - - "POST /v1 HTTP/1.1" 200 -',
+    ].join("\n");
+    const events = correlateRuntimeLogs("", logs, marker);
+    const requests = events.filter((event) => event.stage === "INTERNAL_HTTP");
+    assert.deepEqual(requests, [
+      { service: "FLARESOLVERR", stage: "INTERNAL_HTTP", result: "FAILURE", statusHttp: 500, durationMs: 5200 },
+      { service: "FLARESOLVERR", stage: "INTERNAL_HTTP", result: "SUCCESS", statusHttp: 200, durationMs: 1000 },
+    ]);
+    assert.equal(events.some((event) => event.stage === "CHALLENGE" && event.result === "FAILURE"), true);
+    assert.equal(JSON.stringify(events).includes("secret-"), false);
+  });
+
+  it("correlates only current FlareSolverr request events without leaking request data", () => {
+    const marker = "2026-08-01T12:00:00.000Z";
+    const oldSensitive = '2026-08-01T11:59:59.000Z {"level":"error","message":"unsupported protocol scheme","cookie":"old-secret"}';
+    const currentSensitive = 'https://example.invalid/path?q=Big%20Buck%20Bunny Cookie: session=secret <html>secret</html> Headers: authorization=secret';
+    const torrentLogs = [
+      oldSensitive,
+      `2026-08-01T12:00:00.100Z {"level":"info","message":"Created new FlareSolverr session","session":"secret"}`,
+      `2026-08-01T12:00:00.117Z {"level":"error","message":"response is a challange","url":"${currentSensitive}"}`,
+    ].join("\n");
+    const flaresolverrLogs = [
+      `2026-08-01T12:00:00.110Z Incoming request => POST /v1 ${currentSensitive}`,
+      `2026-08-01T12:00:00.116Z Error solving the challenge in 6ms ${currentSensitive}`,
+      "2026-08-01T12:00:00.117Z Response in 0.007 s",
+      '2026-08-01T12:00:00.118Z 127.0.0.1 - - "POST /v1 HTTP/1.1" 200 -',
+    ].join("\n");
+    const events = correlateRuntimeLogs(torrentLogs, flaresolverrLogs, marker);
+    const diagnostic = createSanitizedErrorDiagnostic(
+      '{"error":"response is a challange"}',
+      torrentLogs,
+      "FLARESOLVERR_URL=PRESENT\nFLARESOLVERR_ADDRESS=ABSENT",
+      "AVAILABLE",
+      "AVAILABLE",
+      { torrentIndexerLogs: torrentLogs, flaresolverrLogs, marker },
+    );
+    const serialized = JSON.stringify(diagnostic);
+
+    assert.equal(diagnostic.category, "FLARESOLVERR_CHALLENGE_UNRESOLVED");
+    assert.equal(diagnostic.environmentPresence.FLARESOLVERR_URL, "PRESENT");
+    assert.equal(serialized.includes("URL is not configured"), false);
+    assert.equal(events.some((event) => event.service === "TORRENT_INDEXER" && event.stage === "SESSION"), true);
+    assert.equal(events.some((event) => event.service === "FLARESOLVERR" && event.stage === "INTERNAL_HTTP" && event.statusHttp === 200 && event.durationMs === 7), true);
+    assert.equal(events.filter((event) => event.stage === "CHALLENGE" && event.result === "FAILURE").length, 2);
+    assert.equal(events.some((event) => event.stage === "INTERNAL_HTTP" && event.result === "FAILURE"), false);
+    assert.equal(diagnostic.logErrors.some((event) => event.category === "CONFIGURATION"), false);
+    for (const forbidden of ["old-secret", "unsupported protocol scheme", "example.invalid", "Big%20Buck%20Bunny", "session=secret", "<html>", "authorization=secret", "Headers:"]) {
+      assert.equal(serialized.includes(forbidden), false);
     }
   });
 
@@ -82,14 +216,17 @@ describe("torrent-indexer runtime contract laboratory", () => {
   });
 
   it("deletes every raw diagnostic input after producing the sanitized report", async () => {
-    const names = ["body", "logs", "environment", "dns", "egress"] as const;
+    const names = ["body", "logs", "environment", "dns", "egress", "torrentIndexerLogs", "flaresolverrLogs", "marker"] as const;
     const paths = Object.fromEntries(names.map((name) => [name, join(tmpdir(), `mibr-diagnostic-${process.pid}-${name}.tmp`)])) as Record<(typeof names)[number], string>;
     await Promise.all([
       writeFile(paths.body, '{"message":"Redis unavailable"}', { flag: "wx" }),
-      writeFile(paths.logs, '{"level":"error","message":"Redis unavailable"}', { flag: "wx" }),
+      writeFile(paths.logs, '2026-08-01T12:00:00.100Z {"level":"error","message":"Redis unavailable"}', { flag: "wx" }),
       writeFile(paths.environment, "REDIS_HOST=PRESENT", { flag: "wx" }),
       writeFile(paths.dns, "AVAILABLE", { flag: "wx" }),
       writeFile(paths.egress, "UNAVAILABLE", { flag: "wx" }),
+      writeFile(paths.torrentIndexerLogs, "", { flag: "wx" }),
+      writeFile(paths.flaresolverrLogs, "", { flag: "wx" }),
+      writeFile(paths.marker, "2026-08-01T12:00:00.000Z", { flag: "wx" }),
     ]);
     const report = await diagnoseAndDeleteTemporaryFiles(paths);
     assert.equal(report.logErrors[0]?.category, "REDIS");
@@ -213,6 +350,10 @@ describe("torrent-indexer runtime contract laboratory", () => {
       assert.match(text, /1048576 \+ 1|maxBytes \+ 1/);
       assert.match(text, /diagnose-error\.ts/);
       assert.match(text, /FLARESOLVERR_URL/);
+      assert.match(text, /FLARESOLVERR_ADDRESS/);
+      assert.match(text, /query-marker\.txt/);
+      assert.match(text, /logs --no-color --timestamps --since/);
+      assert.match(text, /flaresolverr-logs\.raw/);
       assert.match(text, /torrent-indexer\.darklyn\.org\//);
       assert.doesNotMatch(text, /\/search|\/indexers\/manual|\/ui/);
     }

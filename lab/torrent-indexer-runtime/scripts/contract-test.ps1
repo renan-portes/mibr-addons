@@ -29,6 +29,8 @@ function Invoke-RuntimeContractTest {
   $environmentFile = Join-Path $tempDir "environment.presence"
   $dnsFile = Join-Path $tempDir "dns.status"
   $egressFile = Join-Path $tempDir "egress.status"
+  $flaresolverrLogFile = Join-Path $tempDir "flaresolverr-logs.raw"
+  $markerFile = Join-Path $tempDir "query-marker.txt"
   $queryProcess = $null
   $queryStarted = $false
   [Environment]::SetEnvironmentVariable("CONTRACT_TEMP_DIR", $tempDir, "Process")
@@ -71,6 +73,8 @@ function Invoke-RuntimeContractTest {
     }
 
     Write-Host "Executing the single authorized contract query (no retry)..."
+    $queryMarker = [DateTimeOffset]::UtcNow.ToString("o")
+    [IO.File]::WriteAllText($markerFile, $queryMarker)
     $timeout = [int]$env:CONTRACT_TEST_TIMEOUT_SECONDS
     $maxBytes = [int]$env:CONTRACT_TEST_MAX_RESPONSE_BYTES
     $request = "timeout ${timeout}s sh -c `"printf '%s\r\n%s\r\n%s\r\n\r\n' 'GET /indexers/$($env:CONTRACT_TEST_INDEXER)?q=Big%20Buck%20Bunny&filter_results=true&limit=1 HTTP/1.0' 'Host: 127.0.0.1' 'Connection: close' | nc -w $timeout 127.0.0.1 7006`" | head -c $($maxBytes + 1)"
@@ -115,16 +119,18 @@ function Invoke-RuntimeContractTest {
     Write-Host "Response size: $responseBytes bytes"
     if ($httpCode -ne 200) {
       Write-Host "Collecting sanitized failure diagnostics without printing raw response or logs."
-      $logs = (& docker compose --env-file $envFile -f $composeFile logs --no-color torrent-indexer 2>$null) -join "`n"
+      $logs = (& docker compose --env-file $envFile -f $composeFile logs --no-color --timestamps --since $queryMarker torrent-indexer 2>$null) -join "`n"
       [IO.File]::WriteAllText($logFile, $logs)
-      $presenceCommand = 'for name in FLARESOLVERR_URL FLARESOLVERR_POOL_SIZE REDIS_HOST REQUEST_TIMEOUT_MILLISECONDS; do if printenv "$name" >/dev/null 2>&1; then printf "%s=PRESENT\n" "$name"; else printf "%s=ABSENT\n" "$name"; fi; done'
+      $flaresolverrLogs = (& docker compose --env-file $envFile -f $composeFile logs --no-color --timestamps --since $queryMarker flaresolverr 2>$null) -join "`n"
+      [IO.File]::WriteAllText($flaresolverrLogFile, $flaresolverrLogs)
+      $presenceCommand = 'for name in FLARESOLVERR_URL FLARESOLVERR_ADDRESS FLARESOLVERR_POOL_SIZE REDIS_HOST REQUEST_TIMEOUT_MILLISECONDS; do if printenv "$name" >/dev/null 2>&1; then printf "%s=PRESENT\n" "$name"; else printf "%s=ABSENT\n" "$name"; fi; done'
       $presence = (& docker compose --env-file $envFile -f $composeFile exec -T torrent-indexer sh -c $presenceCommand 2>$null) -join "`n"
       [IO.File]::WriteAllText($environmentFile, $presence)
       & docker compose --env-file $envFile -f $composeFile exec -T torrent-indexer sh -c 'getent hosts torrent-indexer.darklyn.org >/dev/null 2>&1'
       [IO.File]::WriteAllText($dnsFile, $(if ($LASTEXITCODE -eq 0) { "AVAILABLE" } else { "UNAVAILABLE" }))
       & docker compose --env-file $envFile -f $composeFile exec -T torrent-indexer sh -c 'timeout 5s wget --spider -q https://torrent-indexer.darklyn.org/'
       [IO.File]::WriteAllText($egressFile, $(if ($LASTEXITCODE -eq 0) { "AVAILABLE" } else { "UNAVAILABLE" }))
-      & docker compose --env-file $envFile -f $composeFile -f $toolsComposeFile run --rm -T contract-tools lab/torrent-indexer-runtime/tools/diagnose-error.ts /contract-input/response.json /contract-input/error-logs.raw /contract-input/environment.presence /contract-input/dns.status /contract-input/egress.status | ForEach-Object { Write-Host $_ }
+      & docker compose --env-file $envFile -f $composeFile -f $toolsComposeFile run --rm -T contract-tools lab/torrent-indexer-runtime/tools/diagnose-error.ts /contract-input/response.json /contract-input/error-logs.raw /contract-input/environment.presence /contract-input/dns.status /contract-input/egress.status /contract-input/error-logs.raw /contract-input/flaresolverr-logs.raw /contract-input/query-marker.txt | ForEach-Object { Write-Host $_ }
       if ($LASTEXITCODE -ne 0) { throw "Sanitized error diagnosis failed" }
       $bodyFile = $null
       throw "Contract endpoint returned HTTP $httpCode"
