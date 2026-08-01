@@ -21,6 +21,18 @@ function Invoke-LabSmokeTests {
     return $id.Trim()
   }
 
+  function Invoke-InternalHttpProbe([int]$Port, [string]$Path) {
+    $command = "printf 'GET $Path HTTP/1.0\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n' | nc -w 10 127.0.0.1 $Port"
+    $raw = (& docker compose --env-file $envFile -f $composeFile exec -T torrent-indexer sh -c $command)
+    if ($LASTEXITCODE -ne 0) { throw "GET $Path transport failed" }
+    $text = (($raw -join "`n") -replace "`r", "")
+    $parts = $text -split "`n`n", 2
+    if ($parts.Count -ne 2 -or $parts[0] -notmatch '^HTTP/[0-9.]+\s+([0-9]{3})') {
+      throw "GET $Path did not return a parseable HTTP response"
+    }
+    return @{ Status = [int]$Matches[1]; Body = $parts[1] }
+  }
+
   try {
     Write-Host "Starting the pinned laboratory build and containers..."
     Invoke-Compose up -d --build --wait --wait-timeout 120
@@ -53,16 +65,17 @@ function Invoke-LabSmokeTests {
     if ($null -eq $rootJson.endpoints) { throw "GET / returned unexpected JSON" }
 
     Write-Host "Checking the safe search health endpoint from inside torrent-indexer..."
-    $health = (& docker compose --env-file $envFile -f $composeFile exec -T torrent-indexer sh -c 'wget -S -O- http://127.0.0.1:7006/search/health 2>&1 || true')
-    if ($LASTEXITCODE -ne 0) { throw "GET /search/health execution failed" }
-    $healthText = $health -join "`n"
-    if ($healthText -notmatch 'HTTP/[0-9.]+ (200|503)') { throw "GET /search/health returned neither HTTP 200 nor 503" }
-    if ($healthText -notmatch '"status"') { throw "GET /search/health returned unexpected JSON" }
+    $health = Invoke-InternalHttpProbe 7006 "/search/health"
+    if ($health.Status -notin @(200, 503)) { throw "GET /search/health returned HTTP $($health.Status) (expected 200 or 503)" }
+    if ([string]::IsNullOrWhiteSpace($health.Body)) { throw "GET /search/health returned an empty body with HTTP $($health.Status)" }
+    try { $null = $health.Body | ConvertFrom-Json -ErrorAction Stop } catch { throw "GET /search/health returned invalid JSON with HTTP $($health.Status)" }
+    Write-Host "GET /search/health returned expected HTTP $($health.Status) with valid JSON."
 
     Write-Host "Checking the safe metrics endpoint from inside torrent-indexer..."
-    $metrics = (& docker compose --env-file $envFile -f $composeFile exec -T torrent-indexer wget -qO- http://127.0.0.1:8081/metrics)
-    if ($LASTEXITCODE -ne 0) { throw "GET :8081/metrics failed" }
-    if (($metrics -join "`n") -notmatch '(?m)^# HELP') { throw "Metrics response is not Prometheus text" }
+    $metrics = Invoke-InternalHttpProbe 8081 "/metrics"
+    if ($metrics.Status -ne 200) { throw "GET /metrics returned HTTP $($metrics.Status) (expected 200)" }
+    if ($metrics.Body -notmatch '(?m)^(# (HELP|TYPE) |[a-zA-Z_:][a-zA-Z0-9_:]*(\{|\s))') { throw "Metrics response is not recognizable Prometheus text" }
+    Write-Host "GET /metrics returned expected HTTP 200 with Prometheus text."
 
     Write-Host "Collecting one resource-usage snapshot..."
     $containerIds = (& docker compose --env-file $envFile -f $composeFile ps -q)

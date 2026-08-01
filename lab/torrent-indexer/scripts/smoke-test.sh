@@ -27,6 +27,25 @@ run_smoke_tests() (
     exit 1
   }
 
+  probe_http() {
+    PROBE_PORT=$1
+    PROBE_PATH=$2
+    PROBE_RAW=$(compose exec -T torrent-indexer sh -c "printf 'GET $PROBE_PATH HTTP/1.0\\r\\nHost: 127.0.0.1\\r\\nConnection: close\\r\\n\\r\\n' | nc -w 10 127.0.0.1 $PROBE_PORT" | tr -d '\r') || fail "GET $PROBE_PATH transport"
+    HTTP_CODE=$(printf '%s\n' "$PROBE_RAW" | sed -n '1s/^HTTP\/[0-9.]* \([0-9][0-9][0-9]\).*/\1/p')
+    HTTP_BODY=$(printf '%s\n' "$PROBE_RAW" | sed '1,/^$/d')
+    [ -n "$HTTP_CODE" ] || fail "GET $PROBE_PATH did not return a parseable HTTP status"
+  }
+
+  validate_json() {
+    if command -v jq >/dev/null 2>&1; then
+      printf '%s' "$1" | jq -e . >/dev/null 2>&1
+    elif command -v python3 >/dev/null 2>&1; then
+      printf '%s' "$1" | python3 -m json.tool >/dev/null 2>&1
+    else
+      fail "JSON validation requires jq or python3 on the Docker host"
+    fi
+  }
+
   printf '%s\n' "Starting the pinned laboratory build and containers..."
   compose up -d --build --wait --wait-timeout 120 || fail "build/start/health wait"
 
@@ -55,13 +74,17 @@ run_smoke_tests() (
   printf '%s' "$ROOT_BODY" | grep -q '"endpoints"' || fail "GET / returned unexpected JSON"
 
   printf '%s\n' "Checking the safe search health endpoint from inside torrent-indexer..."
-  HEALTH_OUTPUT=$(compose exec -T torrent-indexer sh -c 'wget -S -O- http://127.0.0.1:7006/search/health 2>&1 || true') || fail "GET /search/health execution"
-  printf '%s' "$HEALTH_OUTPUT" | grep -Eq 'HTTP/[0-9.]+ (200|503)' || fail "GET /search/health returned neither HTTP 200 nor 503"
-  printf '%s' "$HEALTH_OUTPUT" | grep -q '"status"' || fail "GET /search/health returned unexpected JSON"
+  probe_http 7006 /search/health
+  case "$HTTP_CODE" in 200|503) ;; *) fail "GET /search/health returned HTTP $HTTP_CODE (expected 200 or 503)";; esac
+  [ -n "$HTTP_BODY" ] || fail "GET /search/health returned an empty body with HTTP $HTTP_CODE"
+  validate_json "$HTTP_BODY" || fail "GET /search/health returned invalid JSON with HTTP $HTTP_CODE"
+  printf 'GET /search/health returned expected HTTP %s with valid JSON.\n' "$HTTP_CODE"
 
   printf '%s\n' "Checking the safe metrics endpoint from inside torrent-indexer..."
-  METRICS=$(compose exec -T torrent-indexer wget -qO- http://127.0.0.1:8081/metrics) || fail "GET :8081/metrics"
-  printf '%s' "$METRICS" | grep -q '^# HELP' || fail "metrics response is not Prometheus text"
+  probe_http 8081 /metrics
+  [ "$HTTP_CODE" = "200" ] || fail "GET /metrics returned HTTP $HTTP_CODE (expected 200)"
+  printf '%s\n' "$HTTP_BODY" | grep -Eq '^(# (HELP|TYPE) |[a-zA-Z_:][a-zA-Z0-9_:]*(\{|[[:space:]]))' || fail "metrics response is not recognizable Prometheus text"
+  printf '%s\n' "GET /metrics returned expected HTTP 200 with Prometheus text."
 
   printf '%s\n' "Collecting one resource-usage snapshot..."
   CONTAINER_IDS=$(compose ps -q) || fail "container ID collection"

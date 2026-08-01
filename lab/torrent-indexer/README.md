@@ -59,7 +59,10 @@ POSIX shell:
 
 Os scripts constroem e sobem o ambiente, verificam containers, Redis e a ausência
 de bindings via `docker inspect`; `/`, `/search/health` e `/metrics` são consultados
-por `docker compose exec -T torrent-indexer`, dentro do container. Também examinam logs por valores semelhantes a
+por `docker compose exec -T torrent-indexer`, dentro do container. As sondagens
+capturam separadamente status e corpo por uma requisição HTTP interna, sem
+depender de como `wget` trata respostas de erro. No shell POSIX, a validação
+JSON requer `jq` ou `python3` no host. Também examinam logs por valores semelhantes a
 credenciais, coletam um snapshot de `docker stats` e sempre executam
 `docker compose down --remove-orphans`.
 
@@ -68,6 +71,20 @@ healthy e a rede `internal` impediu a publicação das portas declaradas. O smok
 test falhou porque dependia de `docker compose port`, que nessa versão retornou
 `invalid IP:0`. Os recursos foram removidos pelo cleanup. A versão atual não usa
 esse comando nem requer acesso pelo host.
+
+Na execução seguinte no docker-server, o commit upstream fixado
+`0ba84b16c63a4add68534d1abba7c21660a8e959` compilou com sucesso, Redis e
+torrent-indexer ficaram healthy, não houve bindings no host, `GET /` retornou
+`200` e `GET /search/health` retornou `503` porque MeiliSearch não estava
+configurado. O cleanup terminou por completo e nenhum endpoint de scraping foi
+chamado. O script anterior não conseguiu validar o JSON do `503` porque o `wget`
+encerrou sem exibir o corpo; esta versão captura status e corpo diretamente.
+
+Sem URL de FlareSolverr, o upstream registra `Failed to list existing
+FlareSolverr sessions` e `Post "/v1": unsupported protocol scheme ""` durante a
+inicialização. A revisão fixada não documenta uma variável oficial para desativar
+completamente essa inicialização. O laboratório preserva o comportamento, sem
+adicionar FlareSolverr, egress ou URL dummy.
 
 Eles deliberadamente não chamam `/search`, `/indexers/*` ou `/indexers/manual`.
 

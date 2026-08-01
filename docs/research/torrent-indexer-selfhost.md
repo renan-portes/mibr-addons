@@ -97,6 +97,13 @@ define:
 MeiliSearch, FlareSolverr e Magnet Metadata API não são implantados. Não há
 credenciais reais ou placeholders que pareçam válidos.
 
+A revisão fixada ainda tenta listar sessões de FlareSolverr quando nenhuma URL
+foi configurada e registra `Failed to list existing FlareSolverr sessions` e
+`Post "/v1": unsupported protocol scheme ""`. Não foi encontrada no código ou
+na documentação dessa revisão uma variável oficial para desativar completamente
+essa inicialização. O ruído é preservado e documentado; não foi adicionada URL
+dummy, instância FlareSolverr ou egress.
+
 ## Logs
 
 Com `LOG_FORMAT=json`, o upstream usa zerolog e deve emitir logs estruturados. Os
@@ -119,10 +126,14 @@ O health do container consulta somente o root local. O health de `/search/health
 com endereço MeiliSearch vazio falha na criação da requisição e não consulta uma
 fonte externa.
 
-O primeiro runtime confirmou build, containers healthy e isolamento da rede,
-mas a validação dos endpoints não terminou: `docker compose port` retornou
-`invalid IP:0` e interrompeu o smoke test. O cleanup removeu os recursos. A nova
-estratégia consulta esses endpoints dentro do container e precisa ser repetida.
+O runtime no docker-server confirmou o build do commit
+`0ba84b16c63a4add68534d1abba7c21660a8e959`, ambos os containers healthy, rede
+interna funcional, zero bindings no host, `GET /` com `200` e cleanup completo.
+`GET /search/health` retornou `503`, como esperado sem MeiliSearch. O `wget`
+encerrou sem mostrar o corpo dessa resposta, portanto a validação JSON ainda não
+foi concluída. Os scripts agora capturam status e corpo por HTTP interno sem
+depender do tratamento de erro do `wget`; essa parte precisa ser repetida. Nenhum
+endpoint de scraping foi chamado.
 
 ## Endpoints deliberadamente não chamados
 
@@ -181,7 +192,8 @@ Os scripts PowerShell e POSIX:
 2. confirmam containers em execução e `PONG` do Redis;
 3. confirmam por `docker inspect` que nenhum dos containers possui porta publicada;
 4. validam root, health MeiliSearch e métricas por `docker compose exec -T`,
-   usando apenas loopback dentro do container;
+   usando apenas loopback dentro do container; health aceita somente `200` ou
+   `503` com JSON válido, e métricas exige `200` com texto Prometheus;
 6. coletam um snapshot de `docker stats`;
 7. examinam logs sem imprimir dados de resultados;
 8. executam `docker compose down --remove-orphans` em bloco de limpeza.
