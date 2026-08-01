@@ -7,7 +7,10 @@ import { StreamService } from "../src/services/streamService.js";
 describe("MockProvider", () => {
   it("returns two mock streams", async () => {
     const provider = new MockProvider();
-    const streams = await provider.getStreams({ type: "movie", id: "tt1234567" });
+    const streams = await provider.getStreams(
+      { type: "movie", id: "tt1234567" },
+      new AbortController().signal,
+    );
 
     assert.equal(streams.length, 2);
     assert.match(streams[0]?.url ?? "", /tt1234567$/);
@@ -66,5 +69,26 @@ describe("stream service", () => {
     const streams = await service.getStreams("movie", "tt1234567");
 
     assert.equal(streams.length, 2);
+  });
+
+  it("discards invalid provider results before exposing Stremio streams", async () => {
+    const manager = new ProviderManager();
+    manager.register({
+      id: "mixed",
+      name: "Mixed Provider",
+      async getStreams() {
+        return [
+          { name: "Valid", title: "Playable", url: "https://example.com/video.mp4" },
+          { name: "", title: "Missing name", url: "https://example.com/invalid.mp4" },
+          { name: "Invalid URL", title: "Not playable", url: "javascript:alert(1)" },
+        ];
+      },
+    });
+
+    const streams = await new StreamService(manager).getStreams("movie", "tt1234567");
+
+    assert.deepEqual(streams, [
+      { name: "Valid", title: "Playable", url: "https://example.com/video.mp4" },
+    ]);
   });
 });

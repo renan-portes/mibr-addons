@@ -53,4 +53,5 @@ $env:PORT=8080; npm start
 
 ```bash
 npm test
+npm run typecheck
 ```

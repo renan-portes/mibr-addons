@@ -1,11 +1,11 @@
 import type { StreamProvider, StreamQuery } from "../types/streamProvider.js";
-import type { StremioStream } from "../types/stremio.js";
+import type { StreamResult } from "../types/streamResult.js";
 
 export class MockProvider implements StreamProvider {
   readonly id = "mock";
   readonly name = "MIBR Addons";
 
-  async getStreams(query: StreamQuery): Promise<StremioStream[]> {
+  async getStreams(query: StreamQuery, _signal: AbortSignal): Promise<StreamResult[]> {
     return [
       {
         name: this.name,

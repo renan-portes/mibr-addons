@@ -3,13 +3,13 @@ import { describe, it } from "node:test";
 import { MockProvider } from "../src/providers/mockProvider.js";
 import { ProviderManager } from "../src/services/providerManager.js";
 import type { StreamProvider, StreamQuery } from "../src/types/streamProvider.js";
-import type { StremioStream } from "../src/types/stremio.js";
+import type { StreamResult } from "../src/types/streamResult.js";
 
 class FailingProvider implements StreamProvider {
   readonly id = "failing";
   readonly name = "Failing Provider";
 
-  async getStreams(_query: StreamQuery): Promise<StremioStream[]> {
+  async getStreams(_query: StreamQuery, _signal: AbortSignal): Promise<StreamResult[]> {
     throw new Error("provider failure");
   }
 }
@@ -18,7 +18,7 @@ class ExtraProvider implements StreamProvider {
   readonly id = "extra";
   readonly name = "Extra Provider";
 
-  async getStreams(query: StreamQuery): Promise<StremioStream[]> {
+  async getStreams(query: StreamQuery, _signal: AbortSignal): Promise<StreamResult[]> {
     return [
       {
         name: this.name,
@@ -76,5 +76,30 @@ describe("ProviderManager", () => {
 
     assert.equal(streams.length, 2);
     assert.equal(streams[0]?.name, "MIBR Addons");
+  });
+
+  it("times out a provider that never resolves without blocking others", async () => {
+    const manager = new ProviderManager({ timeoutMs: 20 });
+    let receivedSignal: AbortSignal | undefined;
+
+    manager.register({
+      id: "stuck",
+      name: "Stuck Provider",
+      async getStreams(_query, signal) {
+        receivedSignal = signal;
+        return new Promise<StreamResult[]>(() => undefined);
+      },
+    });
+    manager.register(new MockProvider());
+
+    const streams = await manager.getStreamsFromAll({ type: "movie", id: "tt1234567" });
+
+    assert.equal(streams.length, 2);
+    assert.equal(receivedSignal?.aborted, true);
+  });
+
+  it("rejects invalid timeout configuration", () => {
+    assert.throws(() => new ProviderManager({ timeoutMs: 0 }), /Invalid provider timeout/);
+    assert.throws(() => new ProviderManager({ timeoutMs: 1.5 }), /Invalid provider timeout/);
   });
 });

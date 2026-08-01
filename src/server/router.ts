@@ -1,9 +1,6 @@
 import { getManifest } from "../addon/manifest.js";
-import {
-  getDefaultStreamService,
-  StreamRequestError,
-  type StreamService,
-} from "../services/streamService.js";
+import { getDefaultStreamService } from "../app/bootstrap.js";
+import { StreamRequestError, type StreamService } from "../services/streamService.js";
 import type { ErrorResponse, StremioStreamResponse } from "../types/stremio.js";
 
 export type RouteResult =
