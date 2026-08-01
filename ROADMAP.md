@@ -17,6 +17,7 @@
 - [x] Cliente/provider experimental do torrent-indexer (somente descoberta local)
 - [x] Laboratório self-host isolado do torrent-indexer
 - [ ] Validação controlada do contrato runtime do torrent-indexer (em andamento)
+- [ ] Sondagem operacional sanitizada da instância pública (preparada; execução manual pendente)
 - [ ] Consulta real aos indexadores no self-host
 - [ ] Consultas funcionais a conteúdo comercial (fora de escopo)
 - [ ] Self-host de produção do torrent-indexer

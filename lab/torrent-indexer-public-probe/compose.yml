@@ -1,0 +1,28 @@
+name: mibr-torrent-indexer-public-probe
+
+services:
+  probe:
+    image: mibr-lab/torrent-indexer-public-probe:node-24.4.1
+    build:
+      context: ../..
+      dockerfile: lab/torrent-indexer-public-probe/Dockerfile.probe
+    network_mode: bridge
+    user: "1000:1000"
+    working_dir: /workspace
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m
+    environment:
+      PROBE_INDEXER: ${PROBE_INDEXER:?Choose exactly one allowed indexer}
+    volumes:
+      - type: bind
+        source: ../..
+        target: /workspace
+        read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 256m
+    cpus: 0.50
+    pids_limit: 64
