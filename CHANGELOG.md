@@ -8,6 +8,7 @@
 - Modelo interno de streams e adaptador de saída para o protocolo Stremio.
 - Pipeline local de demonstração com fixtures e testes isolados.
 - Provider HTTP de demonstração com servidor local e parser puro.
+- Provider experimental do Internet Archive para filmes declarados como domínio público.
 - Timeout e cancelamento por provider.
 
 ### Changed

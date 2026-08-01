@@ -1,0 +1,19 @@
+{
+  "metadata": {
+    "identifier": "public-domain-film-no-video",
+    "title": "Public Domain Film Without Video",
+    "mediatype": "movies",
+    "external-identifier": "urn:imdb:tt0000002",
+    "licenseurl": "https://creativecommons.org/publicdomain/zero/1.0/"
+  },
+  "files": [
+    {
+      "name": "cover.jpg",
+      "format": "JPEG"
+    },
+    {
+      "name": "metadata.xml",
+      "format": "Metadata"
+    }
+  ]
+}
