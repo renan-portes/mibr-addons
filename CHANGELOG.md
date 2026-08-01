@@ -15,6 +15,7 @@
 - Laboratório manual para comparação sanitizada e controlada do contrato runtime do torrent-indexer.
 - Infraestrutura do laboratório runtime-contract validada no docker-server com FlareSolverr, Redis e torrent-indexer healthy, zero portas publicadas e resposta HTTP 200 válida com zero resultados.
 - Sondagem manual sanitizada, de uma chamada por execução, para a instância pública oficial do torrent-indexer.
+- Contrato offline e fake local para resolução sequencial e opcional de candidatos do torrent-indexer em URLs HTTP/HTTPS defensivamente validadas, com timeout efetivo e desabilitado por padrão.
 - Timeout e cancelamento por provider.
 
 ### Changed

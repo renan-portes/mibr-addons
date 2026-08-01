@@ -22,6 +22,8 @@
   - `torrent-dos-filmes`: HTTP `200` / `OK_ZERO_RESULTS`;
   - `comando_torrents`: HTTP `500` / `HTTP_ERROR`;
   - nenhuma nova sondagem está pendente nesta milestone; não houve consulta em massa, fallback ou troca automática de indexer.
+- [x] Contrato offline para resolver sequencialmente candidatos validados em URLs HTTP/HTTPS (fake local; timeout efetivo; desabilitado por padrão)
+- [ ] Integração com resolver autorizado real e validação de rede/DNS por hop
 - [ ] Resultado positivo com item real no self-host (não comprovado pela validação parcial)
 - [ ] Consultas funcionais a conteúdo comercial (fora de escopo)
 - [ ] Self-host de produção do torrent-indexer
