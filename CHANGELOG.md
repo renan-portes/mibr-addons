@@ -11,13 +11,14 @@
 - Provider experimental do Internet Archive para filmes declarados como domínio público.
 - Cliente e provider experimental, em modo descoberta, para a API JSON do torrent-indexer.
 - Parsing defensivo e fixtures sintéticas para respostas do torrent-indexer.
-- Laboratório Docker isolado e descartável para avaliação estática do self-host do torrent-indexer.
+- Laboratório Docker isolado e descartável do torrent-indexer, validado em runtime sem consultas a indexadores.
 - Timeout e cancelamento por provider.
 
 ### Changed
 
 - Composição dos providers padrão movida para o bootstrap da aplicação.
 - Validação de configuração e typecheck ampliados para incluir os testes.
+- Smoke tests do laboratório ajustados para rede interna sem portas publicadas e para o health `503` esperado sem MeiliSearch.
 
 ### Fixed
 

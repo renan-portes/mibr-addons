@@ -15,8 +15,9 @@
 - [x] Internet Archive Provider experimental (filmes)
 - [x] Pesquisa arquitetural do torrent-indexer
 - [x] Cliente/provider experimental do torrent-indexer (somente descoberta local)
-- [ ] Laboratório self-host do torrent-indexer (configuração criada; runtime pendente)
-- [ ] Self-host real do torrent-indexer
+- [x] Laboratório self-host isolado do torrent-indexer
+- [ ] Consulta real aos indexadores no self-host
+- [ ] Self-host de produção do torrent-indexer
 - [ ] Integração de playback/debrid
 - [ ] BluDV
 - [ ] Torrentio

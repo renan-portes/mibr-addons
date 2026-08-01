@@ -44,9 +44,16 @@ feito nesta milestone para evitar copiar/modificar código GPL no MIBR Addons.
 | `torrent-indexer` | build do SHA fixado | 0,50 | 256 MiB | 128 | `on-failure:3` |
 | `redis` | `redis:7.4.2-alpine` | 0,25 | 128 MiB | 64 | `on-failure:3` |
 
-Os limites são tetos configurados. O build e a inicialização foram concluídos e
-ambos os containers ficaram healthy; CPU real, memória real e tempo de
-inicialização ainda não foram registrados de forma confiável.
+Os limites são tetos configurados. No smoke test concluído, o snapshot de
+recursos mostrou:
+
+| Container | CPU observada | Memória observada | PIDs observados |
+|---|---:|---:|---:|
+| `redis` | 0,40% | 3,449 MiB | 6 |
+| `torrent-indexer` | 0,00% | 3,328 MiB | 7 |
+
+Esses valores são uma medição pontual do laboratório ocioso, não uma estimativa
+de consumo durante consultas reais.
 
 Ambos usam filesystem read-only, `tmpfs`, `no-new-privileges`, todas as Linux
 capabilities removidas, healthcheck e período de encerramento. Não existem
@@ -119,21 +126,20 @@ Endpoints identificados como seguros para smoke test:
 | Endpoint | Resultado esperado |
 |---|---|
 | `GET /` | `200`, JSON de descoberta com build, indexers e endpoints |
-| `GET /search/health` | `503` e JSON `unhealthy` sem MeiliSearch; `200` se futuramente configurado |
+| `GET /search/health` | `503` e JSON válido sem MeiliSearch; `200` se futuramente configurado |
 | `GET :8081/metrics` | `200`, formato Prometheus |
 
 O health do container consulta somente o root local. O health de `/search/health`
 com endereço MeiliSearch vazio falha na criação da requisição e não consulta uma
 fonte externa.
 
-O runtime no docker-server confirmou o build do commit
-`0ba84b16c63a4add68534d1abba7c21660a8e959`, ambos os containers healthy, rede
-interna funcional, zero bindings no host, `GET /` com `200` e cleanup completo.
-`GET /search/health` retornou `503`, como esperado sem MeiliSearch. O `wget`
-encerrou sem mostrar o corpo dessa resposta, portanto a validação JSON ainda não
-foi concluída. Os scripts agora capturam status e corpo por HTTP interno sem
-depender do tratamento de erro do `wget`; essa parte precisa ser repetida. Nenhum
-endpoint de scraping foi chamado.
+O runtime final no docker-server confirmou o build do commit
+`0ba84b16c63a4add68534d1abba7c21660a8e959`, Redis e torrent-indexer healthy,
+rede `internal` ativa, zero bindings no host e `GET /` com HTTP `200`.
+`GET /search/health` retornou HTTP `503` com JSON válido, resultado esperado sem
+MeiliSearch. `GET /metrics` retornou HTTP `200` com conteúdo Prometheus válido.
+Os logs não continham credenciais, o cleanup removeu containers e rede, e nenhum
+endpoint de scraping ou indexação foi chamado.
 
 ## Endpoints deliberadamente não chamados
 
@@ -194,9 +200,9 @@ Os scripts PowerShell e POSIX:
 4. validam root, health MeiliSearch e métricas por `docker compose exec -T`,
    usando apenas loopback dentro do container; health aceita somente `200` ou
    `503` com JSON válido, e métricas exige `200` com texto Prometheus;
-6. coletam um snapshot de `docker stats`;
-7. examinam logs sem imprimir dados de resultados;
-8. executam `docker compose down --remove-orphans` em bloco de limpeza.
+5. coletam um snapshot de `docker stats`;
+6. examinam logs sem imprimir dados de resultados;
+7. executam `docker compose down --remove-orphans` em bloco de limpeza.
 
 Não são criados volumes nomeados. A imagem construída permanece no cache e pode
 ser removida manualmente após revisão. Os scripts não removem imagens para evitar
@@ -212,10 +218,10 @@ Riscos restantes:
 - dependência operacional de Redis;
 - scrapers e trackers ampliam a superfície quando egress for habilitado;
 - contrato não versionado;
-- os limites Compose e o consumo efetivo ainda precisam de medição completa.
+- o consumo durante consultas reais permanece desconhecido e fora do escopo.
 
-Recomendação: manter como laboratório isolado **parcialmente aprovado**, mas não
-promover a self-host real antes de repetir os smoke tests internos, confirmar os
-endpoints seguros, registrar uso de recursos e validar o encerramento. Mesmo
-depois disso, o serviço deve permanecer interno, sem bootstrap e sem egress até
-aprovação específica para fontes reais.
+Recomendação: laboratório isolado **concluído e aprovado** para build, startup,
+health, métricas, isolamento, observação de recursos e cleanup. Isso não aprova
+consulta real a indexadores nem uso em produção. O serviço deve permanecer
+interno, sem bootstrap e sem egress até aprovação específica para fontes reais;
+debrid e playback continuam fora do escopo.

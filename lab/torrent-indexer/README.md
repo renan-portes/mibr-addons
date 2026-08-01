@@ -72,13 +72,18 @@ test falhou porque dependia de `docker compose port`, que nessa versão retornou
 `invalid IP:0`. Os recursos foram removidos pelo cleanup. A versão atual não usa
 esse comando nem requer acesso pelo host.
 
-Na execução seguinte no docker-server, o commit upstream fixado
+No runtime final no docker-server, o commit upstream fixado
 `0ba84b16c63a4add68534d1abba7c21660a8e959` compilou com sucesso, Redis e
-torrent-indexer ficaram healthy, não houve bindings no host, `GET /` retornou
-`200` e `GET /search/health` retornou `503` porque MeiliSearch não estava
-configurado. O cleanup terminou por completo e nenhum endpoint de scraping foi
-chamado. O script anterior não conseguiu validar o JSON do `503` porque o `wget`
-encerrou sem exibir o corpo; esta versão captura status e corpo diretamente.
+torrent-indexer ficaram healthy, a rede `internal` permaneceu ativa e não houve
+bindings no host. `GET /` retornou HTTP `200`; `GET /search/health` retornou HTTP
+`503` com JSON válido, resultado esperado sem MeiliSearch; e `GET /metrics`
+retornou HTTP `200` com conteúdo Prometheus válido. Nenhum endpoint de scraping
+ou indexação foi chamado.
+
+O snapshot do laboratório ocioso registrou Redis com aproximadamente 3,449 MiB,
+0,40% de CPU e 6 PIDs, e torrent-indexer com aproximadamente 3,328 MiB, 0,00% de
+CPU e 7 PIDs. Os logs não continham credenciais. O cleanup terminou por completo,
+removendo os containers e a rede.
 
 Sem URL de FlareSolverr, o upstream registra `Failed to list existing
 FlareSolverr sessions` e `Post "/v1": unsupported protocol scheme ""` durante a
