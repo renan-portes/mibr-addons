@@ -13,6 +13,10 @@
 - [x] FixtureProvider
 - [x] HttpFixtureProvider
 - [x] Internet Archive Provider experimental (filmes)
+- [x] Pesquisa arquitetural do torrent-indexer
+- [x] Cliente/provider experimental do torrent-indexer (somente descoberta local)
+- [ ] Self-host real do torrent-indexer
+- [ ] Integração de playback/debrid
 - [ ] BluDV
 - [ ] Torrentio
 - [ ] Outros providers externos

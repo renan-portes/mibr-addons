@@ -9,6 +9,8 @@
 - Pipeline local de demonstração com fixtures e testes isolados.
 - Provider HTTP de demonstração com servidor local e parser puro.
 - Provider experimental do Internet Archive para filmes declarados como domínio público.
+- Cliente e provider experimental, em modo descoberta, para a API JSON do torrent-indexer.
+- Parsing defensivo e fixtures sintéticas para respostas do torrent-indexer.
 - Timeout e cancelamento por provider.
 
 ### Changed
