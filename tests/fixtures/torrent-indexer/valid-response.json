@@ -1,0 +1,28 @@
+{
+  "results": [
+    {
+      "title": "Example.Release.2024.1080p (brazilian, eng)",
+      "original_title": "Example Release",
+      "details": "https://indexer.invalid/items/example-release",
+      "year": "2024",
+      "imdb": "https://www.imdb.com/title/tt0000001",
+      "audio": ["Português", "Inglês"],
+      "magnet_link": "",
+      "date": "2024-01-02T03:04:05Z",
+      "info_hash": "0000000000000000000000000000000000000000",
+      "trackers": [],
+      "size": "2.4 GB",
+      "files": [
+        {
+          "path": "Example.Release.2024.1080p.mkv",
+          "size": "2.4 GB"
+        }
+      ],
+      "leech_count": 2,
+      "seed_count": 12,
+      "similarity": 0.95
+    }
+  ],
+  "count": 1,
+  "indexed_count": 1
+}
