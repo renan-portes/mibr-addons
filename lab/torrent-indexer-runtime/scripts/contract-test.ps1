@@ -4,6 +4,7 @@ function Invoke-RuntimeContractTest {
   $script:ContractExitCode = 1
   $labRoot = Split-Path -Parent $PSScriptRoot
   $composeFile = Join-Path $labRoot "compose.yml"
+  $toolsComposeFile = Join-Path $labRoot "compose.tools.yml"
   $envFile = Join-Path $labRoot ".env"
   if (-not (Test-Path -LiteralPath $envFile)) {
     throw "Copy .env.example to .env and explicitly confirm authorization"
@@ -24,6 +25,8 @@ function Invoke-RuntimeContractTest {
   $rawFile = Join-Path $tempDir "http-response.raw"
   $bodyFile = Join-Path $tempDir "response.json"
   $stderrFile = Join-Path $tempDir "docker-stderr.log"
+  $queryProcess = $null
+  $queryStarted = $false
   [Environment]::SetEnvironmentVariable("CONTRACT_TEMP_DIR", $tempDir, "Process")
   [Environment]::SetEnvironmentVariable("CONTRACT_TOOLS_UID", "1000", "Process")
   [Environment]::SetEnvironmentVariable("CONTRACT_TOOLS_GID", "1000", "Process")
@@ -31,6 +34,11 @@ function Invoke-RuntimeContractTest {
   function Invoke-Compose {
     & docker compose --env-file $envFile -f $composeFile @args
     if ($LASTEXITCODE -ne 0) { throw "docker compose failed: $($args -join ' ')" }
+  }
+
+  function Invoke-ToolsCompose {
+    & docker compose --env-file $envFile -f $composeFile -f $toolsComposeFile @args
+    if ($LASTEXITCODE -ne 0) { throw "docker compose tools failed: $($args -join ' ')" }
   }
 
   function Get-ContainerId([string]$Service) {
@@ -43,8 +51,8 @@ function Invoke-RuntimeContractTest {
 
   try {
     Write-Host "Validating the fixed, explicitly authorized query configuration..."
-    Invoke-Compose build contract-tools
-    Invoke-Compose run --rm -T contract-tools lab/torrent-indexer-runtime/tools/validate-config.ts
+    Invoke-ToolsCompose build contract-tools
+    Invoke-ToolsCompose run --rm -T contract-tools lab/torrent-indexer-runtime/tools/validate-config.ts
 
     Write-Host "Starting the pinned runtime-contract laboratory..."
     Invoke-Compose up -d --build --wait --wait-timeout 120
@@ -63,25 +71,29 @@ function Invoke-RuntimeContractTest {
     $maxBytes = [int]$env:CONTRACT_TEST_MAX_RESPONSE_BYTES
     $request = "timeout ${timeout}s sh -c `"printf 'GET /indexers/$($env:CONTRACT_TEST_INDEXER)?q=Big%20Buck%20Bunny&filter_results=true&limit=1 HTTP/1.0\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n' | nc -w $timeout 127.0.0.1 7006`" | head -c $($maxBytes + 1)"
     $arguments = @("compose", "--env-file", $envFile, "-f", $composeFile, "exec", "-T", "torrent-indexer", "sh", "-c", $request)
-    $process = [Diagnostics.Process]::new()
-    $process.StartInfo.FileName = "docker"
-    $process.StartInfo.UseShellExecute = $false
-    $process.StartInfo.RedirectStandardOutput = $true
-    $process.StartInfo.RedirectStandardError = $true
-    foreach ($argument in $arguments) { $null = $process.StartInfo.ArgumentList.Add($argument) }
+    $queryProcess = [Diagnostics.Process]::new()
+    $queryProcess.StartInfo.FileName = "docker"
+    $queryProcess.StartInfo.UseShellExecute = $false
+    $queryProcess.StartInfo.RedirectStandardOutput = $true
+    $queryProcess.StartInfo.RedirectStandardError = $true
+    foreach ($argument in $arguments) { $null = $queryProcess.StartInfo.ArgumentList.Add($argument) }
     # CONTRACT_QUERY_ONCE
     $stopwatch = [Diagnostics.Stopwatch]::StartNew()
-    $null = $process.Start()
-    $stdoutTask = $process.StandardOutput.ReadToEndAsync()
-    $stderrTask = $process.StandardError.ReadToEndAsync()
-    if (-not $process.WaitForExit(20 * 1000)) {
-      $process.Kill($true)
-      throw "Single contract query exceeded the global timeout"
+    $null = $queryProcess.Start()
+    $queryStarted = $true
+    $stdoutTask = $queryProcess.StandardOutput.ReadToEndAsync()
+    $stderrTask = $queryProcess.StandardError.ReadToEndAsync()
+    if (-not $queryProcess.WaitForExit(20 * 1000)) {
+      $queryProcess.Kill($true)
+      $queryProcess.WaitForExit()
+      & docker compose --env-file $envFile -f $composeFile kill torrent-indexer 2>$null
+      throw "consulta excedeu 20 segundos; the complete query process tree was terminated"
     }
     $stopwatch.Stop()
     [IO.File]::WriteAllText($rawFile, $stdoutTask.GetAwaiter().GetResult())
     [IO.File]::WriteAllText($stderrFile, $stderrTask.GetAwaiter().GetResult())
-    if ($process.ExitCode -ne 0) { throw "Single contract query transport failed with exit $($process.ExitCode)" }
+    if ($queryProcess.ExitCode -ne 0) { throw "Single contract query transport failed with exit $($queryProcess.ExitCode)" }
+    $queryProcess = $null
 
     $responseBytes = (Get-Item -LiteralPath $rawFile).Length
     if ($responseBytes -gt $maxBytes) { throw "Response exceeded configured byte limit" }
@@ -102,7 +114,7 @@ function Invoke-RuntimeContractTest {
     $rawFile = $null
 
     Write-Host "Producing the sanitized parser compatibility report..."
-    & docker compose --env-file $envFile -f $composeFile run --rm -T contract-tools lab/torrent-indexer-runtime/tools/analyze-response.ts /contract-input/response.json | ForEach-Object { Write-Host $_ }
+    & docker compose --env-file $envFile -f $composeFile -f $toolsComposeFile run --rm -T contract-tools lab/torrent-indexer-runtime/tools/analyze-response.ts /contract-input/response.json | ForEach-Object { Write-Host $_ }
     $analysisStatus = $LASTEXITCODE
     $bodyFile = $null
 
@@ -117,6 +129,11 @@ function Invoke-RuntimeContractTest {
     Write-Host "Contract test completed. No response values, magnets, hashes, trackers, titles, or URLs were printed."
   } finally {
     Write-Host "Cleanup: deleting temporary payloads, stopping containers, and removing the dedicated network."
+    if ($queryStarted -and $null -ne $queryProcess -and -not $queryProcess.HasExited) {
+      $queryProcess.Kill($true)
+      $queryProcess.WaitForExit()
+    }
+    & docker compose --env-file $envFile -f $composeFile kill torrent-indexer 2>$null
     if (Test-Path -LiteralPath $tempDir) { Remove-Item -LiteralPath $tempDir -Recurse -Force -ErrorAction SilentlyContinue }
     & docker compose --env-file $envFile -f $composeFile down --remove-orphans
     if ($LASTEXITCODE -ne 0) { Write-Warning "docker compose down failed" }

@@ -5,6 +5,7 @@ run_contract_test() (
 
   LAB_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
   COMPOSE_FILE="$LAB_ROOT/compose.yml"
+  TOOLS_COMPOSE_FILE="$LAB_ROOT/compose.tools.yml"
   ENV_FILE="$LAB_ROOT/.env"
   [ -f "$ENV_FILE" ] || {
     printf '%s\n' "FAILED: copy .env.example to .env and explicitly confirm authorization." >&2
@@ -22,24 +23,33 @@ run_contract_test() (
   export CONTRACT_TEMP_DIR CONTRACT_TOOLS_UID CONTRACT_TOOLS_GID
   RAW_FILE="$CONTRACT_TEMP_DIR/http-response.raw"
   BODY_FILE="$CONTRACT_TEMP_DIR/response.json"
+  QUERY_PID=
   CLEANED_UP=0
   cleanup() {
     [ "$CLEANED_UP" -eq 0 ] || return 0
     CLEANED_UP=1
-    rm -f "$RAW_FILE" "$BODY_FILE"
-    rmdir "$CONTRACT_TEMP_DIR" 2>/dev/null || true
+    if [ -n "$QUERY_PID" ]; then
+      kill -TERM "-$QUERY_PID" 2>/dev/null || true
+      kill -KILL "-$QUERY_PID" 2>/dev/null || true
+      QUERY_PID=
+    fi
+    compose kill torrent-indexer >/dev/null 2>&1 || true
     printf '%s\n' "Cleanup: stopping containers and removing the dedicated network."
     compose down --remove-orphans || true
+    [ -z "$RAW_FILE" ] || rm -f "$RAW_FILE"
+    [ -z "$BODY_FILE" ] || rm -f "$BODY_FILE"
+    rmdir "$CONTRACT_TEMP_DIR" 2>/dev/null || true
   }
   on_signal() {
     SIGNAL_STATUS=$1
-    trap - EXIT INT TERM
+    trap - EXIT INT TERM TSTP
     cleanup
     exit "$SIGNAL_STATUS"
   }
   trap cleanup EXIT
   trap 'on_signal 130' INT
   trap 'on_signal 143' TERM
+  trap 'on_signal 148' TSTP
 
   fail() {
     printf 'FAILED: %s\n' "$1" >&2
@@ -50,9 +60,13 @@ run_contract_test() (
     docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"
   }
 
+  tools_compose() {
+    docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" -f "$TOOLS_COMPOSE_FILE" "$@"
+  }
+
   printf '%s\n' "Validating the fixed, explicitly authorized query configuration..."
-  compose build contract-tools || fail "contract-tools image build"
-  compose run --rm -T contract-tools lab/torrent-indexer-runtime/tools/validate-config.ts || fail "configuration validation"
+  tools_compose build contract-tools || fail "contract-tools image build"
+  tools_compose run --rm -T contract-tools lab/torrent-indexer-runtime/tools/validate-config.ts || fail "configuration validation"
 
   printf '%s\n' "Starting the pinned runtime-contract laboratory..."
   compose up -d --build --wait --wait-timeout 120 || fail "build/start/health wait"
@@ -70,7 +84,21 @@ run_contract_test() (
   printf '%s\n' "Executing the single authorized contract query (no retry)..."
   START_MS=$(date +%s%3N)
   # CONTRACT_QUERY_ONCE
-  timeout 20s docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T torrent-indexer sh -c "timeout 20s sh -c \"printf 'GET /indexers/${CONTRACT_TEST_INDEXER}?q=Big%20Buck%20Bunny&filter_results=true&limit=1 HTTP/1.0\\r\\nHost: 127.0.0.1\\r\\nConnection: close\\r\\n\\r\\n' | nc -w 20 127.0.0.1 7006\" | head -c $((1048576 + 1))" >"$RAW_FILE" || fail "single contract query transport/timeout"
+  set +e
+  # The outer timeout owns the local compose process group. On expiry the service
+  # is killed as well, which deterministically terminates the remote exec tree.
+  setsid timeout --signal=TERM --kill-after=2s 20s docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T torrent-indexer sh -c "exec timeout -k 1s 20s sh -c \"printf 'GET /indexers/${CONTRACT_TEST_INDEXER}?q=Big%20Buck%20Bunny&filter_results=true&limit=1 HTTP/1.0\\r\\nHost: 127.0.0.1\\r\\nConnection: close\\r\\n\\r\\n' | nc -w 20 127.0.0.1 7006\" | head -c $((1048576 + 1))" >"$RAW_FILE" &
+  QUERY_PID=$!
+  wait "$QUERY_PID"
+  QUERY_STATUS=$?
+  QUERY_PID=
+  set -e
+  if [ "$QUERY_STATUS" -eq 124 ] || [ "$QUERY_STATUS" -eq 137 ]; then
+    printf '%s\n' "FAILED: consulta excedeu 20 segundos; terminating the complete query process tree." >&2
+    compose kill torrent-indexer >/dev/null 2>&1 || true
+    exit 1
+  fi
+  [ "$QUERY_STATUS" -eq 0 ] || fail "single contract query transport (exit $QUERY_STATUS)"
   END_MS=$(date +%s%3N)
 
   RESPONSE_BYTES=$(wc -c <"$RAW_FILE" | tr -d ' ')
@@ -89,7 +117,7 @@ run_contract_test() (
 
   printf '%s\n' "Producing the sanitized parser compatibility report..."
   set +e
-  compose run --rm -T contract-tools lab/torrent-indexer-runtime/tools/analyze-response.ts /contract-input/response.json
+  tools_compose run --rm -T contract-tools lab/torrent-indexer-runtime/tools/analyze-response.ts /contract-input/response.json
   ANALYSIS_STATUS=$?
   set -e
   BODY_FILE=

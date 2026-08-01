@@ -36,7 +36,8 @@ requisitos do host. O primeiro runtime falhou antes de qualquer consulta com
 `npx: not found`, revelando a dependência indevida.
 
 Validação e análise agora executam pontualmente com `docker compose run --rm`
-no serviço `contract-tools`. Sua imagem usa `node:24.4.1-bookworm-slim` e uma
+no serviço `contract-tools`, definido no override `compose.tools.yml`. Sua imagem
+usa `node:24.4.1-bookworm-slim` e uma
 camada cacheável criada por `npm ci --ignore-scripts` a partir do lockfile. O
 container não possui rede ou portas, roda com filesystem read-only, tmpfs,
 `no-new-privileges`, capabilities removidas e limites de recursos. O repositório
@@ -113,3 +114,22 @@ três casos.
 Subshell POSIX e `finally` PowerShell removem os arquivos temporários e executam
 `docker compose down --remove-orphans` em sucesso, falha ou interrupção. A imagem
 de build pode permanecer no cache Docker; nenhum volume nomeado é criado.
+
+O primeiro runtime após remover a dependência de `npx` fez exatamente uma
+consulta, que ficou presa e foi suspensa manualmente. O código final `148` foi
+causado por `SIGTSTP`, não por uma resposta do indexer. O cleanup posterior foi
+bem-sucedido: não restaram containers, rede, ferramentas ou payload, e nenhuma
+segunda consulta ocorreu. Portanto, a consulta real continua **não validada**.
+
+O timeout corrigido executa o cliente Compose em um grupo de processos dedicado.
+Após 20 segundos ele envia `TERM`, escala para `KILL`, encerra explicitamente o
+container do indexer e retorna `1` com `consulta excedeu 20 segundos`. `INT`,
+`TERM` e `TSTP` também encerram imediatamente esse grupo e acionam uma única vez
+o cleanup idempotente.
+
+Como `contract-tools` foi separado do Compose principal, o comando abaixo não
+interpola nem exige `CONTRACT_TEMP_DIR` e pode ser usado para recuperação manual:
+
+```sh
+docker compose -f lab/torrent-indexer-runtime/compose.yml down --remove-orphans
+```

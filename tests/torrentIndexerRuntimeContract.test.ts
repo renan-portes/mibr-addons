@@ -139,14 +139,14 @@ describe("torrent-indexer runtime contract laboratory", () => {
       assert.match(text, /(?:compose|docker compose)[^\n]*run --rm -T contract-tools/);
       assert.match(text, /remove|Remove-Item/);
       assert.match(text, /limit=1/);
-      assert.match(text, /20 \* 1000|timeout 20s/);
+      assert.match(text, /20 \* 1000|timeout[^\n]*20s/);
       assert.match(text, /1048576 \+ 1|maxBytes \+ 1/);
     }
   });
 
   it("defines a locked-down, one-shot container for TypeScript tools", async () => {
     const compose = await readFile(
-      new URL("../lab/torrent-indexer-runtime/compose.yml", import.meta.url),
+      new URL("../lab/torrent-indexer-runtime/compose.tools.yml", import.meta.url),
       "utf8",
     );
     const dockerfile = await readFile(
@@ -172,9 +172,50 @@ describe("torrent-indexer runtime contract laboratory", () => {
       "utf8",
     );
     assert.match(text, /CLEANED_UP=0/);
-    assert.match(text, /trap - EXIT INT TERM/);
+    assert.match(text, /trap - EXIT INT TERM TSTP/);
     assert.match(text, /trap 'on_signal 130' INT/);
     assert.match(text, /trap 'on_signal 143' TERM/);
+    assert.match(text, /trap 'on_signal 148' TSTP/);
     assert.match(text, /on_signal\(\)[\s\S]*exit "\$SIGNAL_STATUS"/);
+    assert.match(text, /kill -TERM "-\$QUERY_PID"/);
+    assert.match(text, /kill -KILL "-\$QUERY_PID"/);
+    assert.match(text, /compose kill torrent-indexer/);
+  });
+
+  it("enforces the global timeout around a dedicated process group without retry", async () => {
+    const text = await readFile(
+      new URL("../lab/torrent-indexer-runtime/scripts/contract-test.sh", import.meta.url),
+      "utf8",
+    );
+    const powershell = await readFile(
+      new URL("../lab/torrent-indexer-runtime/scripts/contract-test.ps1", import.meta.url),
+      "utf8",
+    );
+    assert.match(text, /setsid timeout --signal=TERM --kill-after=2s 20s docker compose/);
+    assert.match(text, /QUERY_STATUS[\s\S]*(?:124|137)/);
+    assert.match(text, /consulta excedeu 20 segundos/);
+    assert.equal((text.match(/CONTRACT_QUERY_ONCE/g) ?? []).length, 1);
+    assert.match(powershell, /WaitForExit\(20 \* 1000\)/);
+    assert.match(powershell, /Kill\(\$true\)/);
+    assert.match(powershell, /compose[\s\S]*kill torrent-indexer/);
+    assert.equal((powershell.match(/CONTRACT_QUERY_ONCE/g) ?? []).length, 1);
+  });
+
+  it("keeps recovery cleanup independent from the contract-tools temporary mount", async () => {
+    const baseCompose = await readFile(
+      new URL("../lab/torrent-indexer-runtime/compose.yml", import.meta.url),
+      "utf8",
+    );
+    const toolsCompose = await readFile(
+      new URL("../lab/torrent-indexer-runtime/compose.tools.yml", import.meta.url),
+      "utf8",
+    );
+    const readme = await readFile(
+      new URL("../lab/torrent-indexer-runtime/README.md", import.meta.url),
+      "utf8",
+    );
+    assert.doesNotMatch(baseCompose, /CONTRACT_TEMP_DIR|contract-tools/);
+    assert.match(toolsCompose, /CONTRACT_TEMP_DIR/);
+    assert.match(readme, /docker compose -f lab\/torrent-indexer-runtime\/compose\.yml down --remove-orphans/);
   });
 });

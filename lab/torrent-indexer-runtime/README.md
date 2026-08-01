@@ -65,7 +65,10 @@ Códigos de saída:
 - `2`: validação parcial porque a resposta válida teve zero resultados.
 
 O código `2` encerra sem trocar termo/indexer e sem segunda consulta. Cleanup é
-executado para os três códigos e também em `INT`/`TERM`.
+executado para os três códigos e também em `INT`, `TERM` e `TSTP`. No POSIX, a
+consulta roda em um grupo de processos dedicado; ao completar 20 segundos, o
+grupo local e o container do indexer são encerrados antes do cleanup. A mensagem
+`consulta excedeu 20 segundos` identifica esse caso, que retorna `1`.
 
 O JSON bruto e a resposta HTTP existem apenas em arquivos temporários. A
 ferramenta TypeScript reutiliza `TorrentIndexerParser`, informa itens aceitos e
@@ -75,8 +78,20 @@ falha.
 
 O primeiro teste no docker-server encerrou antes da consulta com `npx: not
 found`. Isso confirmou que a versão anterior dependia indevidamente de tooling no
-host. A estratégia atual move validação e análise para `contract-tools`; essa
-execução precisa ser repetida no docker-server.
+host. Após essa correção, uma única execução real chegou à consulta, mas ficou
+presa até ser suspensa manualmente. O código `148` veio de `SIGTSTP`, não do
+indexer. O cleanup posterior removeu containers e rede, não houve repetição nem
+payload persistido, mas o contrato real ainda não foi validado.
+
+O serviço `contract-tools` fica em `compose.tools.yml`; assim o Compose principal
+não depende de `CONTRACT_TEMP_DIR`. Recuperação manual segura, inclusive após a
+perda do diretório temporário:
+
+```sh
+docker compose -f lab/torrent-indexer-runtime/compose.yml down --remove-orphans
+```
+
+Essa execução precisa ser repetida no docker-server após revisão do novo timeout.
 
 ## Dados que nunca devem aparecer
 
