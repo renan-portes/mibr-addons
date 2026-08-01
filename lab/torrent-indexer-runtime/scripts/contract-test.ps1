@@ -62,7 +62,7 @@ function Invoke-RuntimeContractTest {
     Invoke-Compose up -d --build --wait --wait-timeout 120
 
     Write-Host "Confirming that neither container publishes a host port..."
-    foreach ($service in @("redis", "torrent-indexer")) {
+    foreach ($service in @("redis", "flaresolverr", "torrent-indexer")) {
       $containerId = Get-ContainerId $service
       $hostBindings = (& docker inspect --format '{{json .HostConfig.PortBindings}}' $containerId)
       if ($LASTEXITCODE -ne 0 -or $hostBindings.Trim() -ne "{}") { throw "$service has configured host bindings" }

@@ -29,6 +29,11 @@ Os containers mantêm filesystem read-only, tmpfs, limites de CPU/memória/PIDs,
 `no-new-privileges` e todas as capabilities removidas. Não há privileged, Docker
 socket, host network, volumes persistentes, credenciais ou exposição pública.
 
+O runtime inclui FlareSolverr `v3.3.21` somente na rede Docker, sem host port. O
+torrent-indexer usa `http://flaresolverr:8191` e aguarda seu healthcheck. Essa
+dependência corrige a causa confirmada do challenge HTTP `500` do BluDV no
+self-host; não altera o laboratório isolado anterior.
+
 ## Execução manual
 
 O host requer somente Docker com o plugin Docker Compose. Node.js, npm, npx e

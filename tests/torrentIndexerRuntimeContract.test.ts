@@ -51,7 +51,7 @@ describe("torrent-indexer runtime contract laboratory", () => {
       JSON.stringify({ message: sensitive, details: "must-not-appear", title: "must-not-appear" }),
       [
         JSON.stringify({ level: "info", message: sensitive }),
-        JSON.stringify({ level: "error", message: `FlareSolverr failed at ${sensitive}` }),
+        `torrent-indexer | ${JSON.stringify({ level: "error", time: "2026-08-01T12:00:00Z", client_ip: "192.0.2.10", path: "/indexers/bludv", query: "Big Buck Bunny", user_agent: "secret-agent", message: `FlareSolverr failed at ${sensitive}` })}`,
         JSON.stringify({ level: "fatal", message: "Redis timeout" }),
       ].join("\n"),
       "FLARESOLVERR_URL=ABSENT\nREDIS_HOST=PRESENT\nREDIS_HOST=secret-value",
@@ -61,10 +61,14 @@ describe("torrent-indexer runtime contract laboratory", () => {
     const serialized = JSON.stringify(diagnostic);
     assert.deepEqual(diagnostic.allowedRootKeys, ["message"]);
     assert.equal(diagnostic.logErrors.length, 2);
+    assert.deepEqual(diagnostic.logErrors[0], {
+      category: "FLARESOLVERR",
+      message: "FlareSolverr session initialization failed because its URL is not configured.",
+    });
     assert.deepEqual(diagnostic.environmentPresence, { FLARESOLVERR_URL: "ABSENT", REDIS_HOST: "PRESENT" });
     assert.equal(diagnostic.dns, "AVAILABLE");
     assert.equal(diagnostic.egress, "UNAVAILABLE");
-    for (const value of ["example.invalid", "magnet:?", hash, "tracker.invalid", "Secret", "movie.mkv", "must-not-appear", "secret-value", "Big%20Buck%20Bunny"]) {
+    for (const value of ["torrent-indexer |", "2026-08-01", "client_ip", "192.0.2.10", "/indexers/bludv", "query", "secret-agent", "example.invalid", "magnet:?", hash, "tracker.invalid", "Secret", "movie.mkv", "must-not-appear", "secret-value", "Big%20Buck%20Bunny"]) {
       assert.equal(serialized.includes(value), false);
     }
   });
@@ -253,6 +257,22 @@ describe("torrent-indexer runtime contract laboratory", () => {
     assert.match(dockerfile, /FROM node:24\.4\.1-bookworm-slim/);
     assert.match(dockerfile, /npm ci --ignore-scripts/);
     assert.doesNotMatch(dockerfile, /:latest/);
+  });
+
+  it("defines a locked-down internal FlareSolverr dependency", async () => {
+    const compose = await readFile(
+      new URL("../lab/torrent-indexer-runtime/compose.yml", import.meta.url),
+      "utf8",
+    );
+    assert.match(compose, /flaresolverr:[\s\S]*image: ghcr\.io\/flaresolverr\/flaresolverr:v3\.3\.21/);
+    assert.match(compose, /flaresolverr:[\s\S]*read_only: true/);
+    assert.match(compose, /flaresolverr:[\s\S]*no-new-privileges:true/);
+    assert.match(compose, /flaresolverr:[\s\S]*cap_drop:[\s\S]*- ALL/);
+    assert.match(compose, /flaresolverr:[\s\S]*mem_limit: 512m[\s\S]*cpus: 1\.0[\s\S]*pids_limit: 256/);
+    assert.match(compose, /FLARESOLVERR_URL: http:\/\/flaresolverr:8191/);
+    assert.match(compose, /depends_on:[\s\S]*flaresolverr:[\s\S]*condition: service_healthy/);
+    assert.doesNotMatch(compose, /flaresolverr:[\s\S]*?ports:/);
+    assert.doesNotMatch(compose, /privileged:|docker\.sock|:latest/);
   });
 
   it("uses idempotent POSIX signal cleanup and exits without resuming", async () => {

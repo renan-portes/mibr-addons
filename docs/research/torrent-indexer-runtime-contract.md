@@ -155,6 +155,13 @@ Isso comprova operação pública do contrato para `bludv` e
 no self-host é provavelmente ambiental ou de configuração, não evidência de uma
 quebra global do indexer.
 
+O diagnóstico self-host posterior confirmou a causa: HTTP `500`, payload JSON
+com erro de challenge, categoria `FLARESOLVERR`, `FLARESOLVERR_URL` ausente,
+DNS/egress disponíveis e Redis funcional. O laboratório runtime agora inclui
+`ghcr.io/flaresolverr/flaresolverr:v3.3.21` na mesma rede, sem porta publicada, e
+configura `FLARESOLVERR_URL=http://flaresolverr:8191`. O torrent-indexer aguarda o
+healthcheck desse serviço antes de iniciar.
+
 Em HTTP diferente de `200`, o laboratório agora produz somente diagnóstico
 sanitizado. O corpo é classificado como JSON ou texto, apenas as chaves raiz
 `error`, `message`, `status`, `code` e `type` podem aparecer, e a mensagem é
@@ -168,3 +175,7 @@ apenas como `PRESENT`/`ABSENT`, com atenção a `FLARESOLVERR_URL`. DNS e egress
 checados sem nova busca: resolução do host público e `wget --spider` somente na
 raiz `https://torrent-indexer.darklyn.org/`. Nenhuma página de resultados é
 acessada, a consulta `bludv` continua única e todos os temporários são apagados.
+
+`logErrors` nunca reutiliza a linha original: prefixo do container, JSON,
+timestamp, IP, path, user-agent e query são descartados. Cada entrada contém
+somente categoria e uma mensagem curta normalizada.

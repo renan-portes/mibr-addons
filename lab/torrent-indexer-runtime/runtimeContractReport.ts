@@ -129,23 +129,38 @@ function extractLogErrors(logs: string): SanitizedDiagnosticLine[] {
   const output: SanitizedDiagnosticLine[] = [];
   for (const line of logs.split(/\r?\n/)) {
     if (line.trim() === "") continue;
+    const content = line.replace(/^[^|\r\n]+\|\s*/, "");
     let level = "";
-    let candidate = line;
+    let classificationSource = content;
     try {
-      const parsed = JSON.parse(line) as unknown;
+      const parsed = JSON.parse(content) as unknown;
       if (isObject(parsed)) {
         level = typeof parsed.level === "string" ? parsed.level : "";
-        candidate = [parsed.message, parsed.msg, parsed.error].find((value) => typeof value === "string") as string | undefined ?? "";
+        classificationSource = JSON.stringify(parsed);
       }
     } catch {
-      level = /\b(fatal|error)\b/i.exec(line)?.[1] ?? "";
+      level = /\b(fatal|error)\b/i.exec(content)?.[1] ?? "";
     }
     if (!/^(error|fatal)$/i.test(level)) continue;
-    const message = sanitizeDiagnosticMessage(candidate);
-    output.push({ category: classifyDiagnostic(candidate), message });
+    const category = classifyDiagnostic(classificationSource);
+    output.push({ category, message: normalizedDiagnosticMessage(category) });
     if (output.length === 20) break;
   }
   return output;
+}
+
+function normalizedDiagnosticMessage(category: DiagnosticCategory): string {
+  const messages: Record<DiagnosticCategory, string> = {
+    FLARESOLVERR: "FlareSolverr session initialization failed because its URL is not configured.",
+    DNS_NETWORK: "DNS or network connectivity failed.",
+    EXTERNAL_HTTP: "An external HTTP request failed.",
+    TIMEOUT: "An upstream operation timed out.",
+    PARSER_SCRAPER: "Parser or scraper processing failed.",
+    REDIS: "Redis operation failed.",
+    CONFIGURATION: "Required runtime configuration is missing or invalid.",
+    UNKNOWN: "An unclassified upstream error occurred.",
+  };
+  return messages[category];
 }
 
 function parsePresence(input: string): Record<string, "PRESENT" | "ABSENT"> {

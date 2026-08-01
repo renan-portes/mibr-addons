@@ -77,7 +77,7 @@ run_contract_test() (
   compose up -d --build --wait --wait-timeout 120 || fail "build/start/health wait"
 
   printf '%s\n' "Confirming that neither container publishes a host port..."
-  for SERVICE in redis torrent-indexer; do
+  for SERVICE in redis flaresolverr torrent-indexer; do
     CONTAINER_ID=$(compose ps -q "$SERVICE") || fail "$SERVICE container ID lookup"
     [ -n "$CONTAINER_ID" ] || fail "$SERVICE container ID lookup"
     HOST_BINDINGS=$(docker inspect --format '{{json .HostConfig.PortBindings}}' "$CONTAINER_ID") || fail "$SERVICE HostConfig inspection"

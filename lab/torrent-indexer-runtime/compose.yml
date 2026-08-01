@@ -26,6 +26,35 @@ services:
       start_period: 5s
     stop_grace_period: 10s
 
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:v3.3.21
+    restart: "on-failure:3"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=128m
+      - /app/config:rw,nosuid,nodev,size=16m
+    shm_size: 128m
+    environment:
+      LOG_LEVEL: info
+      LOG_HTML: "false"
+      CAPTCHA_SOLVER: none
+    networks:
+      - runtime-contract
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 256
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8191/', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+    stop_grace_period: 15s
+
   torrent-indexer:
     image: mibr-lab/torrent-indexer:0ba84b16c63a
     build:
@@ -45,10 +74,13 @@ services:
       SHORT_LIVED_CACHE_EXPIRATION: 5m
       LONG_LIVED_CACHE_EXPIRATION: 1h
       FLARESOLVERR_POOL_SIZE: "1"
+      FLARESOLVERR_URL: http://flaresolverr:8191
       FALLBACK_TITLE_ENABLED: "false"
       MAGNET_METADATA_API_ENABLED: "false"
     depends_on:
       redis:
+        condition: service_healthy
+      flaresolverr:
         condition: service_healthy
     networks:
       - runtime-contract
