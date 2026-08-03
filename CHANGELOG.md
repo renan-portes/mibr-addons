@@ -8,6 +8,8 @@
 - Hardened the experimental health response framing and client-abort semantics, with fixed accept/start/completion markers to isolate the remaining post-listen runtime timeout without raw logs.
 - Removed the experimental HTTP launcher's implicit host-Node dependency after runtime markers proved health completed; curl metadata is now deterministic and response validation runs inside the offline tools container.
 - Recorded the first successful offline experimental HTTP Docker runtime on `b9c9be61b7dc29df8ff0418bfd43447b457107ab`, including validated health, isolated manifest and offline stream response with complete cleanup and no token or external call.
+- Added a separate offline/fake experimental client-access launcher with strict loopback/LAN authorization, one-port publication, pre-readiness validation and no automatic firewall or WAN exposure.
+- Hardened that launcher with executable failure/signal cleanup coverage, sanitized Compose failures, exact one-port override validation, an explicit `1024..65535` port range and a maximum optional lifetime of 3600 seconds.
 
 - Added an isolated, opt-in experimental addon-runtime composition for the torrent indexer and Real-Debrid resolver; the standard bootstrap and public addon surface remain unchanged.
 
