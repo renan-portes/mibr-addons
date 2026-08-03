@@ -24,6 +24,7 @@
 - Segunda execução única do modo `candidate` registrada com `GET info` concluído e `FILE_LIST_INVALID`; decoder ajustado ao slash inicial contratual sem relaxar a comparação autorizada, com nova validação runtime ainda pendente.
 - Terceira execução única de `candidate` registrada após `file_selected`, com `TIMEOUT` em aproximadamente 2899 ms e cleanup completo; polling do laboratório ampliado de forma limitada e categorias sanitizadas separadas sem alterar os defaults do produto.
 - Execução controlada posterior confirmou `DOWNLOADING` e esgotamento dos 10 GETs sem deadline global; somente o laboratório passa a permitir 20 GETs, delay de 1500 ms e timeout total de 45 s para uma nova validação única.
+- Modo `candidate` validado com sucesso na base `0b5381c0321b8d9626981cd5383cb692e990eb9f`: cadeia completa em 2271 ms, código 0, URL final validada sem exposição e cleanup sem resíduos, usando somente conteúdo aberto/autorizado pré-carregado manualmente.
 - Timeout e cancelamento por provider.
 
 ### Changed

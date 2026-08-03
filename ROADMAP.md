@@ -33,6 +33,7 @@
   - segunda execução única de `candidate`: `GET info` e presença de `files` confirmados; `FILE_LIST_INVALID` antes de `file_selected`, em 1349 ms, código 1 e cleanup completo. A incompatibilidade provável com o slash inicial contratual foi corrigida offline; nova validação runtime permanece pendente.
   - terceira execução única de `candidate`: autenticação, arquivo autorizado e `selectFiles` validados; `TIMEOUT` após `file_selected`, em aproximadamente 2899 ms, código 1 e cleanup completo. O laboratório agora distingue deadline, polling, delay e GET, usando até 10 snapshots, delay de 1500 ms e deadline de 30 s; nova execução permanece pendente.
   - execução seguinte alcançou `DOWNLOADING` e esgotou 10 GETs em 17766 ms, sem atingir o deadline global, sem falha estrutural ou URL final; janela exclusiva do laboratório ajustada para até 20 GETs, 1500 ms e 45 s, com nova execução única pendente.
+  - primeira execução bem-sucedida de `candidate` na base `0b5381c0321b8d9626981cd5383cb692e990eb9f`: fluxo completo, `SUCCESS`, código 0, 2271 ms, URL final validada sem exposição e cleanup completo; conteúdo aberto/autorizado foi pré-carregado manualmente, sem obra comercial ou repetição automática.
 - [ ] Integração com resolver autorizado real e validação de rede/DNS por hop
 - [ ] Resultado positivo com item real no self-host (não comprovado pela validação parcial)
 - [ ] Consultas funcionais a conteúdo comercial (fora de escopo)

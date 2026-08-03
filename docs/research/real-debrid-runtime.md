@@ -108,3 +108,15 @@ validação, somente o laboratório passa a usar no máximo 20 GETs, o mesmo del
 cancelável de 1500 ms e deadline total de 45 segundos. Polling infinito continua
 proibido e os defaults do produto permanecem 3 tentativas, 20 segundos e sem
 delay.
+
+Na base runtime `0b5381c0321b8d9626981cd5383cb692e990eb9f`, a primeira
+execução bem-sucedida do modo `candidate` validou a cadeia completa:
+autenticação, `addMagnet`, localização e validação do arquivo autorizado,
+`selectFiles` uma única vez, confirmação de `downloaded`, `unrestrict` uma única
+vez, validação defensiva da URL final e cleanup. O relatório sanitizado retornou
+`SUCCESS`, código 0 e duração de 2271 ms, sem expor URL, magnet, hash, path, ID,
+token ou dados da conta; não houve repetição automática nem resíduos de container
+ou rede. O conteúdo aberto/autorizado precisou ser pré-carregado manualmente e
+nenhuma obra comercial foi utilizada. Os defaults do produto permanecem
+inalterados, o provider continua fora do bootstrap e desativado por padrão, e
+playback, Stremio e Nuvio continuam não validados.

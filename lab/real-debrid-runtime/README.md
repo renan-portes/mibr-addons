@@ -94,6 +94,15 @@ Uma execução posterior confirmou `DOWNLOADING`, bucket `MANY`, limite de 10 GE
 atingido, deadline global não atingido, `POLLING_EXHAUSTED`, duração de 17766 ms,
 código 1 e cleanup completo. Não houve falha estrutural nem URL final.
 
+Na base runtime `0b5381c0321b8d9626981cd5383cb692e990eb9f`, a execução
+controlada seguinte concluiu toda a cadeia uma única vez: autenticação,
+`addMagnet`, validação do arquivo autorizado, `selectFiles`, `downloaded`,
+`unrestrict`, validação defensiva da URL final e cleanup. O resultado foi
+`SUCCESS`, código 0, em 2271 ms, sem exposição de dados sensíveis ou resíduos. A
+pré-carga manual de conteúdo aberto/autorizado foi necessária; nenhuma obra
+comercial, reprodução, integração Stremio ou Nuvio foi testada. O provider segue
+fora do bootstrap e desativado por padrão, sem alteração dos defaults do produto.
+
 Para a próxima validação controlada, somente este laboratório usa até 20
 snapshots por fase, 1500 ms entre GETs e deadline total de 45 s. Os defaults do
 produto permanecem inalterados. O relatório diferencia `GLOBAL_TIMEOUT`,
