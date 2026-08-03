@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { once } from "node:events";
-import { request } from "node:http";
+import { Agent, request } from "node:http";
 import { describe, it } from "node:test";
 import type { DataClient } from "../src/types/dataClient.js";
 import type { Parser } from "../src/types/parser.js";
@@ -40,13 +40,13 @@ function config(enabled: boolean, token?: string) {
   return { enabled, ...(token === undefined ? {} : { token }), source: { indexer: "synthetic" } };
 }
 
-async function localRequest(port: number, path: string, method = "GET"): Promise<{ status: number; contentType: string; body: string }> {
+async function localRequest(port: number, path: string, method = "GET", agent?: Agent): Promise<{ status: number; contentType: string; contentLength: string; body: string }> {
   return new Promise((resolve, reject) => {
-    const call = request({ host: "127.0.0.1", port, path, method }, (response) => {
+    const call = request({ host: "127.0.0.1", port, path, method, agent }, (response) => {
       let body = "";
       response.setEncoding("utf8");
       response.on("data", (chunk: string) => { body += chunk; });
-      response.on("end", () => resolve({ status: response.statusCode ?? 0, contentType: String(response.headers["content-type"] ?? ""), body }));
+      response.on("end", () => resolve({ status: response.statusCode ?? 0, contentType: String(response.headers["content-type"] ?? ""), contentLength: String(response.headers["content-length"] ?? ""), body }));
     });
     call.once("error", reject);
     call.end();
@@ -227,19 +227,112 @@ describe("experimental Real-Debrid addon runtime", () => {
       const stream = await localRequest(port, "/stream/movie/tt0000001.json");
       const unknown = await localRequest(port, "/debug");
       const method = await localRequest(port, "/health", "POST");
+      const head = await localRequest(port, "/health", "HEAD");
       assert.equal(health.status, 200);
+      assert.equal(health.contentLength, String(Buffer.byteLength(health.body)));
       assert.equal(manifest.status, 200);
       assert.equal(stream.status, 200);
       assert.deepEqual(JSON.parse(stream.body), { streams: [] });
       assert.equal(unknown.status, 404);
       assert.equal(method.status, 405);
+      assert.equal(head.status, 405);
+      assert.equal(unknown.contentLength, String(Buffer.byteLength(unknown.body)));
+      assert.equal(method.contentLength, String(Buffer.byteLength(method.body)));
       assert.match(manifest.contentType, /^application\/json/);
       assert.notDeepEqual(JSON.parse(manifest.body), getManifest());
       const copied = getExperimentalAddonManifest();
       copied.name = "mutated";
       assert.notEqual(getExperimentalAddonManifest().name, "mutated");
-      assert.equal(JSON.stringify([health, manifest, stream, unknown, method]).includes(TOKEN), false);
+      assert.equal(JSON.stringify([health, manifest, stream, unknown, method, head]).includes(TOKEN), false);
     } finally {
+      server.close();
+      await once(server, "close");
+    }
+  });
+
+  it("serves repeated HTTP/1.1 health responses over direct and keep-alive connections", async () => {
+    const runtime = createExperimentalRealDebridAddonRuntime(config(false), { client: new StaticClient(), parser });
+    for (const bind of ["127.0.0.1", "0.0.0.0"] as const) {
+      const markers: string[] = [];
+      const server = createExperimentalAddonHttpServer({ bind, port: 0, runtime, marker: (value) => markers.push(value) });
+      await once(server, "listening");
+      const address = server.address() as { port: number };
+      const agent = new Agent({ keepAlive: true, maxSockets: 1 });
+      try {
+        for (let index = 0; index < 3; index += 1) {
+          const health = await localRequest(address.port, "/health", "GET", index === 0 ? undefined : agent);
+          assert.equal(health.status, 200);
+          assert.equal(health.contentType, "application/json; charset=utf-8");
+          assert.equal(health.body, '{"status":"ok"}');
+          assert.equal(health.contentLength, String(Buffer.byteLength(health.body)));
+        }
+        assert.equal(markers.filter((value) => value === "EXPERIMENTAL_HTTP_REQUEST_ACCEPTED").length, 3);
+        assert.equal(markers.filter((value) => value === "EXPERIMENTAL_HTTP_HEALTH_RESPONSE_STARTED").length, 3);
+        assert.equal(markers.filter((value) => value === "EXPERIMENTAL_HTTP_HEALTH_RESPONSE_COMPLETED").length, 3);
+        assert.equal(markers.includes("EXPERIMENTAL_HTTP_CLIENT_ABORTED"), false);
+        assert.equal(server.listening, true);
+      } finally {
+        agent.destroy();
+        server.close();
+        await once(server, "close");
+      }
+    }
+  });
+
+  it("does not abort provider work after a normal completed response", async () => {
+    const resolver = new FakeTorrentCandidateResolver([{ url: "https://media.example.invalid/stream.mp4", name: "Synthetic", sizeBytes: 1, source: "local-test" }]);
+    const runtime = createExperimentalRealDebridAddonRuntime(config(true, TOKEN), {
+      client: new StaticClient(), parser,
+      wiring: {
+        createTransport: () => new FakeRealDebridTransport([]),
+        createApiClient: (transport, token) => new RealDebridApiClient(transport, token),
+        createResolver: () => resolver,
+      },
+    });
+    const markers: string[] = [];
+    const server = createExperimentalAddonHttpServer({ runtime, marker: (value) => markers.push(value) });
+    await once(server, "listening");
+    const port = (server.address() as { port: number }).port;
+    try {
+      const normal = await localRequest(port, "/stream/movie/tt0000001.json");
+      assert.equal(normal.status, 200);
+      assert.equal(resolver.requests[0]?.signal.aborted, false);
+      assert.equal(markers.includes("EXPERIMENTAL_HTTP_CLIENT_ABORTED"), false);
+    } finally {
+      server.close();
+      await once(server, "close");
+    }
+  });
+
+  it("aborts provider work only for a genuinely premature client disconnect", async () => {
+    const resolver = new FakeTorrentCandidateResolver(["wait-for-abort"]);
+    const runtime = createExperimentalRealDebridAddonRuntime(config(true, TOKEN), {
+      client: new StaticClient(), parser,
+      wiring: {
+        createTransport: () => new FakeRealDebridTransport([]),
+        createApiClient: (transport, token) => new RealDebridApiClient(transport, token),
+        createResolver: () => resolver,
+      },
+    });
+    const markers: string[] = [];
+    const server = createExperimentalAddonHttpServer({ runtime, marker: (value) => markers.push(value) });
+    await once(server, "listening");
+    const port = (server.address() as { port: number }).port;
+
+    const call = request({ host: "127.0.0.1", port, path: "/stream/movie/tt0000001.json" });
+    call.on("error", () => undefined);
+    try {
+      call.end();
+      await resolver.waitForCall();
+      const signal = resolver.requests[0]?.signal;
+      assert.ok(signal);
+      const aborted = once(signal, "abort");
+      call.destroy();
+      await aborted;
+      assert.equal(signal.aborted, true);
+      assert.equal(markers.filter((value) => value === "EXPERIMENTAL_HTTP_CLIENT_ABORTED").length, 1);
+    } finally {
+      call.destroy();
       server.close();
       await once(server, "close");
     }
@@ -310,7 +403,7 @@ describe("experimental Real-Debrid addon runtime", () => {
     assert.match(launcher, /cleanup\(\)/);
     assert.match(launcher, /\[ "\$cleaned" -eq 0 \] \|\| return 0/);
     assert.doesNotMatch(launcher, /REAL_DEBRID_TOKEN=/);
-    for (const field of ["serviceContainerPresent", "serviceRunning", "serviceExitCodePresent", "expectedInternalPort", "publishedLoopbackPresent", "serverStartupMarkerPresent", "serverListeningMarkerPresent", "diagnosticCategory"]) {
+    for (const field of ["serviceContainerPresent", "serviceRunning", "serviceExitCodePresent", "expectedInternalPort", "publishedLoopbackPresent", "serverStartupMarkerPresent", "serverListeningMarkerPresent", "requestAcceptedMarkerPresent", "healthResponseStartedMarkerPresent", "healthResponseCompletedMarkerPresent", "diagnosticCategory"]) {
       assert.match(launcher, new RegExp(field));
     }
     assert.doesNotMatch(launcher, /compose logs[^\n]*\|\s*(cat|tee)|docker inspect[^\n]*printf/);
@@ -325,7 +418,7 @@ describe("experimental Real-Debrid addon runtime", () => {
     try {
       mkdirSync(bin, { recursive: true });
       const fake = (name: string, source: string) => { const path = join(bin, name); writeFileSync(path, source); chmodSync(path, 0o700); };
-      fake("docker", `#!/bin/sh\necho "docker $*" >> "$FAKE_LOG"\ncase "$*" in *" up "*) exit "\${FAKE_UP_STATUS:-0}";; *" ps -a -q "*) [ "\${FAKE_SERVICE_PRESENT:-1}" = 1 ] && echo synthetic-container;; *" ps -q "*) [ "\${FAKE_SERVICE_RUNNING:-1}" = 1 ] && echo synthetic-container;; inspect\\ *State.Running*) [ "\${FAKE_SERVICE_RUNNING:-1}" = 1 ] && echo true || echo false;; inspect\\ *State.ExitCode*) echo 1;; inspect\\ *Path*) [ "\${FAKE_COMMAND_MATCH:-1}" = 1 ] && echo '/opt/runtime-tools/node_modules/.bin/tsx|/workspace/lab/real-debrid-addon-runtime/tools/http-server.ts' || echo mismatch;; *" port "*) [ "\${FAKE_PUBLISHED:-1}" = 1 ] && echo "127.0.0.1:17007";; *" logs "*) [ "\${FAKE_STARTING:-1}" = 1 ] && echo EXPERIMENTAL_HTTP_STARTING; [ "\${FAKE_LISTENING:-1}" = 1 ] && echo EXPERIMENTAL_HTTP_LISTENING; [ "\${FAKE_CONFIG_ERROR:-0}" = 1 ] && echo EXPERIMENTAL_HTTP_CONFIGURATION_ERROR;; *" down "*) exit "\${FAKE_DOWN_STATUS:-0}";; esac\n`);
+      fake("docker", `#!/bin/sh\necho "docker $*" >> "$FAKE_LOG"\ncase "$*" in *" up "*) exit "\${FAKE_UP_STATUS:-0}";; *" ps -a -q "*) [ "\${FAKE_SERVICE_PRESENT:-1}" = 1 ] && echo synthetic-container;; *" ps -q "*) [ "\${FAKE_SERVICE_RUNNING:-1}" = 1 ] && echo synthetic-container;; inspect\\ *State.Running*) [ "\${FAKE_SERVICE_RUNNING:-1}" = 1 ] && echo true || echo false;; inspect\\ *State.ExitCode*) echo 1;; inspect\\ *Path*) [ "\${FAKE_COMMAND_MATCH:-1}" = 1 ] && echo '/opt/runtime-tools/node_modules/.bin/tsx|/workspace/lab/real-debrid-addon-runtime/tools/http-server.ts' || echo mismatch;; *" port "*) [ "\${FAKE_PUBLISHED:-1}" = 1 ] && echo "127.0.0.1:17007";; *" logs "*) [ "\${FAKE_STARTING:-1}" = 1 ] && echo EXPERIMENTAL_HTTP_STARTING; [ "\${FAKE_LISTENING:-1}" = 1 ] && echo EXPERIMENTAL_HTTP_LISTENING; [ "\${FAKE_REQUEST_ACCEPTED:-0}" = 1 ] && echo EXPERIMENTAL_HTTP_REQUEST_ACCEPTED; [ "\${FAKE_HEALTH_STARTED:-0}" = 1 ] && echo EXPERIMENTAL_HTTP_HEALTH_RESPONSE_STARTED; [ "\${FAKE_HEALTH_COMPLETED:-0}" = 1 ] && echo EXPERIMENTAL_HTTP_HEALTH_RESPONSE_COMPLETED; [ "\${FAKE_CONFIG_ERROR:-0}" = 1 ] && echo EXPERIMENTAL_HTTP_CONFIGURATION_ERROR;; *" down "*) exit "\${FAKE_DOWN_STATUS:-0}";; esac\n`);
       fake("mktemp", `#!/bin/sh\necho mktemp >> "$FAKE_LOG"\n/bin/mkdir -p "$FAKE_TEMP_DIR"\nprintf '%s\\n' "$FAKE_TEMP_DIR"\n`);
       fake("chmod", `#!/bin/sh\n/bin/chmod "$@"\n`);
       fake("chown", `#!/bin/sh\necho chown >> "$FAKE_LOG"\n`);
@@ -346,7 +439,8 @@ describe("experimental Real-Debrid addon runtime", () => {
       for (const [name, up, healthFails, expectedHealth, manifestMode, streamMode, running, present, listening, category] of cases) {
         rmSync(log, { force: true }); rmSync(work, { recursive: true, force: true }); rmSync(join(root, "count"), { force: true });
         const command = process.platform === "win32" ? 'export PATH="$(/usr/bin/cygpath -u "$TEST_BIN"):$PATH"; exec /bin/sh "$TEST_LAUNCHER"' : 'export PATH="$TEST_BIN:$PATH"; exec sh "$TEST_LAUNCHER"';
-        const result = spawnSync(shell, ["-c", command], { cwd: process.cwd(), encoding: "utf8", env: { ...process.env, TEST_BIN: bin, TEST_LAUNCHER: "lab/real-debrid-addon-runtime/scripts/http-offline.sh", FAKE_LOG: log, FAKE_TEMP_DIR: work, FAKE_COUNT: join(root, "count"), FAKE_UP_STATUS: up, FAKE_HEALTH_FAILS: healthFails, FAKE_SERVICE_RUNNING: running, FAKE_SERVICE_PRESENT: present, FAKE_COMMAND_MATCH: name === "command-mismatch" ? "0" : "1", FAKE_STARTING: "1", FAKE_LISTENING: listening, FAKE_CONFIG_ERROR: name === "configuration-missing" ? "1" : "0", FAKE_health_MODE: name === "health-redirect" ? "redirect" : manifestMode === "reset" ? "reset" : "ok", FAKE_manifest_MODE: manifestMode, FAKE_stream_MODE: streamMode, FAKE_DOWN_STATUS: name === "success" ? "9" : "0", FAKE_RM_STATUS: "0", FAKE_RMDIR_STATUS: "0" } });
+        const healthyMarkers = name === "success" || name === "health-last";
+        const result = spawnSync(shell, ["-c", command], { cwd: process.cwd(), encoding: "utf8", env: { ...process.env, TEST_BIN: bin, TEST_LAUNCHER: "lab/real-debrid-addon-runtime/scripts/http-offline.sh", FAKE_LOG: log, FAKE_TEMP_DIR: work, FAKE_COUNT: join(root, "count"), FAKE_UP_STATUS: up, FAKE_HEALTH_FAILS: healthFails, FAKE_SERVICE_RUNNING: running, FAKE_SERVICE_PRESENT: present, FAKE_COMMAND_MATCH: name === "command-mismatch" ? "0" : "1", FAKE_STARTING: "1", FAKE_LISTENING: listening, FAKE_REQUEST_ACCEPTED: name === "connection-reset" ? "0" : "1", FAKE_HEALTH_STARTED: name === "connection-reset" ? "0" : "1", FAKE_HEALTH_COMPLETED: healthyMarkers ? "1" : "0", FAKE_CONFIG_ERROR: name === "configuration-missing" ? "1" : "0", FAKE_health_MODE: name === "health-redirect" ? "redirect" : manifestMode === "reset" ? "reset" : "ok", FAKE_manifest_MODE: manifestMode, FAKE_stream_MODE: streamMode, FAKE_DOWN_STATUS: name === "success" ? "9" : "0", FAKE_RM_STATUS: "0", FAKE_RMDIR_STATUS: "0" } });
         assert.equal(result.status, name === "up" ? 17 : name === "success" || name === "health-last" ? 0 : 1, `${name}: ${result.stdout} ${result.stderr}`);
         const calls = readFileSync(log, "utf8").trim().split("\n");
         assert.equal(calls.filter((x) => x.includes(" down ")).length, 1);
@@ -355,6 +449,16 @@ describe("experimental Real-Debrid addon runtime", () => {
         if (configIndex !== -1) assert.ok(calls.indexOf("chown") < configIndex);
         assert.equal(calls.filter((x) => x.includes("/health")).length, Number(expectedHealth));
         if (category) assert.match(result.stdout, new RegExp(`diagnosticCategory: ${category}`));
+        if (name === "connection-reset") {
+          assert.match(result.stdout, /requestAcceptedMarkerPresent: NAO/);
+          assert.match(result.stdout, /healthResponseStartedMarkerPresent: NAO/);
+          assert.match(result.stdout, /healthResponseCompletedMarkerPresent: NAO/);
+        }
+        if (name === "health-timeout") {
+          assert.match(result.stdout, /requestAcceptedMarkerPresent: SIM/);
+          assert.match(result.stdout, /healthResponseStartedMarkerPresent: SIM/);
+          assert.match(result.stdout, /healthResponseCompletedMarkerPresent: NAO/);
+        }
         assert.equal(calls.filter((x) => x.includes("/manifest.json")).length, name === "up" || category !== "" ? 0 : 1);
         assert.equal(calls.filter((x) => x.includes("tt0000001")).length, name === "success" || name === "health-last" || name === "stream-invalid" || name === "stream-http" || name === "stream-redirect" ? 1 : 0);
         assert.equal(result.stdout.includes("127.0.0.1"), false);

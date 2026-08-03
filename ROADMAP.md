@@ -2,7 +2,7 @@
 
 - [ ] Validate the experimental addon manifest on the docker-server before any Stremio or Nuvio installation; the offline no-port dry-run is complete.
 
-- [ ] Re-run the isolated offline experimental HTTP addon runtime with fixed startup/listening markers and allowlisted process diagnostics; two reset-only health attempts completed cleanup, and the final cause remains unconfirmed before manifest validation.
+- [ ] Re-run the isolated offline experimental HTTP addon runtime with accept/response-completion markers; the latest run confirmed a live listening process and loopback publication but not whether Node accepted or flushed the health request.
 
 - [ ] Start the isolated Real-Debrid addon runtime lab on the docker-server and validate its experimental manifest before any Stremio or Nuvio installation.
 

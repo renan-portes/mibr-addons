@@ -16,7 +16,8 @@ try {
     throw new Error("invalid experimental HTTP configuration");
   }
   const runtime = createExperimentalRealDebridAddonRuntime({ enabled: false, source: { indexer: "runtime-lab" } }, { client, parser });
-  const server = createExperimentalAddonHttpServer({ bind, port, runtime });
+  const marker = (value: string) => process.stdout.write(`${value}\n`);
+  const server = createExperimentalAddonHttpServer({ bind, port, runtime, marker });
   server.once("listening", () => process.stdout.write("EXPERIMENTAL_HTTP_LISTENING\n"));
   server.once("error", () => {
     process.stderr.write("EXPERIMENTAL_HTTP_RUNTIME_ERROR\n");

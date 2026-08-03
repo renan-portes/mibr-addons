@@ -77,6 +77,9 @@ emit_diagnostic() {
   published_loopback_present=NAO
   server_startup_marker_present=NAO
   server_listening_marker_present=NAO
+  request_accepted_marker_present=NAO
+  health_response_started_marker_present=NAO
+  health_response_completed_marker_present=NAO
   command_matches=NAO
   diagnostic_category=UNKNOWN
 
@@ -93,6 +96,9 @@ emit_diagnostic() {
   [ "$(compose port addon-runtime-http-lab 7007 2>/dev/null || :)" = "127.0.0.1:${port}" ] && published_loopback_present=SIM
   marker_present EXPERIMENTAL_HTTP_STARTING && server_startup_marker_present=SIM
   marker_present EXPERIMENTAL_HTTP_LISTENING && server_listening_marker_present=SIM
+  marker_present EXPERIMENTAL_HTTP_REQUEST_ACCEPTED && request_accepted_marker_present=SIM
+  marker_present EXPERIMENTAL_HTTP_HEALTH_RESPONSE_STARTED && health_response_started_marker_present=SIM
+  marker_present EXPERIMENTAL_HTTP_HEALTH_RESPONSE_COMPLETED && health_response_completed_marker_present=SIM
 
   if [ "$service_container_present" = NAO ]; then
     diagnostic_category=SERVICE_NOT_CREATED
@@ -118,6 +124,9 @@ emit_diagnostic() {
     "publishedLoopbackPresent: $published_loopback_present" \
     "serverStartupMarkerPresent: $server_startup_marker_present" \
     "serverListeningMarkerPresent: $server_listening_marker_present" \
+    "requestAcceptedMarkerPresent: $request_accepted_marker_present" \
+    "healthResponseStartedMarkerPresent: $health_response_started_marker_present" \
+    "healthResponseCompletedMarkerPresent: $health_response_completed_marker_present" \
     "diagnosticCategory: $diagnostic_category"
 }
 
