@@ -6,6 +6,7 @@
 - Corrected the experimental Docker HTTP service to bind internally on `0.0.0.0:7007` while retaining loopback-only host publication; the first reset-only health run remains documented and a replacement validation is pending.
 - Added fixed experimental HTTP startup markers and allowlisted container/readiness diagnostics after a second reset-only runtime attempt showed that the internal bind correction alone was insufficient.
 - Hardened the experimental health response framing and client-abort semantics, with fixed accept/start/completion markers to isolate the remaining post-listen runtime timeout without raw logs.
+- Removed the experimental HTTP launcher's implicit host-Node dependency after runtime markers proved health completed; curl metadata is now deterministic and response validation runs inside the offline tools container.
 
 - Added an isolated, opt-in experimental addon-runtime composition for the torrent indexer and Real-Debrid resolver; the standard bootstrap and public addon surface remain unchanged.
 

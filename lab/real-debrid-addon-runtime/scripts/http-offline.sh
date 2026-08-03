@@ -10,9 +10,18 @@ placeholder="$tmp_dir/real_debrid_token"
 headers="$tmp_dir/headers"
 body="$tmp_dir/body"
 status_file="$tmp_dir/status"
+. "$lab_dir/scripts/local-http-client.sh"
 main_status=0
 cleaned=0
 last_curl_status=0
+curl_exit_category=UNKNOWN
+http_status_present=NAO
+http_status_accepted=NAO
+content_type_present=NAO
+content_type_accepted=NAO
+body_present=NAO
+json_valid=NAO
+health_status_valid=NAO
 port=${EXPERIMENTAL_ADDON_HTTP_PORT:-17007}
 
 cleanup() {
@@ -127,6 +136,14 @@ emit_diagnostic() {
     "requestAcceptedMarkerPresent: $request_accepted_marker_present" \
     "healthResponseStartedMarkerPresent: $health_response_started_marker_present" \
     "healthResponseCompletedMarkerPresent: $health_response_completed_marker_present" \
+    "curlExitCategory: $curl_exit_category" \
+    "httpStatusPresent: $http_status_present" \
+    "httpStatusAccepted: $http_status_accepted" \
+    "contentTypePresent: $content_type_present" \
+    "contentTypeAccepted: $content_type_accepted" \
+    "bodyPresent: $body_present" \
+    "jsonValid: $json_valid" \
+    "healthStatusValid: $health_status_valid" \
     "diagnosticCategory: $diagnostic_category"
 }
 
@@ -137,22 +154,55 @@ if ! service_running; then
 fi
 
 fetch_json() {
-  path=$1
-  : > "$headers"; : > "$body"
-  if curl --silent --max-time 2 --max-redirs 0 --noproxy '*' -D "$headers" -o "$body" -w '%{http_code}' "http://127.0.0.1:${port}/${path}" > "$status_file" 2>/dev/null; then
+  kind=$1
+  path=$2
+  curl_exit_category=UNKNOWN
+  http_status_present=NAO
+  http_status_accepted=NAO
+  content_type_present=NAO
+  content_type_accepted=NAO
+  body_present=NAO
+  json_valid=NAO
+  health_status_valid=NAO
+
+  if local_http_get "$port" "$path" "$headers" "$body" "$status_file"; then
     last_curl_status=0
   else
     last_curl_status=$?
+  fi
+  case "$last_curl_status" in
+    0) curl_exit_category=SUCCESS;;
+    7) curl_exit_category=CONNECT_FAILED;;
+    22) curl_exit_category=HTTP_ERROR;;
+    28) curl_exit_category=TIMEOUT;;
+    35|52) curl_exit_category=PROTOCOL_ERROR;;
+    56) curl_exit_category=CONNECTION_RESET;;
+    *) curl_exit_category=UNKNOWN;;
+  esac
+
+  http_status=$(sed -n '1p' "$status_file" | tr -d '\r\n')
+  content_type=$(sed -n '2p' "$status_file" | tr -d '\r' | tr '[:upper:]' '[:lower:]')
+  case "$http_status" in [0-9][0-9][0-9]) http_status_present=SIM;; esac
+  [ "$http_status" = 200 ] && http_status_accepted=SIM
+  [ -n "$content_type" ] && content_type_present=SIM
+  case "$content_type" in application/json|application/json\;*) content_type_accepted=SIM;; esac
+  [ -s "$body" ] && body_present=SIM
+
+  [ "$last_curl_status" -eq 0 ] || return 1
+  [ "$http_status_accepted" = SIM ] || return 1
+  [ "$content_type_accepted" = SIM ] || return 1
+  [ "$body_present" = SIM ] || return 1
+  if compose exec -T addon-runtime-http-lab /opt/runtime-tools/node_modules/.bin/tsx /workspace/lab/real-debrid-addon-runtime/tools/http-response-validator.ts "$kind" < "$body" >/dev/null 2>&1; then
+    json_valid=SIM
+    [ "$kind" != health ] || health_status_valid=SIM
+  else
     return 1
   fi
-  [ "$(cat "$status_file")" = 200 ] || return 1
-  grep -Eiq '^content-type:[[:space:]]*application/json([;[:space:]]|$)' "$headers" || return 1
-  node -e 'JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"))' "$body" >/dev/null 2>&1 || return 1
 }
 
 attempt=0
 while :; do
-  if fetch_json health && node -e 'const x=JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8")); process.exit(x.status === "ok" ? 0 : 1)' "$body" >/dev/null 2>&1; then break; fi
+  if fetch_json health health; then break; fi
   if ! service_running; then
     emit_diagnostic
     main_status=1
@@ -162,7 +212,5 @@ while :; do
   [ "$attempt" -lt 5 ] || { emit_diagnostic; main_status=1; exit "$main_status"; }
   sleep 1
 done
-fetch_json manifest.json || { main_status=1; exit "$main_status"; }
-node -e 'const x=JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8")); process.exit(typeof x.id === "string" && typeof x.name === "string" && Array.isArray(x.resources) ? 0 : 1)' "$body" >/dev/null 2>&1 || { main_status=1; exit "$main_status"; }
-fetch_json stream/movie/tt0000001.json || { main_status=1; exit "$main_status"; }
-node -e 'const x=JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8")); process.exit(Array.isArray(x.streams) ? 0 : 1)' "$body" >/dev/null 2>&1 || { main_status=1; exit "$main_status"; }
+fetch_json manifest manifest.json || { main_status=1; exit "$main_status"; }
+fetch_json stream stream/movie/tt0000001.json || { main_status=1; exit "$main_status"; }
