@@ -42,6 +42,16 @@ export function selectRealDebridFile(files: readonly RealDebridFile[], media: To
   return candidates[0] ?? null;
 }
 
+function selectAuthorizedFile(files: readonly RealDebridFile[], authorized: TorrentCandidateResolutionRequest["files"]): RealDebridFile | null {
+  if (authorized.length === 0) return null;
+  const exactPath = files.filter((file) => authorized.some((entry) => entry.path === file.path));
+  if (exactPath.length === 0) throw new RealDebridResolverError("authorized_file_not_found");
+  const exact = exactPath.filter((file) => authorized.some((entry) => entry.path === file.path && entry.sizeBytes === file.bytes));
+  if (exact.length === 0) throw new RealDebridResolverError("authorized_file_size_mismatch");
+  if (exact.length !== 1) throw new RealDebridResolverError("ambiguous_authorized_file");
+  return exact[0]!;
+}
+
 export class RealDebridCandidateResolver implements TorrentCandidateResolver {
   private readonly attempts: number;
   private readonly timeoutMs: number;
@@ -80,7 +90,9 @@ export class RealDebridCandidateResolver implements TorrentCandidateResolver {
       torrentId = await this.api.addMagnet(request.magnet, main.signal); this.check(main.signal);
       let info = await this.api.info(torrentId, main.signal); this.check(main.signal);
       info = await this.waitForFiles(torrentId, info, main.signal);
-      const file = selectRealDebridFile(info.files, request.media);
+      const file = request.files.length > 0
+        ? selectAuthorizedFile(info.files, request.files)
+        : selectRealDebridFile(info.files, request.media);
       if (file === null) result = null;
       else {
         await this.api.selectFile(torrentId, file.id, main.signal); this.check(main.signal);

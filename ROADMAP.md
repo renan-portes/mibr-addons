@@ -28,7 +28,8 @@
 - [x] Laboratório autenticado descartável do Real-Debrid preparado para execução manual (`account` primeiro; `candidate` separado; sem token ou chamada real no desenvolvimento)
   - primeira tentativa falhou no build por ownership do `WORKDIR`, antes de autenticação ou chamada à API; correção aplicada e nova execução pendente.
   - tentativa seguinte falhou antes do HTTP porque o segredo `root:root 0600` era ilegível pelo container `1000:1000`; ownership POSIX e diagnóstico pré-HTTP corrigidos, com nova execução pendente.
-  - modo `account` validado no commit `e13652b6dedfd77b77cd02cfe22af492ad8869d2`: um `GET /user`, HTTP 200, `SUCCESS`, código 0, sanitização e cleanup completos; `candidate`, conteúdo e playback não testados.
+  - modo `account` validado no commit `e13652b6dedfd77b77cd02cfe22af492ad8869d2`: um `GET /user`, HTTP 200, `SUCCESS`, código 0, sanitização e cleanup completos; conteúdo e playback não testados nessa fase.
+  - primeira execução única de `candidate`: autenticação e `addMagnet` validados; falha `INVALID_RESPONSE` antes de `file_selected`, em 1366 ms, código 1 e cleanup completo. Diagnóstico estrutural foi refinado offline; causa específica e representação do path raiz continuam pendentes, sem nova execução.
 - [ ] Integração com resolver autorizado real e validação de rede/DNS por hop
 - [ ] Resultado positivo com item real no self-host (não comprovado pela validação parcial)
 - [ ] Consultas funcionais a conteúdo comercial (fora de escopo)

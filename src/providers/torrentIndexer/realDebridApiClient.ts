@@ -4,6 +4,9 @@ export type RealDebridErrorCode =
   | "invalid_configuration" | "canceled" | "timeout" | "transport_error"
   | "unexpected_http_status" | "rate_limited" | "invalid_content_type" | "invalid_json"
   | "response_too_large" | "invalid_response" | "unknown_status"
+  | "info_http_error" | "info_invalid_json" | "info_invalid_response"
+  | "file_list_missing" | "file_list_invalid" | "file_list_too_many" | "file_id_invalid"
+  | "authorized_file_not_found" | "authorized_file_size_mismatch" | "ambiguous_authorized_file"
   | "terminal_status" | "file_not_found" | "ambiguous_file_selection"
   | "link_not_found" | "ambiguous_link" | "invalid_final_url" | "cleanup_failed";
 
@@ -112,14 +115,20 @@ export function isSafeRealDebridPath(value: unknown): value is string {
     && segment.length <= 255 && !segment.endsWith(".") && !segment.endsWith(" "));
 }
 
-function decodeFiles(value: unknown): readonly RealDebridFile[] | null {
-  if (!Array.isArray(value) || value.length > MAX_ITEMS) return null;
+function decodeFiles(value: unknown): readonly RealDebridFile[] {
+  if (value === undefined) throw new RealDebridResolverError("file_list_missing");
+  if (!Array.isArray(value)) throw new RealDebridResolverError("file_list_invalid");
+  if (value.length > MAX_ITEMS) throw new RealDebridResolverError("file_list_too_many");
   const files: RealDebridFile[] = [];
   for (const entry of value) {
     const item = object(entry);
-    if (item === null || !Number.isSafeInteger(item.id) || (item.id as number) <= 0 || !isSafeRealDebridPath(item.path)
+    if (item === null) throw new RealDebridResolverError("file_list_invalid");
+    if (!Number.isSafeInteger(item.id) || (item.id as number) <= 0) throw new RealDebridResolverError("file_id_invalid");
+    if (!isSafeRealDebridPath(item.path)
       || !Number.isSafeInteger(item.bytes) || (item.bytes as number) < 0 || (item.bytes as number) > MAX_FILE_BYTES
-      || typeof item.selected !== "number" || (item.selected !== 0 && item.selected !== 1)) return null;
+      || typeof item.selected !== "number" || (item.selected !== 0 && item.selected !== 1)) {
+      throw new RealDebridResolverError("file_list_invalid");
+    }
     files.push(Object.freeze({ id: item.id as number, path: item.path, bytes: item.bytes as number, selected: item.selected === 1 }));
   }
   return Object.freeze(files);
@@ -177,7 +186,7 @@ export class RealDebridApiClient {
     const links = decodeLinks(value?.links);
     const status = value?.status;
     if (typeof status === "string" && !STATUS.has(status as RealDebridStatus)) throw new RealDebridResolverError("unknown_status");
-    if (decodedId === null || decodedId !== torrentId || files === null || links === null || typeof status !== "string") {
+    if (decodedId === null || decodedId !== torrentId || links === null || typeof status !== "string") {
       throw new RealDebridResolverError("invalid_response");
     }
     return Object.freeze({ id: decodedId, status: status as RealDebridStatus, files, links });
