@@ -1,8 +1,8 @@
 # Roadmap
 
-- [ ] Validate the experimental addon manifest on the docker-server before any Stremio or Nuvio installation; the offline no-port dry-run is complete.
+- [x] Validate the isolated experimental addon HTTP runtime on the docker-server: runtime base `b9c9be61b7dc29df8ff0418bfd43447b457107ab` returned code `0` after health, manifest and offline stream validation with loopback-only publication and complete cleanup.
 
-- [ ] Re-run the isolated offline experimental HTTP addon runtime with the deterministic curl client; the latest run proved Node accepted and completed health, isolating the prior timeout to the host-side client/validator boundary.
+- [ ] Expose the isolated experimental manifest temporarily to an explicitly authorized client; Stremio, Nuvio and playback remain unvalidated, and the standard addon stays unchanged.
 
 - [ ] Start the isolated Real-Debrid addon runtime lab on the docker-server and validate its experimental manifest before any Stremio or Nuvio installation.
 

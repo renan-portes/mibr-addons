@@ -7,6 +7,7 @@
 - Added fixed experimental HTTP startup markers and allowlisted container/readiness diagnostics after a second reset-only runtime attempt showed that the internal bind correction alone was insufficient.
 - Hardened the experimental health response framing and client-abort semantics, with fixed accept/start/completion markers to isolate the remaining post-listen runtime timeout without raw logs.
 - Removed the experimental HTTP launcher's implicit host-Node dependency after runtime markers proved health completed; curl metadata is now deterministic and response validation runs inside the offline tools container.
+- Recorded the first successful offline experimental HTTP Docker runtime on `b9c9be61b7dc29df8ff0418bfd43447b457107ab`, including validated health, isolated manifest and offline stream response with complete cleanup and no token or external call.
 
 - Added an isolated, opt-in experimental addon-runtime composition for the torrent indexer and Real-Debrid resolver; the standard bootstrap and public addon surface remain unchanged.
 
