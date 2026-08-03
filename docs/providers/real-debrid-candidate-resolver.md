@@ -2,7 +2,7 @@
 
 ## Experimental HTTP runtime laboratory
 
-The isolated addon-runtime laboratory now includes an offline experimental HTTP surface with its own manifest and ProviderManager composition. It is not imported by the standard bootstrap and it is disabled from network publication in versioned Compose. Only loopback publication through a disposable local override is planned for the next runtime check. No token or Real-Debrid call is used; Stremio, Nuvio, and playback remain unvalidated.
+The isolated addon-runtime laboratory now includes an offline experimental HTTP surface with its own manifest and ProviderManager composition. It is not imported by the standard bootstrap and it is disabled from network publication in versioned Compose. Direct execution binds to `127.0.0.1`; the experimental container alone binds internally to `0.0.0.0:7007`, while its disposable override may publish only `127.0.0.1:<host-port>:7007`. No token or Real-Debrid call is used; Stremio, Nuvio, and playback remain unvalidated. The first runtime attempt reached a started container but received five reset health connections and returned code `1`; this bind correction still awaits runtime validation.
 
 ## Escopo offline
 

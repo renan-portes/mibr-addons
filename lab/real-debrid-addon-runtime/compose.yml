@@ -32,6 +32,9 @@ services:
       context: ../..
       dockerfile: lab/real-debrid-addon-runtime/Dockerfile.tools
     command: ["/workspace/lab/real-debrid-addon-runtime/tools/http-server.ts"]
+    environment:
+      EXPERIMENTAL_ADDON_HTTP_HOST: "0.0.0.0"
+      EXPERIMENTAL_ADDON_HTTP_PORT: "7007"
     read_only: true
     user: "1000:1000"
     init: true
