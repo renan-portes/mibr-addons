@@ -202,7 +202,7 @@ describe("Real-Debrid authenticated runtime laboratory", () => {
     assert.deepEqual(polling.snapshot(), { pollingStarted: "SIM", pollingAttemptsBucket: "FEW", lastStatusCategory: "COMPRESSING", globalDeadlineReached: "NÃO", pollingLimitReached: "SIM" });
     const global = new CandidatePollingDiagnosticTracker(); global.startAttempt(); global.recordStatus("downloading"); global.recordFailure("global_timeout");
     assert.deepEqual(global.snapshot(), { pollingStarted: "SIM", pollingAttemptsBucket: "ONE", lastStatusCategory: "DOWNLOADING", globalDeadlineReached: "SIM", pollingLimitReached: "NÃO" });
-    assert.match(tool, /pollAttempts: 10/); assert.match(tool, /totalTimeoutMs: 30_000/); assert.match(tool, /setTimeout\(finish, 1_500\)/);
+    assert.match(tool, /pollAttempts: 20/); assert.match(tool, /totalTimeoutMs: 45_000/); assert.match(tool, /setTimeout\(finish, 1_500\)/);
     for (const forbidden of ["torrentId", "magnet", "infoHash", "path", "link", "url"]) assert.equal(JSON.stringify(polling.snapshot()).includes(forbidden), false);
   });
 

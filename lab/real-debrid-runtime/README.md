@@ -90,8 +90,12 @@ por fase, sem delay intencional e deadline total de 20 s. Isso é compatível co
 esgotamento rápido do polling, mas o diagnóstico anterior agregava polling,
 deadline global e timeout do GET/delay.
 
-Para a próxima validação controlada, somente este laboratório usa até 10
-snapshots por fase, 1500 ms entre GETs e deadline total de 30 s. Os defaults do
+Uma execução posterior confirmou `DOWNLOADING`, bucket `MANY`, limite de 10 GETs
+atingido, deadline global não atingido, `POLLING_EXHAUSTED`, duração de 17766 ms,
+código 1 e cleanup completo. Não houve falha estrutural nem URL final.
+
+Para a próxima validação controlada, somente este laboratório usa até 20
+snapshots por fase, 1500 ms entre GETs e deadline total de 45 s. Os defaults do
 produto permanecem inalterados. O relatório diferencia `GLOBAL_TIMEOUT`,
 `POLLING_EXHAUSTED`, `POLLING_DELAY_TIMEOUT`, `INFO_REQUEST_TIMEOUT`, `CANCELED` e
 `TERMINAL_TORRENT_STATUS`, acrescentando apenas buckets e flags allowlisted. O

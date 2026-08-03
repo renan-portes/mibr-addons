@@ -159,7 +159,7 @@ async function candidate(token: string): Promise<ExitCode> {
     timer = setTimeout(finish, 1_500);
   });
   const resolver = new RealDebridCandidateResolver(new TrackingApiClient(new RealDebridFetchTransport({ timeoutMs: 20_000 }), token),
-    { pollAttempts: 10, totalTimeoutMs: 30_000, delay: pollDelay });
+    { pollAttempts: 20, totalTimeoutMs: 45_000, delay: pollDelay });
   try {
     // CANDIDATE_RESOLUTION_ONCE: one resolver chain; POST/DELETE are not repeated.
     const result = await resolver.resolve(Object.freeze({

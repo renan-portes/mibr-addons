@@ -66,7 +66,7 @@ export class RealDebridCandidateResolver implements TorrentCandidateResolver {
     this.cleanup = options.cleanup ?? true;
     this.cleanupTimeoutMs = options.cleanupTimeoutMs ?? 2_000;
     this.delay = options.delay ?? (() => Promise.resolve());
-    if (!Number.isInteger(this.attempts) || this.attempts < 1 || this.attempts > 10
+    if (!Number.isInteger(this.attempts) || this.attempts < 1 || this.attempts > 20
       || !Number.isInteger(this.timeoutMs) || this.timeoutMs < 1 || this.timeoutMs > 60_000
       || !Number.isInteger(this.cleanupTimeoutMs) || this.cleanupTimeoutMs < 1 || this.cleanupTimeoutMs > 5_000) {
       throw new RealDebridResolverError("invalid_configuration");
