@@ -5,6 +5,7 @@ run_real_debrid_runtime() (
   LAB_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
   ENV_FILE="$LAB_ROOT/.env"
   COMPOSE_FILE="$LAB_ROOT/compose.yml"
+  umask 077
   RUNTIME_TEMP_DIR=$(mktemp -d)
   SECRET_FILE="$RUNTIME_TEMP_DIR/real_debrid_token"
   OVERRIDE_FILE="$RUNTIME_TEMP_DIR/secret.override.yml"
@@ -39,10 +40,16 @@ run_real_debrid_runtime() (
   TOKEN=$(sed -n 's/^REAL_DEBRID_API_TOKEN=//p' "$ENV_FILE")
   TOKEN_BYTES=$(printf '%s' "$TOKEN" | wc -c | tr -d ' ')
   [ "$TOKEN_BYTES" -ge 1 ] && [ "$TOKEN_BYTES" -le 4096 ] && [ -n "$(printf '%s' "$TOKEN" | tr -d '[:space:]')" ] || { printf '%s\n' 'FAILED: API token is invalid.' >&2; exit 1; }
-  umask 077
   printf '%s' "$TOKEN" >"$SECRET_FILE"
-  chmod 600 "$SECRET_FILE"
+  chown 1000:1000 "$RUNTIME_TEMP_DIR" "$SECRET_FILE"
+  chmod 700 "$RUNTIME_TEMP_DIR"
+  chmod 400 "$SECRET_FILE"
   unset TOKEN
+  [ -d "$RUNTIME_TEMP_DIR" ] && [ -f "$SECRET_FILE" ] && [ -s "$SECRET_FILE" ] || { printf '%s\n' 'FAILED: runtime secret preparation failed.' >&2; exit 1; }
+  DIR_METADATA=$(stat -c '%u:%g:%a' "$RUNTIME_TEMP_DIR" 2>/dev/null || printf '')
+  FILE_METADATA=$(stat -c '%u:%g:%a' "$SECRET_FILE" 2>/dev/null || printf '')
+  [ "$DIR_METADATA" = '1000:1000:700' ] || { printf '%s\n' 'FAILED: runtime secret directory permissions are invalid.' >&2; exit 1; }
+  case "$FILE_METADATA" in '1000:1000:400'|'1000:1000:600') :;; *) printf '%s\n' 'FAILED: runtime secret file permissions are invalid.' >&2; exit 1;; esac
   cat >"$OVERRIDE_FILE" <<EOF
 services:
   runtime-tools:

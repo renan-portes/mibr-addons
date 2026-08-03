@@ -23,6 +23,7 @@ function Stop-RuntimeTree {
 }
 
 try {
+  throw 'PowerShell runtime is pending validation of UID 1000 bind-mount ownership; use the validated POSIX launcher.'
   if (-not (Test-Path -LiteralPath $envFile -PathType Leaf)) { throw 'Copy .env.example to .env.' }
   $currentIdentity = [Security.Principal.WindowsIdentity]::GetCurrent().Name
   $unsafeAcl = (Get-Acl -LiteralPath $envFile).Access | Where-Object {

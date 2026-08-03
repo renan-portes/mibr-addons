@@ -1,5 +1,6 @@
 import { performance } from "node:perf_hooks";
-import { readFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { access, lstat, readFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import {
   REAL_DEBRID_API_BASE_URL,
@@ -10,7 +11,7 @@ import { RealDebridFetchTransport } from "../../../src/providers/torrentIndexer/
 import { RealDebridApiClient } from "../../../src/providers/torrentIndexer/realDebridApiClient.js";
 import { RealDebridCandidateResolver } from "../../../src/providers/torrentIndexer/realDebridCandidateResolver.js";
 import type { RealDebridTorrentInfo } from "../../../src/providers/torrentIndexer/realDebridApiClient.js";
-import { buildFailureReport, CandidateStageTracker, opaqueCategory, validateToken } from "./runtime-lab-support.js";
+import { buildFailureReport, CandidateStageTracker, opaqueCategory, RuntimeValidationError, validateToken } from "./runtime-lab-support.js";
 
 type ExitCode = 0 | 1 | 2;
 type SafeScalar = string | number | boolean;
@@ -25,7 +26,37 @@ function required(name: string): string {
 }
 
 function category(error: unknown): string {
-  return opaqueCategory(error instanceof RealDebridResolverError ? error.code : undefined);
+  return opaqueCategory(error instanceof RealDebridResolverError || error instanceof RuntimeValidationError ? error.code : undefined);
+}
+
+export interface RuntimeTokenFileAccess {
+  lstat(path: string): Promise<{ isFile(): boolean; size: number; mode: number; uid: number; gid: number }>;
+  access(path: string): Promise<void>;
+  readFile(path: string): Promise<string>;
+}
+
+const runtimeTokenFileAccess: RuntimeTokenFileAccess = {
+  lstat,
+  access: async (path) => access(path, constants.R_OK),
+  readFile: async (path) => readFile(path, "utf8"),
+};
+
+export async function loadRuntimeToken(tokenFile: string | undefined, fileAccess: RuntimeTokenFileAccess = runtimeTokenFileAccess): Promise<string> {
+  if (tokenFile === undefined || tokenFile.length === 0) throw new RuntimeValidationError("INVALID_CONFIGURATION");
+  let metadata: Awaited<ReturnType<RuntimeTokenFileAccess["lstat"]>>;
+  try { metadata = await fileAccess.lstat(tokenFile); }
+  catch (error) { throw new RuntimeValidationError((error as { code?: string }).code === "ENOENT" ? "TOKEN_FILE_MISSING" : "TOKEN_FILE_UNREADABLE"); }
+  const mode = metadata.mode & 0o777;
+  if (!metadata.isFile() || metadata.uid !== 1_000 || metadata.gid !== 1_000 || (mode !== 0o400 && mode !== 0o600)) throw new RuntimeValidationError("TOKEN_FILE_INVALID_PERMISSIONS");
+  if (metadata.size < 1) throw new RuntimeValidationError("TOKEN_FILE_EMPTY");
+  try { await fileAccess.access(tokenFile); }
+  catch { throw new RuntimeValidationError("TOKEN_FILE_UNREADABLE"); }
+  let token: string;
+  try { token = await fileAccess.readFile(tokenFile); }
+  catch { throw new RuntimeValidationError("TOKEN_FILE_UNREADABLE"); }
+  if (token.length === 0) throw new RuntimeValidationError("TOKEN_FILE_EMPTY");
+  try { return validateToken(token); }
+  catch { throw new RuntimeValidationError("INVALID_CONFIGURATION"); }
 }
 
 export function sanitizeAccountPayload(decoded: unknown, http: number, durationMs: number): SafeReport {
@@ -125,8 +156,7 @@ async function candidate(token: string): Promise<ExitCode> {
 
 async function main(): Promise<ExitCode> {
   if (process.env.REAL_DEBRID_AUTHORIZED !== "true") throw new RealDebridResolverError("invalid_configuration");
-  const tokenFile = required("REAL_DEBRID_TOKEN_FILE");
-  const token = validateToken(await readFile(tokenFile, "utf8"));
+  const token = await loadRuntimeToken(process.env.REAL_DEBRID_TOKEN_FILE);
   const mode = process.env.REAL_DEBRID_TEST_MODE ?? "account";
   if (mode === "account") return account(token);
   if (mode === "candidate") return candidate(token);
@@ -135,7 +165,7 @@ async function main(): Promise<ExitCode> {
 
 if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().then((code) => { process.exitCode = code; }).catch((error: unknown) => {
-    emit(buildFailureReport("account", error instanceof RealDebridResolverError ? error.code : undefined, 0));
+    emit(buildFailureReport("account", category(error), 0));
     process.exitCode = 1;
   });
 }
