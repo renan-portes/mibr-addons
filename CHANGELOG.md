@@ -29,6 +29,7 @@
 
 ### Fixed
 
+- Ownership do diretório de trabalho da imagem de ferramentas do laboratório Real-Debrid ajustado antes do `npm ci` não-root; nova validação runtime ainda pendente.
 - Isolamento de falhas para impedir que um provider com erro ou timeout derrube os demais.
 - Validação estrita da porta configurada por ambiente.
 - Inicialização do FlareSolverr v3.3.21 com ChromeDriver efêmero e exceção `read_only: false` restrita ao serviço.
