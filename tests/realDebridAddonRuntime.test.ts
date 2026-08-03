@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { spawnSync } from "node:child_process";
 import { describe, it } from "node:test";
 import type { DataClient } from "../src/types/dataClient.js";
 import type { Parser } from "../src/types/parser.js";
@@ -120,6 +123,76 @@ describe("experimental Real-Debrid addon runtime", () => {
       assert.equal(JSON.stringify(logs).includes(TOKEN), false);
     } finally {
       console.error = originalError;
+    }
+  });
+
+  it("defines a single-shot POSIX dry-run launcher with secret-safe cleanup", () => {
+    const launcher = readFileSync(new URL("../lab/real-debrid-addon-runtime/scripts/dry-run.sh", import.meta.url), "utf8");
+    assert.match(launcher, /set -eu/);
+    assert.match(launcher, /umask 077/);
+    assert.match(launcher, /REAL_DEBRID_ADDON_RUNTIME_ENABLED=false/);
+    assert.match(launcher, /\[ ! -s "\$placeholder" \]/);
+    assert.match(launcher, /docker compose -f "\$compose_file" config --format json/);
+    assert.match(launcher, /docker compose -f "\$compose_file" run --rm --no-deps addon-runtime-lab/);
+    assert.match(launcher, /docker compose -f "\$compose_file" down --remove-orphans/);
+    assert.match(launcher, /trap on_int INT/);
+    assert.match(launcher, /trap on_term TERM/);
+    assert.match(launcher, /trap on_tstp TSTP/);
+    assert.match(launcher, /cleanup_done=0/);
+    assert.match(launcher, /\[ "\$cleanup_done" -eq 0 \] \|\| return 0/);
+    assert.doesNotMatch(launcher, /REAL_DEBRID_TOKEN_FILE_HOST=.*echo|printenv|env$/m);
+  });
+
+  it("executes launcher cleanup once and preserves main status with fake Docker", () => {
+    const root = mkdtempSync(join(tmpdir(), "mibr-addon-dry-run-"));
+    const bin = join(root, "bin");
+    const log = join(root, "calls.log");
+    const shell = process.platform === "win32" ? "C:\\Program Files\\Git\\bin\\sh.exe" : "sh";
+    const work = join(root, "work");
+    try {
+      mkdirSync(bin, { recursive: true });
+      const writeFake = (name: string, source: string) => {
+        const executable = join(bin, name);
+        writeFileSync(executable, source);
+        chmodSync(executable, 0o700);
+      };
+      writeFake("docker", `#!/bin/sh\necho "docker $*" >> "$FAKE_LOG"\ncase "$*" in *" config "*) echo '{"services":{"addon-runtime-lab":{}}}' ;; *" run "*) exit "\${FAKE_RUN_STATUS:-0}" ;; *" down "*) exit "\${FAKE_DOWN_STATUS:-0}" ;; esac\n`);
+      writeFake("mktemp", `#!/bin/sh\necho "mktemp $*" >> "$FAKE_LOG"\n/bin/mkdir -p "$FAKE_TEMP_DIR"\nprintf '%s\\n' "$FAKE_TEMP_DIR"\n`);
+      writeFake("chmod", `#!/bin/sh\necho "chmod $*" >> "$FAKE_LOG"\n/bin/chmod "$@"\n`);
+      writeFake("rm", `#!/bin/sh\necho "rm $*" >> "$FAKE_LOG"\n[ "\${FAKE_RM_STATUS:-0}" = 0 ] || exit "$FAKE_RM_STATUS"\n/bin/rm "$@"\n`);
+      writeFake("rmdir", `#!/bin/sh\necho "rmdir $*" >> "$FAKE_LOG"\n/bin/rmdir "$@"\n`);
+      for (const [runStatus, downStatus, rmStatus] of [["0", "0", "0"], ["17", "0", "0"], ["23", "9", "0"], ["29", "0", "7"]]) {
+        rmSync(log, { force: true });
+        rmSync(work, { recursive: true, force: true });
+        const command = process.platform === "win32"
+          ? 'export PATH="$(/usr/bin/cygpath -u "$TEST_BIN"):$PATH"; exec /bin/sh "$TEST_LAUNCHER"'
+          : 'export PATH="$TEST_BIN:$PATH"; exec sh "$TEST_LAUNCHER"';
+        const result = spawnSync(shell, ["-c", command], {
+          cwd: process.cwd(), encoding: "utf8",
+          env: { ...process.env, TEST_BIN: bin, TEST_LAUNCHER: "lab/real-debrid-addon-runtime/scripts/dry-run.sh", FAKE_LOG: log, FAKE_TEMP_DIR: work, FAKE_RUN_STATUS: runStatus, FAKE_DOWN_STATUS: downStatus, FAKE_RM_STATUS: rmStatus },
+        });
+        assert.equal(result.status, Number(runStatus));
+        assert.equal(result.stdout.includes("real_debrid_token"), false);
+        const calls = readFileSync(log, "utf8").trim().split("\n");
+        const configIndex = calls.findIndex((call) => call.includes(" config "));
+        const runIndex = calls.findIndex((call) => call.includes(" run "));
+        const downIndex = calls.findIndex((call) => call.includes(" down "));
+        assert.notEqual(configIndex, -1);
+        assert.notEqual(runIndex, -1);
+        assert.notEqual(downIndex, -1);
+        assert.ok(configIndex < runIndex);
+        assert.ok(runIndex < downIndex);
+        assert.equal(calls.filter((call) => call.includes(" config ")).length, 1);
+        assert.equal(calls.filter((call) => call.includes(" run ")).length, 1);
+        assert.equal(calls.filter((call) => call.includes(" down ")).length, 1);
+        assert.equal(calls.filter((call) => call.startsWith("mktemp ")).length, 1);
+        assert.equal(calls.filter((call) => call.startsWith("chmod ")).length, 1);
+        assert.equal(calls.filter((call) => call.startsWith("rm ")).length, 1);
+        assert.equal(calls.filter((call) => call.startsWith("rmdir ")).length, 1);
+        if (rmStatus === "0") assert.equal(existsSync(work), false);
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
     }
   });
 });
