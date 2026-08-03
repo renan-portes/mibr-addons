@@ -151,19 +151,24 @@ function decodeLinks(value: unknown): readonly string[] | null {
 }
 
 export class RealDebridApiClient {
-  constructor(private readonly transport: RealDebridHttpTransport, private readonly token: string) {
+  readonly #transport: RealDebridHttpTransport;
+  readonly #token: string;
+
+  constructor(transport: RealDebridHttpTransport, token: string) {
     if (token.length === 0 || token.length > 4_096 || /[\u0000-\u001f\u007f]/.test(token)) {
       throw new RealDebridResolverError("invalid_configuration");
     }
+    this.#transport = transport;
+    this.#token = token;
   }
 
   private async call(method: RealDebridMethod, pathname: string, signal: AbortSignal, body?: RealDebridFormBody): Promise<unknown> {
     if (signal.aborted) throw errorFromSignal(signal);
     const headers = Object.freeze({
-      Authorization: `Bearer ${this.token}`,
+      Authorization: `Bearer ${this.#token}`,
       ...(method === "POST" ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
     });
-    const operation = Promise.resolve().then(() => this.transport.request(Object.freeze({
+    const operation = Promise.resolve().then(() => this.#transport.request(Object.freeze({
       baseUrl: REAL_DEBRID_API_BASE_URL, method, pathname, redirect: "error" as const, headers,
       ...(body === undefined ? {} : { body: Object.freeze({ ...body }) }), signal,
     }))).catch((error: unknown) => {

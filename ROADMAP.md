@@ -39,6 +39,8 @@
 - [ ] Consultas funcionais a conteúdo comercial (fora de escopo)
 - [ ] Self-host de produção do torrent-indexer
 - [ ] Integração de playback/debrid
+- [x] Wiring interno opt-in do resolver Real-Debrid para o `TorrentIndexerProvider` (sem bootstrap ou configuração operacional; desativado por padrão)
+- [ ] Configuração operacional isolada e teste do addon com autorização explícita
 - [ ] BluDV
 - [ ] Torrentio
 - [ ] Outros providers externos

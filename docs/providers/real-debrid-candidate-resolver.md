@@ -116,3 +116,26 @@ a leitura sem materializar o restante.
 Todos os testes do transporte usam mocks injetados; nenhuma chamada externa,
 credencial real, configuração operacional ou playback foi ativado. O provider
 continua fora do bootstrap e a feature flag permanece `false`.
+
+## Composição interna opt-in
+
+`createRealDebridProviderWiring` compõe `RealDebridFetchTransport`,
+`RealDebridApiClient` e `RealDebridCandidateResolver` somente quando recebe
+`enabled: true`, token explícito válido e opções limitadas. Com `enabled: false`,
+nenhum transporte, cliente ou resolver é construído. A factory retorna apenas o
+resolver e opções sanitizadas do provider; nunca retorna token, base configurável
+ou detalhes HTTP. Erros de configuração/construção são opacos e não copiam
+mensagens arbitrárias.
+
+`createRealDebridTorrentIndexerProvider` entrega esse wiring ao
+`TorrentIndexerProvider`, mas não é chamado pelo bootstrap. A feature flag segue
+`false` por padrão e o comportamento sem ativação continua discovery-only com
+`[]`. A base HTTPS permanece fixa, DNS e redirects mantêm a política defensiva do
+transporte, o `AbortSignal` continua propagado e o provider apenas devolve
+`StreamResult` validado sem acessar a URL final.
+
+Esta composição foi validada exclusivamente com transportes e resolvers fake.
+Nenhum `.env`, token real ou configuração operacional foi adicionado. O runtime
+manual do Real-Debrid já validou a cadeia autorizada, mas integração operacional
+isolada, teste do addon, playback, Stremio e Nuvio permanecem para milestones
+posteriores.
