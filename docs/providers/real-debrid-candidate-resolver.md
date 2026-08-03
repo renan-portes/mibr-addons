@@ -1,5 +1,9 @@
 # Real-Debrid candidate resolver
 
+## Experimental HTTP runtime laboratory
+
+The isolated addon-runtime laboratory now includes an offline experimental HTTP surface with its own manifest and ProviderManager composition. It is not imported by the standard bootstrap and it is disabled from network publication in versioned Compose. Only loopback publication through a disposable local override is planned for the next runtime check. No token or Real-Debrid call is used; Stremio, Nuvio, and playback remain unvalidated.
+
 ## Escopo offline
 
 Esta milestone implementa apenas um adaptador interno e offline compatível com

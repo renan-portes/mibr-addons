@@ -11,3 +11,7 @@ The validated POSIX launcher is `scripts/dry-run.sh`. It rejects any supplied `R
 The first Docker dry-run completed on runtime base `cf94968d6d7f641985e42bef6336408b63d4e907`: Compose rendered, the image built, the single run returned `DRY_RUN_OK` with exit code 0, no ports or external services were used, and `compose down` removed the residual project network and temporary placeholder.
 
 No Stremio, Nuvio, playback, Docker runtime, or external service has been tested by this lab.
+
+## Experimental HTTP runtime
+
+`tools/http-server.ts` and the `addon-runtime-http-lab` Compose profile are a separate offline-only surface. They expose only `GET /health`, `GET /manifest.json`, and `GET /stream/{movie|series}/tt<id>.json` on loopback. The versioned Compose file still publishes no ports; `scripts/http-offline.sh` creates a disposable, mode-`600`, loopback-only override, validates it, retries health at most five times, and queries manifest and stream once each. The default response is empty and no token, DNS, fetch, Real-Debrid, Stremio, Nuvio, or playback is used. The standard manifest, bootstrap, and router remain unchanged.

@@ -26,6 +26,28 @@ services:
     networks:
       - addon-runtime-lab
 
+  addon-runtime-http-lab:
+    profiles: ["experimental-http"]
+    build:
+      context: ../..
+      dockerfile: lab/real-debrid-addon-runtime/Dockerfile.tools
+    command: ["/workspace/lab/real-debrid-addon-runtime/tools/http-server.ts"]
+    read_only: true
+    user: "1000:1000"
+    init: true
+    restart: "no"
+    volumes:
+      - ../..:/workspace:ro
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m,mode=0700,uid=1000,gid=1000
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    privileged: false
+    pids_limit: 64
+    mem_limit: 256m
+    cpus: 0.50
+    networks: [addon-runtime-lab]
+
 networks:
   addon-runtime-lab:
     driver: bridge

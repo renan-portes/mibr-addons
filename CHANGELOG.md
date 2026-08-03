@@ -2,6 +2,8 @@
 
 - Recorded the successful offline Docker dry-run for the isolated Real-Debrid addon runtime and added its secret-safe, single-shot POSIX launcher.
 
+- Added an isolated offline experimental HTTP addon runtime surface and loopback-only launcher; the standard bootstrap, manifest, and router remain unchanged.
+
 - Added an isolated, opt-in experimental addon-runtime composition for the torrent indexer and Real-Debrid resolver; the standard bootstrap and public addon surface remain unchanged.
 
 ## [Unreleased]
