@@ -79,11 +79,16 @@ JSON do `GET info`, resposta estrutural inválida, status desconhecido/terminal,
 lista ausente/inválida, ID inválido e correspondência autorizada ausente,
 divergente em tamanho ou ambígua. Metadados adicionais são apenas flags e um
 bucket de cardinalidade; nunca incluem valores. A entrada autorizada é comparada
-por path completo e tamanho exatos. Paths com diretório raiz ou slash inicial não
-são equiparados ao path sem raiz, e basename nunca é fallback. O contrato público
-modelado expõe `files[].id`, `path`, `bytes` e `selected`, mas a representação do
-diretório raiz antes de `selectFiles` continua uma hipótese a validar em runtime;
-a entrada do laboratório deve reproduzir exatamente o path retornado pela API.
+por path completo e tamanho exatos depois de uma única normalização contratual na
+fronteira: a API deve fornecer exatamente uma barra inicial, que o decoder remove
+antes de aplicar a política interna defensiva. Não há fallback por basename.
+
+Uma segunda execução única concluiu `GET info`, confirmou a presença de `files` e
+terminou com `FILE_LIST_INVALID`, em 1349 ms e código 1, ainda antes de
+`file_selected`. A causa provável, fortemente sustentada pelo contrato oficial,
+era a barra inicial obrigatória rejeitada pelo decoder anterior. O cleanup foi
+completo, sem repetição. A correção permanece pendente de validação runtime;
+nenhum valor de conteúdo ou conta foi registrado e nenhum playback ocorreu.
 
 ## Isolamento
 

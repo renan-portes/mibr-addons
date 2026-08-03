@@ -8,7 +8,7 @@ import { FakeRealDebridTransport, json, noContent, type FakeRealDebridOutcome } 
 const TOKEN = "test-token-not-a-real-secret";
 const HASH = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const MAGNET = `magnet:?xt=urn:btih:${HASH}`;
-const FILE = Object.freeze({ id: 7, path: "folder/movie.mkv", bytes: 2_000, selected: 0 });
+const FILE = Object.freeze({ id: 7, path: "/folder/movie.mkv", bytes: 2_000, selected: 0 });
 type Options = ConstructorParameters<typeof RealDebridCandidateResolver>[1];
 
 interface Deferred<T> { promise: Promise<T>; resolve(value: T): void; reject(error: unknown): void; }
@@ -54,7 +54,7 @@ describe("RealDebridCandidateResolver offline adapter", () => {
   });
 
   it("associates only one selected ID with exactly one final link, regardless of file order", async () => {
-    const other = { id: 8, path: "folder/other.mkv", bytes: 1_000, selected: 0 };
+    const other = { id: 8, path: "/folder/other.mkv", bytes: 1_000, selected: 0 };
     const current = setup([json({ id: "torrent-1" }), json(info("waiting_files_selection", [FILE, other])), noContent,
       json(selected([other, { ...FILE, selected: 1 }])), json({ download: "https://media.example.invalid/movie.mkv" }), noContent]);
     assert.notEqual(await current.resolver.resolve(request()), null);
@@ -66,12 +66,13 @@ describe("RealDebridCandidateResolver offline adapter", () => {
     const cases: Array<[readonly unknown[], TorrentCandidateResolutionRequest, string]> = [
       [[FILE], authorized("folder/movie.mkv"), "success"],
       [[FILE], authorized("movie.mkv"), "authorized_file_not_found"],
-      [[{ ...FILE, path: "root/folder/movie.mkv" }], authorized("folder/movie.mkv"), "authorized_file_not_found"],
-      [[{ ...FILE, path: "/folder/movie.mkv" }], authorized("folder/movie.mkv"), "file_list_invalid"],
+      [[{ ...FILE, path: "/root/folder/movie.mkv" }], authorized("folder/movie.mkv"), "authorized_file_not_found"],
+      [[{ ...FILE, path: "folder/movie.mkv" }], authorized("folder/movie.mkv"), "file_list_invalid"],
+      [[{ ...FILE, path: "//folder/movie.mkv" }], authorized("folder/movie.mkv"), "file_list_invalid"],
       [[FILE], authorized("folder/movie.mkv", 1_999), "authorized_file_size_mismatch"],
       [[FILE, { ...FILE, id: 8 }], authorized("folder/movie.mkv"), "ambiguous_authorized_file"],
       [[{ ...FILE, id: 0 }], authorized("folder/movie.mkv"), "file_id_invalid"],
-      [[{ ...FILE, path: "one/movie.mkv" }, { ...FILE, id: 8, path: "two/movie.mkv" }], authorized("movie.mkv"), "authorized_file_not_found"],
+      [[{ ...FILE, path: "/one/movie.mkv" }, { ...FILE, id: 8, path: "/two/movie.mkv" }], authorized("movie.mkv"), "authorized_file_not_found"],
     ];
     for (const [files, candidate, expected] of cases) {
       const outcomes = expected === "success" ? successQueue() : [json({ id: "torrent-1" }), json(info("waiting_files_selection", files)), noContent];
@@ -83,11 +84,30 @@ describe("RealDebridCandidateResolver offline adapter", () => {
     }
   });
 
+  it("normalizes exactly one contractual API slash before exact authorization", async () => {
+    for (const [apiPath, internalPath] of [["/video.mp4", "video.mp4"], ["/directory/video.mp4", "directory/video.mp4"]] as const) {
+      const transport = new FakeRealDebridTransport([json(info("waiting_files_selection", [{ ...FILE, path: apiPath }]))]);
+      const decoded = await new RealDebridApiClient(transport, TOKEN).info("torrent-1", new AbortController().signal);
+      assert.equal(decoded.files[0]?.path, internalPath);
+      transport.assertExhausted();
+    }
+  });
+
+  it("sends only the exactly authorized synthetic file ID to selectFiles", async () => {
+    const current = setup(successQueue());
+    let selectedId: number | undefined;
+    const original = current.api.selectFile.bind(current.api);
+    current.api.selectFile = async (torrentId, fileId, signal) => { selectedId = fileId; await original(torrentId, fileId, signal); };
+    assert.notEqual(await current.resolver.resolve(request({ files: Object.freeze([Object.freeze({ path: "folder/movie.mkv", sizeBytes: 2_000 })]) })), null);
+    assert.equal(selectedId, 7);
+    current.transport.assertExhausted();
+  });
+
   it("rejects every ambiguous final file/link cardinality", async () => {
     const cases: Array<[unknown, string]> = [
       [selected([{ ...FILE, selected: 0 }]), "ambiguous_file_selection"],
       [selected([{ ...FILE, id: 9, selected: 1 }]), "file_not_found"],
-      [selected([{ ...FILE, selected: 1 }, { id: 8, path: "other.mkv", bytes: 1, selected: 1 }]), "ambiguous_file_selection"],
+      [selected([{ ...FILE, selected: 1 }, { id: 8, path: "/other.mkv", bytes: 1, selected: 1 }]), "ambiguous_file_selection"],
       [selected([{ ...FILE, selected: 1 }], []), "link_not_found"],
       [selected([{ ...FILE, selected: 1 }], ["https://one.invalid", "https://two.invalid"]), "ambiguous_link"],
       [selected([{ ...FILE, selected: 1 }], ["https://same.invalid", "https://same.invalid"]), "ambiguous_link"],
@@ -234,18 +254,34 @@ describe("RealDebridCandidateResolver offline adapter", () => {
       await assert.rejects(() => current.resolver.resolve(request()), (error: unknown) => error instanceof RealDebridResolverError && error.code === "unknown_status"); current.transport.assertExhausted();
     }
     const invalidFiles: Array<[unknown, string]> = [
-      [[{ id: 0, path: "movie.mkv", bytes: 1, selected: 0 }], "file_id_invalid"], [[{ id: -1, path: "movie.mkv", bytes: 1, selected: 0 }], "file_id_invalid"],
-      [[{ id: 1.5, path: "movie.mkv", bytes: 1, selected: 0 }], "file_id_invalid"], [[{ id: Number.NaN, path: "movie.mkv", bytes: 1, selected: 0 }], "file_id_invalid"],
-      [[{ id: Number.POSITIVE_INFINITY, path: "movie.mkv", bytes: 1, selected: 0 }], "file_id_invalid"], [[{ id: 1, path: "movie.mkv", bytes: MAX_FILE_BYTES + 1, selected: 0 }], "file_list_invalid"],
-      [[{ id: 1, path: "movie.mkv", bytes: 1 }], "file_list_invalid"],
-      [Array.from({ length: 101 }, (_, index) => ({ id: index + 1, path: `${index}.mkv`, bytes: 1, selected: 0 })), "file_list_too_many"],
+      [[{ id: 0, path: "/movie.mkv", bytes: 1, selected: 0 }], "file_id_invalid"], [[{ id: -1, path: "/movie.mkv", bytes: 1, selected: 0 }], "file_id_invalid"],
+      [[{ id: 1.5, path: "/movie.mkv", bytes: 1, selected: 0 }], "file_id_invalid"], [[{ id: Number.NaN, path: "/movie.mkv", bytes: 1, selected: 0 }], "file_id_invalid"],
+      [[{ id: Number.POSITIVE_INFINITY, path: "/movie.mkv", bytes: 1, selected: 0 }], "file_id_invalid"], [[{ id: 1, path: "/movie.mkv", bytes: MAX_FILE_BYTES + 1, selected: 0 }], "file_list_invalid"],
+      [[{ id: 1, path: "/movie.mkv", bytes: 1 }], "file_list_invalid"],
+      [Array.from({ length: 101 }, (_, index) => ({ id: index + 1, path: `/${index}.mkv`, bytes: 1, selected: 0 })), "file_list_too_many"],
     ];
+    for (const path of ["", "/", "movie.mkv", "//movie.mkv", "/../movie.mkv", "/./movie.mkv", "/directory/../movie.mkv", "/directory//movie.mkv", "/directory\\movie.mkv", "/%2e%2e/movie.mkv", "/movie%20name.mkv", "/movie\u0000.mkv", "/video∕file.mkv", "/video⁄file.mkv", "/directory./movie.mkv", "/directory /movie.mkv", `/${"a".repeat(256)}/movie.mkv`]) {
+      invalidFiles.push([[{ id: 1, path, bytes: 1, selected: 0 }], "file_list_invalid"]);
+    }
+    invalidFiles.push([[{ id: 1, path: "/movie.mkv", bytes: 1, selected: 2 }], "file_list_invalid"]);
     for (const [files, code] of invalidFiles) {
       const current = setup([json({ id: "torrent-1" }), json(info("downloaded", files)), noContent]);
       await assert.rejects(() => current.resolver.resolve(request()), (error: unknown) => error instanceof RealDebridResolverError && error.code === code); current.transport.assertExhausted();
     }
     const missing = setup([json({ id: "torrent-1" }), json({ id: "torrent-1", status: "downloaded", links: [] }), noContent]);
     await assert.rejects(() => missing.resolver.resolve(request()), (error: unknown) => error instanceof RealDebridResolverError && error.code === "file_list_missing"); missing.transport.assertExhausted();
+  });
+
+  it("recognizes compressing and uploading as bounded transient statuses", async () => {
+    for (const status of ["compressing", "uploading"] as const) {
+      let delays = 0;
+      const current = setup([json({ id: "torrent-1" }), json(info("waiting_files_selection")), noContent,
+        json(info(status, [{ ...FILE, selected: 1 }])), json(selected()), json({ download: "https://media.example.invalid/movie.mkv" }), noContent],
+      { delay: async () => { delays += 1; } });
+      assert.notEqual(await current.resolver.resolve(request()), null);
+      assert.equal(delays, 1);
+      current.transport.assertExhausted();
+    }
   });
 
   it("distinguishes HTTP and content decoder error codes", async () => {
