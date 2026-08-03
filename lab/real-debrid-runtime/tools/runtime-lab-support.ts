@@ -70,7 +70,7 @@ export function validateRuntimeConfiguration(values: Readonly<Record<string, str
   return Object.freeze({ mode, token, candidate: Object.freeze({ magnet, infoHash: infoHash.toLowerCase(), path, bytes }) });
 }
 
-const ERROR_CATEGORIES = new Set(["TOKEN_FILE_MISSING", "TOKEN_FILE_UNREADABLE", "TOKEN_FILE_EMPTY", "TOKEN_FILE_INVALID_PERMISSIONS", "INVALID_CONFIGURATION", "CANCELED", "TIMEOUT", "TRANSPORT_ERROR", "UNEXPECTED_HTTP_STATUS", "RATE_LIMITED", "INVALID_CONTENT_TYPE", "INVALID_JSON", "RESPONSE_TOO_LARGE", "INVALID_RESPONSE", "UNKNOWN_STATUS", "TERMINAL_STATUS", "FILE_NOT_FOUND", "AMBIGUOUS_FILE_SELECTION", "LINK_NOT_FOUND", "AMBIGUOUS_LINK", "INVALID_FINAL_URL", "CLEANUP_FAILED"]);
+const ERROR_CATEGORIES = new Set(["TOKEN_FILE_MISSING", "TOKEN_FILE_UNREADABLE", "TOKEN_FILE_EMPTY", "TOKEN_FILE_INVALID_PERMISSIONS", "INVALID_CONFIGURATION", "CANCELED", "TIMEOUT", "TRANSPORT_ERROR", "UNEXPECTED_HTTP_STATUS", "RATE_LIMITED", "INVALID_CONTENT_TYPE", "INVALID_JSON", "RESPONSE_TOO_LARGE", "INVALID_RESPONSE", "INFO_HTTP_ERROR", "INFO_INVALID_JSON", "INFO_INVALID_RESPONSE", "UNKNOWN_TORRENT_STATUS", "TERMINAL_TORRENT_STATUS", "FILE_LIST_MISSING", "FILE_LIST_INVALID", "AUTHORIZED_FILE_NOT_FOUND", "AUTHORIZED_FILE_SIZE_MISMATCH", "AMBIGUOUS_AUTHORIZED_FILE", "FILE_ID_INVALID", "UNKNOWN_STATUS", "TERMINAL_STATUS", "FILE_NOT_FOUND", "AMBIGUOUS_FILE_SELECTION", "LINK_NOT_FOUND", "AMBIGUOUS_LINK", "INVALID_FINAL_URL", "CLEANUP_FAILED"]);
 
 export function opaqueCategory(code: string | undefined): string {
   const normalized = code?.toUpperCase() ?? "UNKNOWN";
@@ -107,4 +107,53 @@ export class CandidateStageTracker {
   private readonly completed: CandidateStage[] = [];
   complete(stage: CandidateStage): void { if (!this.completed.includes(stage)) this.completed.push(stage); }
   snapshot(): readonly CandidateStage[] { return Object.freeze([...this.completed]); }
+}
+
+export function candidateRuntimeCategory(code: string | undefined, phase: "info" | "workflow"): string {
+  if (phase === "info") {
+    if (code === "unexpected_http_status" || code === "rate_limited") return "INFO_HTTP_ERROR";
+    if (code === "invalid_json") return "INFO_INVALID_JSON";
+    if (code === "invalid_response") return "INFO_INVALID_RESPONSE";
+    if (code === "unknown_status") return "UNKNOWN_TORRENT_STATUS";
+    if (code === "file_list_too_many") return "FILE_LIST_INVALID";
+  }
+  if (code === "terminal_status") return "TERMINAL_TORRENT_STATUS";
+  return opaqueCategory(code);
+}
+
+export type CandidateFileCountBucket = "ZERO" | "ONE" | "MULTIPLE" | "TOO_MANY" | "UNKNOWN";
+export interface CandidateStructuralDiagnostics {
+  readonly infoRequestCompleted: "SIM" | "NÃO";
+  readonly statusRecognized: "SIM" | "NÃO";
+  readonly fileArrayPresent: "SIM" | "NÃO";
+  readonly fileCountBucket: CandidateFileCountBucket;
+  readonly authorizedFileMatched: "SIM" | "NÃO";
+  readonly authorizedFileSizeMatched: "SIM" | "NÃO";
+  readonly selectedFileIdValid: "SIM" | "NÃO";
+}
+
+export class CandidateDiagnosticTracker {
+  private state: CandidateStructuralDiagnostics = Object.freeze({
+    infoRequestCompleted: "NÃO", statusRecognized: "NÃO", fileArrayPresent: "NÃO", fileCountBucket: "UNKNOWN",
+    authorizedFileMatched: "NÃO", authorizedFileSizeMatched: "NÃO", selectedFileIdValid: "NÃO",
+  });
+
+  recordInfo(info: { readonly files: readonly { readonly id: number; readonly path: string; readonly bytes: number }[] }, path: string, bytes: number): void {
+    const pathMatches = info.files.filter((file) => file.path === path);
+    const exact = pathMatches.filter((file) => file.bytes === bytes);
+    this.state = Object.freeze({ infoRequestCompleted: "SIM", statusRecognized: "SIM", fileArrayPresent: "SIM",
+      fileCountBucket: info.files.length === 0 ? "ZERO" : info.files.length === 1 ? "ONE" : "MULTIPLE",
+      authorizedFileMatched: pathMatches.length > 0 ? "SIM" : "NÃO", authorizedFileSizeMatched: exact.length > 0 ? "SIM" : "NÃO",
+      selectedFileIdValid: exact.length === 1 && Number.isSafeInteger(exact[0]?.id) && (exact[0]?.id ?? 0) > 0 ? "SIM" : "NÃO" });
+  }
+
+  recordError(code: string): void {
+    const updates: { -readonly [Key in keyof CandidateStructuralDiagnostics]?: CandidateStructuralDiagnostics[Key] } = {};
+    if (!["transport_error", "timeout", "canceled"].includes(code)) updates.infoRequestCompleted = "SIM";
+    if (code === "file_list_invalid" || code === "file_id_invalid") updates.fileArrayPresent = "SIM";
+    if (code === "file_list_too_many") { updates.fileArrayPresent = "SIM"; updates.fileCountBucket = "TOO_MANY"; }
+    this.state = Object.freeze({ ...this.state, ...updates });
+  }
+
+  snapshot(): CandidateStructuralDiagnostics { return Object.freeze({ ...this.state }); }
 }

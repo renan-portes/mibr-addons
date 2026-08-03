@@ -19,7 +19,8 @@
 - Adaptador interno offline do contrato de candidatos para o subconjunto necessário da API Real-Debrid, com associação 1:1 pós-seleção, deadlines canceláveis e cleanup limitado, exercitado exclusivamente por transporte fake e sem credencial ou serviço real.
 - Transporte HTTPS concreto do adaptador Real-Debrid com base fixa, redirects desabilitados, limite de 1 MiB, timeout/cancelamento efetivos e validação DNS defensiva, testado somente com dependências injetadas e sem rede real.
 - Laboratório descartável preparado offline para validação runtime manual do transporte Real-Debrid, com modo inicial de conta sanitizado e modo de candidato separado e explicitamente autorizado, sem credencial versionada.
-- Modo `account` do laboratório Real-Debrid validado no docker-server com transporte HTTPS real, segredo efêmero read-only, resposta HTTP 200 sanitizada e cleanup completo; modo `candidate` e playback permanecem não testados.
+- Modo `account` do laboratório Real-Debrid validado no docker-server com transporte HTTPS real, segredo efêmero read-only, resposta HTTP 200 sanitizada e cleanup completo; playback permanece não testado.
+- Primeira execução única do modo `candidate` registrada: autenticação e `addMagnet` concluídos, falha sanitizada antes de `file_selected`, cleanup completo e diagnóstico estrutural offline mais preciso, sem expor entrada ou resposta.
 - Timeout e cancelamento por provider.
 
 ### Changed
@@ -32,6 +33,7 @@
 
 - Ownership do diretório de trabalho da imagem de ferramentas do laboratório Real-Debrid ajustado antes do `npm ci` não-root; nova validação runtime ainda pendente.
 - Segredo efêmero do laboratório Real-Debrid preparado e validado como `1000:1000` com modos restritos antes do Compose, evitando falha de leitura pré-HTTP pelo container não-root.
+- Correspondência do arquivo autorizado no resolver Real-Debrid tornada exata por path completo e tamanho, com falhas estruturais e de seleção discriminadas sem dados sensíveis.
 - Isolamento de falhas para impedir que um provider com erro ou timeout derrube os demais.
 - Validação estrita da porta configurada por ambiente.
 - Inicialização do FlareSolverr v3.3.21 com ChromeDriver efêmero e exceção `read_only: false` restrita ao serviço.

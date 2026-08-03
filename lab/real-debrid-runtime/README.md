@@ -66,9 +66,24 @@ cleanup e categoria. Magnet, hash, filename, URL e payload não são impressos.
 
 As etapas candidate são incluídas por allowlist somente depois de confirmadas;
 retorno parcial ou erro não antecipa etapas futuras. Os códigos são: `0` sucesso,
-`1` falha e `2` validação parcial. O modo `candidate` ainda não foi executado;
-nenhum endpoint de torrent, magnet ou unrestrict e nenhum conteúdo foram
-acessados. Não há teste no Stremio nem no Nuvio ou validação de playback.
+`1` falha e `2` validação parcial. O modo `candidate` foi executado uma única vez
+com uma obra aberta/autorizada. A autenticação e `addMagnet` concluíram, mas a
+execução falhou antes de `file_selected`, com `INVALID_RESPONSE`, em 1366 ms e
+código 1. `unrestrict` não foi chamado, não houve repetição e o cleanup terminou
+sem resíduos. A causa específica permaneceu inconclusiva nessa execução; nenhum
+valor do conteúdo ou da conta foi registrado. Não há teste no Stremio nem no
+Nuvio ou validação de playback.
+
+Entre `magnet_added` e `file_selected`, o relatório agora distingue falha HTTP ou
+JSON do `GET info`, resposta estrutural inválida, status desconhecido/terminal,
+lista ausente/inválida, ID inválido e correspondência autorizada ausente,
+divergente em tamanho ou ambígua. Metadados adicionais são apenas flags e um
+bucket de cardinalidade; nunca incluem valores. A entrada autorizada é comparada
+por path completo e tamanho exatos. Paths com diretório raiz ou slash inicial não
+são equiparados ao path sem raiz, e basename nunca é fallback. O contrato público
+modelado expõe `files[].id`, `path`, `bytes` e `selected`, mas a representação do
+diretório raiz antes de `selectFiles` continua uma hipótese a validar em runtime;
+a entrada do laboratório deve reproduzir exatamente o path retornado pela API.
 
 ## Isolamento
 

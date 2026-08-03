@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { loadRuntimeToken, sanitizeAccountPayload, type RuntimeTokenFileAccess } from "../lab/real-debrid-runtime/tools/runtime-test.js";
-import { buildFailureReport, CandidateStageTracker, RuntimeLifecycleExit, RuntimeValidationError, runOfflineLifecycle, validatePosixMode, validateRuntimeConfiguration, validateRuntimeSecretMetadata, type RuntimeSecretMetadata } from "../lab/real-debrid-runtime/tools/runtime-lab-support.js";
+import { buildFailureReport, CandidateDiagnosticTracker, candidateRuntimeCategory, CandidateStageTracker, opaqueCategory, RuntimeLifecycleExit, RuntimeValidationError, runOfflineLifecycle, validatePosixMode, validateRuntimeConfiguration, validateRuntimeSecretMetadata, type RuntimeSecretMetadata } from "../lab/real-debrid-runtime/tools/runtime-lab-support.js";
 
 const root = new URL("../", import.meta.url);
 const read = (path: string) => readFileSync(new URL(path, root), "utf8");
@@ -164,6 +164,37 @@ describe("Real-Debrid authenticated runtime laboratory", () => {
     assert.match(candidateEmit, /finalUrlValid/);
     assert.match(candidateEmit, /stagesCompleted/);
     assert.doesNotMatch(candidateEmit, /emit\([^\n]*(?:magnet|infoHash|path|result\.url)/);
+  });
+
+  it("classifies post-add failures and emits only allowlisted structural diagnostics", () => {
+    const categories = ["INFO_HTTP_ERROR", "INFO_INVALID_JSON", "INFO_INVALID_RESPONSE", "UNKNOWN_TORRENT_STATUS", "TERMINAL_TORRENT_STATUS", "FILE_LIST_MISSING", "FILE_LIST_INVALID", "AUTHORIZED_FILE_NOT_FOUND", "AUTHORIZED_FILE_SIZE_MISMATCH", "AMBIGUOUS_AUTHORIZED_FILE", "FILE_ID_INVALID", "TIMEOUT", "CANCELED", "UNKNOWN"];
+    for (const value of categories) assert.equal(opaqueCategory(value), value);
+    const mappings: Array<[string | undefined, "info" | "workflow", string]> = [
+      ["unexpected_http_status", "info", "INFO_HTTP_ERROR"], ["rate_limited", "info", "INFO_HTTP_ERROR"],
+      ["invalid_json", "info", "INFO_INVALID_JSON"], ["invalid_response", "info", "INFO_INVALID_RESPONSE"],
+      ["unknown_status", "info", "UNKNOWN_TORRENT_STATUS"], ["terminal_status", "workflow", "TERMINAL_TORRENT_STATUS"],
+      ["file_list_missing", "info", "FILE_LIST_MISSING"], ["file_list_invalid", "info", "FILE_LIST_INVALID"],
+      ["file_list_too_many", "info", "FILE_LIST_INVALID"], ["file_id_invalid", "info", "FILE_ID_INVALID"],
+      ["authorized_file_not_found", "workflow", "AUTHORIZED_FILE_NOT_FOUND"],
+      ["authorized_file_size_mismatch", "workflow", "AUTHORIZED_FILE_SIZE_MISMATCH"],
+      ["ambiguous_authorized_file", "workflow", "AMBIGUOUS_AUTHORIZED_FILE"],
+      ["timeout", "workflow", "TIMEOUT"], ["canceled", "workflow", "CANCELED"], [undefined, "workflow", "UNKNOWN"],
+    ];
+    for (const [code, phase, expected] of mappings) assert.equal(candidateRuntimeCategory(code, phase), expected);
+    const tracker = new CandidateDiagnosticTracker();
+    tracker.recordInfo({ files: [{ id: 7, path: "root/authorized.mkv", bytes: 10 }] }, "root/authorized.mkv", 10);
+    assert.deepEqual(tracker.snapshot(), { infoRequestCompleted: "SIM", statusRecognized: "SIM", fileArrayPresent: "SIM", fileCountBucket: "ONE", authorizedFileMatched: "SIM", authorizedFileSizeMatched: "SIM", selectedFileIdValid: "SIM" });
+    const tooMany = new CandidateDiagnosticTracker(); tooMany.recordError("file_list_too_many");
+    assert.equal(tooMany.snapshot().fileCountBucket, "TOO_MANY");
+    const zero = new CandidateDiagnosticTracker(); zero.recordInfo({ files: [] }, "authorized.mkv", 10);
+    assert.equal(zero.snapshot().fileCountBucket, "ZERO");
+    const multiple = new CandidateDiagnosticTracker(); multiple.recordInfo({ files: [{ id: 1, path: "one.mkv", bytes: 1 }, { id: 2, path: "two.mkv", bytes: 2 }] }, "authorized.mkv", 10);
+    assert.deepEqual({ bucket: multiple.snapshot().fileCountBucket, path: multiple.snapshot().authorizedFileMatched, size: multiple.snapshot().authorizedFileSizeMatched }, { bucket: "MULTIPLE", path: "NÃO", size: "NÃO" });
+    const incomplete = new CandidateDiagnosticTracker(); incomplete.recordError("transport_error");
+    assert.equal(incomplete.snapshot().infoRequestCompleted, "NÃO");
+    const serialized = JSON.stringify(tracker.snapshot());
+    for (const forbidden of ["root/authorized.mkv", "magnet:?", "torrent-1", "https://", "bytes", "path"]) assert.equal(serialized.toLowerCase().includes(forbidden.toLowerCase()), false);
+    assert.match(tool, /diagnostics\.snapshot\(\)/);
   });
 
   it("preserves one invocation, no retry, global timeout, cleanup and exit codes", () => {

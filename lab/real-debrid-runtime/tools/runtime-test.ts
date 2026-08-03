@@ -11,7 +11,7 @@ import { RealDebridFetchTransport } from "../../../src/providers/torrentIndexer/
 import { RealDebridApiClient } from "../../../src/providers/torrentIndexer/realDebridApiClient.js";
 import { RealDebridCandidateResolver } from "../../../src/providers/torrentIndexer/realDebridCandidateResolver.js";
 import type { RealDebridTorrentInfo } from "../../../src/providers/torrentIndexer/realDebridApiClient.js";
-import { buildFailureReport, CandidateStageTracker, opaqueCategory, RuntimeValidationError, validateToken } from "./runtime-lab-support.js";
+import { buildFailureReport, CandidateDiagnosticTracker, candidateRuntimeCategory, CandidateStageTracker, opaqueCategory, RuntimeValidationError, validateToken } from "./runtime-lab-support.js";
 
 type ExitCode = 0 | 1 | 2;
 type SafeScalar = string | number | boolean;
@@ -119,12 +119,22 @@ async function candidate(token: string): Promise<ExitCode> {
   const bytes = Number(required("REAL_DEBRID_CANDIDATE_FILE_BYTES"));
   if (!/^[a-fA-F0-9]{40}$/.test(infoHash) || !Number.isSafeInteger(bytes) || bytes < 0) throw new RealDebridResolverError("invalid_configuration");
   const stages = new CandidateStageTracker();
+  const diagnostics = new CandidateDiagnosticTracker();
   class TrackingApiClient extends RealDebridApiClient {
     override async addMagnet(value: string, signal: AbortSignal): Promise<string> {
       const id = await super.addMagnet(value, signal); stages.complete("authenticated"); stages.complete("magnet_added"); return id;
     }
     override async info(id: string, signal: AbortSignal): Promise<RealDebridTorrentInfo> {
-      const info = await super.info(id, signal); if (info.status === "downloaded") stages.complete("downloaded"); return info;
+      try {
+        const info = await super.info(id, signal); diagnostics.recordInfo(info, path, bytes);
+        if (info.status === "downloaded") stages.complete("downloaded"); return info;
+      } catch (error) {
+        const code = error instanceof RealDebridResolverError ? error.code : "transport_error";
+        diagnostics.recordError(code);
+        const classified = candidateRuntimeCategory(code, "info").toLowerCase() as typeof code;
+        if (classified !== code) throw new RealDebridResolverError(classified);
+        throw error;
+      }
     }
     override async selectFile(id: string, fileId: number, signal: AbortSignal): Promise<void> {
       await super.selectFile(id, fileId, signal); stages.complete("file_selected");
@@ -149,7 +159,9 @@ async function candidate(token: string): Promise<ExitCode> {
     emit({ status: result === null ? "PARTIAL" : "SUCCESS", stagesCompleted: stages.snapshot(), durationMs: Math.round(performance.now() - started), finalUrlValid: result === null ? "NÃO" : "SIM", cleanup: stages.snapshot().includes("cleanup_completed") ? "SIM" : "NÃO", category: result === null ? "NO_RESOLUTION" : "SUCCESS" });
     return result === null ? 2 : 0;
   } catch (error) {
-    emit(Object.freeze({ ...buildFailureReport("candidate", error instanceof RealDebridResolverError ? error.code : undefined, Math.round(performance.now() - started)), stagesCompleted: stages.snapshot(), cleanup: stages.snapshot().includes("cleanup_completed") ? "SIM" : "NÃO" }));
+    const rawCode = error instanceof RealDebridResolverError ? error.code : undefined;
+    const runtimeCode = candidateRuntimeCategory(rawCode, "workflow");
+    emit(Object.freeze({ ...buildFailureReport("candidate", runtimeCode, Math.round(performance.now() - started)), stagesCompleted: stages.snapshot(), cleanup: stages.snapshot().includes("cleanup_completed") ? "SIM" : "NÃO", ...diagnostics.snapshot() }));
     return 1;
   }
 }

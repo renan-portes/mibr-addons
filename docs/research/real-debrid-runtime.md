@@ -48,8 +48,27 @@ operador não garante ownership ou leitura pelo UID Linux 1000 no bind mount. O
 launcher PowerShell permanece bloqueado, pendente de validação runtime específica;
 não se presume paridade nem se amplia a leitura do segredo para group/others.
 
-O provider continua fora do bootstrap e a feature flag permanece `false`. O modo
-`candidate` ainda não foi executado; nenhum endpoint de torrent, magnet ou
-unrestrict foi acessado. Não houve acesso a conteúdo, validação de playback ou
-teste no Stremio ou Nuvio. Qualquer fase futura permanece manual, separada e
-restrita a conteúdo próprio, público ou autorizado.
+O provider continua fora do bootstrap e a feature flag permanece `false`.
+
+O modo `candidate` foi executado uma única vez com entrada aberta/autorizada. A
+autenticação e `addMagnet` concluíram; `file_selected` não foi alcançado e
+`unrestrict` não foi chamado. O resultado sanitizado foi `INVALID_RESPONSE`, em
+1366 ms, código 1, com cleanup completo e sem resíduos. Não houve repetição. Essa
+execução localiza a falha entre o primeiro `GET info`/decodificação e a seleção,
+mas não confirma qual hipótese específica causou a resposta inválida.
+
+O diagnóstico subsequente separa, sem valores, erros HTTP/JSON de `info`, resposta
+estrutural inválida, status desconhecido ou terminal, lista ausente/inválida, ID
+inválido e ausência, divergência de tamanho ou ambiguidade do arquivo autorizado.
+Também registra somente presença/conclusão e buckets `ZERO`, `ONE`, `MULTIPLE`,
+`TOO_MANY` ou `UNKNOWN`. Magnet, hash, path, nome, bytes, torrent ID, links, URL,
+payload e mensagens arbitrárias permanecem excluídos.
+
+A comparação autorizada permanece deliberadamente exata por path completo e
+tamanho. Um path com diretório raiz, sem diretório raiz ou com slash inicial são
+entradas distintas; basename não é usado. O modelo público usado pelo cliente
+prevê `files[].id`, `path`, `bytes`, `selected`, `status` e `links`, mas não há
+evidência runtime sanitizada suficiente para afirmar como o diretório raiz é
+representado antes de `selectFiles`. Portanto, esse formato é hipótese pendente:
+a entrada futura deve usar exatamente a representação observada, sem
+normalização implícita. Nenhum conteúdo, playback, Stremio ou Nuvio foi validado.
