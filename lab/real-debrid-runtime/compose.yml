@@ -1,0 +1,36 @@
+services:
+  runtime-tools:
+    build:
+      context: ../..
+      dockerfile: lab/real-debrid-runtime/Dockerfile.tools
+    read_only: true
+    user: "1000:1000"
+    init: true
+    restart: "no"
+    environment:
+      REAL_DEBRID_AUTHORIZED: ${REAL_DEBRID_AUTHORIZED:-false}
+      REAL_DEBRID_TOKEN_FILE: /run/secrets/real_debrid_token
+      REAL_DEBRID_TEST_MODE: ${REAL_DEBRID_TEST_MODE:-account}
+      REAL_DEBRID_CANDIDATE_AUTHORIZED: ${REAL_DEBRID_CANDIDATE_AUTHORIZED:-false}
+      REAL_DEBRID_CANDIDATE_MAGNET: ${REAL_DEBRID_CANDIDATE_MAGNET:-}
+      REAL_DEBRID_CANDIDATE_INFO_HASH: ${REAL_DEBRID_CANDIDATE_INFO_HASH:-}
+      REAL_DEBRID_CANDIDATE_FILE_PATH: ${REAL_DEBRID_CANDIDATE_FILE_PATH:-}
+      REAL_DEBRID_CANDIDATE_FILE_BYTES: ${REAL_DEBRID_CANDIDATE_FILE_BYTES:-}
+    volumes:
+      - ../..:/workspace:ro
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m,mode=0700,uid=1000,gid=1000
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    privileged: false
+    pids_limit: 64
+    mem_limit: 256m
+    cpus: 0.50
+    networks:
+      - real-debrid-runtime
+
+networks:
+  real-debrid-runtime:
+    driver: bridge
