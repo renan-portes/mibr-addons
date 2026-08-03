@@ -1,5 +1,7 @@
 # Changelog
 
+- Added an isolated, opt-in experimental addon-runtime composition for the torrent indexer and Real-Debrid resolver; the standard bootstrap and public addon surface remain unchanged.
+
 ## [Unreleased]
 
 ### Added

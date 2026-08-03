@@ -139,3 +139,8 @@ Nenhum `.env`, token real ou configuração operacional foi adicionado. O runtim
 manual do Real-Debrid já validou a cadeia autorizada, mas integração operacional
 isolada, teste do addon, playback, Stremio e Nuvio permanecem para milestones
 posteriores.
+## Experimental addon runtime composition
+
+The validated Real-Debrid runtime flow and the internal opt-in wiring are now available to an **isolated experimental composition** only. `src/runtime/experimentalRealDebridAddonRuntime.ts` creates a new `ProviderManager`, registers one injected `TorrentIndexerProvider`, and builds the resolver chain only for `enabled === true` with a non-empty token. It performs no DNS, fetch, or other I/O during construction and never changes the default bootstrap.
+
+`lab/real-debrid-addon-runtime/` provides an offline dry-run and a hardened, no-port Compose definition. No real configuration or token is versioned. The lab has not started Docker, accessed a service, exposed an experimental manifest, or tested Stremio, Nuvio, or playback. Those checks remain a separately authorized next step.

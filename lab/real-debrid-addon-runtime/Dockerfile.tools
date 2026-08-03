@@ -1,0 +1,10 @@
+FROM node:24.4.1-bookworm-slim
+
+WORKDIR /opt/runtime-tools
+RUN chown node:node /opt/runtime-tools
+COPY --chown=node:node package.json package-lock.json ./
+USER node
+RUN npm ci --ignore-scripts
+
+ENTRYPOINT ["/opt/runtime-tools/node_modules/.bin/tsx"]
+CMD ["/workspace/lab/real-debrid-addon-runtime/tools/dry-run.ts"]

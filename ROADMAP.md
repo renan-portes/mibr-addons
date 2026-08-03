@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Start the isolated Real-Debrid addon runtime lab on the docker-server and validate its experimental manifest before any Stremio or Nuvio installation.
+
 ## Infraestrutura
 
 - [x] Projeto TypeScript

@@ -1,0 +1,31 @@
+services:
+  addon-runtime-lab:
+    build:
+      context: ../..
+      dockerfile: lab/real-debrid-addon-runtime/Dockerfile.tools
+    read_only: true
+    user: "1000:1000"
+    init: true
+    restart: "no"
+    environment:
+      REAL_DEBRID_ADDON_RUNTIME_ENABLED: ${REAL_DEBRID_ADDON_RUNTIME_ENABLED:-false}
+      REAL_DEBRID_TOKEN_FILE: /run/secrets/real_debrid_token
+    volumes:
+      - ../..:/workspace:ro
+      - ${REAL_DEBRID_TOKEN_FILE_HOST:?set only in a disposable local override}:/run/secrets/real_debrid_token:ro
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m,mode=0700,uid=1000,gid=1000
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    privileged: false
+    pids_limit: 64
+    mem_limit: 256m
+    cpus: 0.50
+    networks:
+      - addon-runtime-lab
+
+networks:
+  addon-runtime-lab:
+    driver: bridge
