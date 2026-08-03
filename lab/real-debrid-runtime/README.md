@@ -8,7 +8,7 @@ A primeira tentativa no docker-server falhou ainda no build, antes da execução
 o `WORKDIR` pertencia a root e o usuário `node` não podia criar `node_modules`
 durante `npm ci`. O diretório agora recebe ownership `node:node` antes da troca de
 usuário. Nenhuma chamada à API ou tentativa de autenticação ocorreu; uma nova
-validação runtime permanece pendente.
+validação runtime ainda estava pendente naquele ponto.
 
 Na tentativa seguinte, o build passou, mas a execução terminou antes do HTTP:
 o launcher POSIX, executado como root, havia criado o segredo como `root:root 0600`,
@@ -16,7 +16,7 @@ enquanto o container usa `1000:1000`. O arquivo montado não era legível. O scr
 agora aplica `umask 077`, ownership `1000:1000`, diretório `0700` e segredo `0400`,
 validando tipo, tamanho, UID, GID e modos antes do Compose. A execução anterior
 registrou HTTP 0, duração 0 e cleanup completo; nenhuma autenticação ou chamada
-externa ocorreu. Uma nova validação runtime permanece pendente.
+externa ocorreu. Uma nova validação runtime ainda estava pendente naquele ponto.
 
 ## Preparação no servidor
 
@@ -46,6 +46,15 @@ endpoints de torrent, magnet ou unrestrict. O JSON de saída contém apenas
 duração e categoria. Username, email, ID, avatar, pontos, token, headers e payload
 bruto nunca são emitidos.
 
+### Validação concluída
+
+O modo `account` foi validado no docker-server com o commit
+`e13652b6dedfd77b77cd02cfe22af492ad8869d2`: exatamente um `GET /user`, sem
+retry, retornou HTTP 200 em 796 ms, `authenticated: SIM`, conta `premium`, campos
+de expiração e premium presentes, categoria `SUCCESS` e código final 0. O token
+permaneceu no `.env` local ignorado e no segredo efêmero read-only; nenhum dado
+pessoal ou token foi emitido. O cleanup removeu container, rede e temporários.
+
 ## Modo candidate
 
 É opcional, separado e nunca automático. Exige `REAL_DEBRID_TEST_MODE=candidate`,
@@ -57,9 +66,9 @@ cleanup e categoria. Magnet, hash, filename, URL e payload não são impressos.
 
 As etapas candidate são incluídas por allowlist somente depois de confirmadas;
 retorno parcial ou erro não antecipa etapas futuras. Os códigos são: `0` sucesso,
-`1` falha e `2` validação parcial. Não foi executada nenhuma chamada real nesta
-implementação. Não há teste no Stremio nem no Nuvio, playback público ou validação
-de conteúdo comercial.
+`1` falha e `2` validação parcial. O modo `candidate` ainda não foi executado;
+nenhum endpoint de torrent, magnet ou unrestrict e nenhum conteúdo foram
+acessados. Não há teste no Stremio nem no Nuvio ou validação de playback.
 
 ## Isolamento
 
