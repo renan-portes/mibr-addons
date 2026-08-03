@@ -18,7 +18,8 @@
 - Contrato offline e fake local para resolução sequencial e opcional de candidatos do torrent-indexer em URLs HTTP/HTTPS defensivamente validadas, com timeout efetivo, prioridade final do cancelamento e limites de entrada por rejeição, desabilitado por padrão.
 - Adaptador interno offline do contrato de candidatos para o subconjunto necessário da API Real-Debrid, com associação 1:1 pós-seleção, deadlines canceláveis e cleanup limitado, exercitado exclusivamente por transporte fake e sem credencial ou serviço real.
 - Transporte HTTPS concreto do adaptador Real-Debrid com base fixa, redirects desabilitados, limite de 1 MiB, timeout/cancelamento efetivos e validação DNS defensiva, testado somente com dependências injetadas e sem rede real.
-- Laboratório descartável para validação runtime manual do transporte Real-Debrid, com modo inicial de conta sanitizado e modo de candidato separado e explicitamente autorizado, sem credencial versionada ou execução real nesta milestone.
+- Laboratório descartável preparado offline para validação runtime manual do transporte Real-Debrid, com modo inicial de conta sanitizado e modo de candidato separado e explicitamente autorizado, sem credencial versionada.
+- Modo `account` do laboratório Real-Debrid validado no docker-server com transporte HTTPS real, segredo efêmero read-only, resposta HTTP 200 sanitizada e cleanup completo; modo `candidate` e playback permanecem não testados.
 - Timeout e cancelamento por provider.
 
 ### Changed
