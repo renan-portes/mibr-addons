@@ -14,7 +14,9 @@ configuração operacional ou `.env` novo.
 
 - `RealDebridCandidateResolver` orquestra estados, seleção, deadlines e cleanup;
 - `RealDebridApiClient` modela os cinco endpoints e decodifica respostas;
-- `RealDebridHttpTransport` é a única fronteira HTTP e não usa `fetch` global;
+- `RealDebridHttpTransport` é a única fronteira HTTP;
+- `RealDebridFetchTransport` é a implementação HTTPS concreta, ainda usada
+  somente com `fetch` e DNS injetados nos testes offline;
 - `FakeRealDebridTransport` mantém fila estrita e isolada, sem rede;
 - `RealDebridResolverError` expõe somente códigos internos sanitizados.
 
@@ -83,3 +85,34 @@ Uma integração real ainda exigirá autenticação operacional, rate limiting,
 observabilidade sanitizada, validação runtime, DNS/anti-rebinding e validação de
 cada redirect no momento da conexão. O uso deverá ser restrito a conteúdo
 autorizado. Nenhuma URL foi acessada ou reproduzida nesta milestone.
+
+## Transporte HTTPS concreto (offline)
+
+O transporte fixa `https://api.real-debrid.com/rest/1.0`, usa o token somente no
+header `Authorization: Bearer`, define redirects como `error`, limita cada corpo
+a 1 MiB e possui timeout próprio padrão de 10 segundos (máximo 60). Cancelamento
+do chamador e timeout vencem inclusive `fetch`, leitura ou DNS não cooperativos;
+o cancelamento do body reader é best-effort e limitado a 250 ms; listeners e
+timers são removidos. O cancelamento externo é revalidado antes de qualquer
+retorno: timeout e cancelamento limitam DNS, fetch, leitura e cleanup do reader,
+mesmo quando a operação ignora o `AbortSignal`. Não existe retry: POST e DELETE nunca são
+repetidos. HTTP 429 é classificado separadamente para que um futuro chamador
+possa tratar rate limiting de GET, mas esta milestone não implementa loop.
+
+Antes do `fetch`, todas as respostas DNS são validadas e endereços privados,
+loopback, link-local, multicast, documentação e especiais IPv4/IPv6 são
+rejeitados. Como o `fetch` nativo pode resolver o hostname novamente, esta
+checagem isolada ainda tem janela TOCTOU e não constitui proteção completa contra
+DNS rebinding. Uma integração operacional deverá fixar a conexão ao endereço
+validado e revalidar DNS e destino em cada hop. Redirects permanecem desabilitados;
+se forem suportados no futuro, cada hop deverá ser validado novamente.
+
+O pathname não é uma URL livre: somente os cinco formatos de endpoint modelados
+são aceitos, com IDs conservadores e sem query, fragmento, percent-encoding,
+traversal, controles, backslash ou host/protocolo embutido. O limite do corpo é
+aplicado por bytes durante o streaming; 1 MiB é aceito e o byte seguinte encerra
+a leitura sem materializar o restante.
+
+Todos os testes do transporte usam mocks injetados; nenhuma chamada externa,
+credencial real, configuração operacional ou playback foi ativado. O provider
+continua fora do bootstrap e a feature flag permanece `false`.

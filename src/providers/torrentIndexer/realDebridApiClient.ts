@@ -2,7 +2,7 @@ export const REAL_DEBRID_API_BASE_URL = "https://api.real-debrid.com/rest/1.0" a
 
 export type RealDebridErrorCode =
   | "invalid_configuration" | "canceled" | "timeout" | "transport_error"
-  | "unexpected_http_status" | "invalid_content_type" | "invalid_json"
+  | "unexpected_http_status" | "rate_limited" | "invalid_content_type" | "invalid_json"
   | "response_too_large" | "invalid_response" | "unknown_status"
   | "terminal_status" | "file_not_found" | "ambiguous_file_selection"
   | "link_not_found" | "ambiguous_link" | "invalid_final_url" | "cleanup_failed";
@@ -147,10 +147,14 @@ export class RealDebridApiClient {
     const operation = Promise.resolve().then(() => this.transport.request(Object.freeze({
       baseUrl: REAL_DEBRID_API_BASE_URL, method, pathname, redirect: "error" as const, headers,
       ...(body === undefined ? {} : { body: Object.freeze({ ...body }) }), signal,
-    }))).catch(() => { throw new RealDebridResolverError("transport_error"); });
+    }))).catch((error: unknown) => {
+      if (error instanceof RealDebridResolverError) throw error;
+      throw new RealDebridResolverError("transport_error");
+    });
     const response = await raceAgainstSignal(operation, signal);
     if (signal.aborted) throw errorFromSignal(signal);
     if (new TextEncoder().encode(response.bodyText).byteLength > MAX_BODY_BYTES) throw new RealDebridResolverError("response_too_large");
+    if (response.status === 429) throw new RealDebridResolverError("rate_limited");
     if (response.status < 200 || response.status >= 300) throw new RealDebridResolverError("unexpected_http_status");
     if (response.status === 204 && response.bodyText === "") return null;
     if (!/^application\/json(?:\s*;|$)/i.test(response.contentType)) throw new RealDebridResolverError("invalid_content_type");

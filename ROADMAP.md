@@ -24,6 +24,7 @@
   - nenhuma nova sondagem está pendente nesta milestone; não houve consulta em massa, fallback ou troca automática de indexer.
 - [x] Contrato offline para resolver sequencialmente candidatos validados em URLs HTTP/HTTPS (fake local; timeout efetivo; limites por rejeição; desabilitado por padrão)
 - [x] Adaptador Real-Debrid exclusivamente offline sobre transporte fake (associação 1:1 pós-seleção; sem token ou chamada real; desabilitado)
+- [x] Transporte HTTPS Real-Debrid offline com fetch/DNS injetados (base fixa, sem redirects ou retries, limites e validação DNS pré-conexão; ainda sem configuração/runtime real)
 - [ ] Integração com resolver autorizado real e validação de rede/DNS por hop
 - [ ] Resultado positivo com item real no self-host (não comprovado pela validação parcial)
 - [ ] Consultas funcionais a conteúdo comercial (fora de escopo)
