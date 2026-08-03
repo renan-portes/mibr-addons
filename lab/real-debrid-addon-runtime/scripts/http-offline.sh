@@ -6,6 +6,7 @@ lab_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 compose_file="$lab_dir/compose.yml"
 tmp_dir=$(mktemp -d)
 override="$tmp_dir/compose.override.yml"
+placeholder="$tmp_dir/real_debrid_token"
 headers="$tmp_dir/headers"
 body="$tmp_dir/body"
 status_file="$tmp_dir/status"
@@ -17,9 +18,9 @@ cleanup() {
   [ "$cleaned" -eq 0 ] || return 0
   cleaned=1
   docker compose -f "$compose_file" -f "$override" --profile experimental-http down --remove-orphans >/dev/null 2>&1 || :
-  rm -f -- "$override" "$headers" "$body" "$status_file" || :
+  rm -f -- "$override" "$placeholder" "$headers" "$body" "$status_file" || :
   rmdir -- "$tmp_dir" || :
-  unset REAL_DEBRID_ADDON_RUNTIME_ENABLED EXPERIMENTAL_ADDON_HTTP_PORT
+  unset REAL_DEBRID_TOKEN_FILE_HOST REAL_DEBRID_ADDON_RUNTIME_ENABLED EXPERIMENTAL_ADDON_HTTP_PORT
 }
 on_exit() { trap - EXIT; cleanup; exit "$main_status"; }
 trap on_exit EXIT
@@ -31,6 +32,13 @@ invalid() { main_status=2; exit "$main_status"; }
 [ "${REAL_DEBRID_ADDON_RUNTIME_ENABLED:-false}" = false ] || invalid
 case "$port" in *[!0-9]*|'') invalid;; esac
 [ "$port" -ge 1024 ] && [ "$port" -le 65535 ] || invalid
+
+: > "$placeholder"
+chown 1000:1000 "$placeholder" || invalid
+chmod 400 "$placeholder" || invalid
+[ -f "$placeholder" ] && [ ! -L "$placeholder" ] && [ ! -s "$placeholder" ] || invalid
+[ "$(stat -c %a "$placeholder")" = 400 ] && [ "$(stat -c %u "$placeholder")" = 1000 ] && [ "$(stat -c %g "$placeholder")" = 1000 ] || invalid
+export REAL_DEBRID_TOKEN_FILE_HOST="$placeholder"
 
 cat > "$override" <<EOF
 services:
