@@ -74,7 +74,8 @@ export interface RealDebridFile {
 }
 
 export type RealDebridStatus = "magnet_conversion" | "waiting_files_selection" | "queued"
-  | "downloading" | "downloaded" | "magnet_error" | "error" | "virus" | "dead";
+  | "downloading" | "downloaded" | "compressing" | "uploading"
+  | "magnet_error" | "error" | "virus" | "dead";
 
 export interface RealDebridTorrentInfo {
   readonly id: string;
@@ -90,6 +91,7 @@ const MAX_TEXT = 8_192;
 export const MAX_FILE_BYTES = 10 * 1_024 ** 4;
 const STATUS = new Set<RealDebridStatus>([
   "magnet_conversion", "waiting_files_selection", "queued", "downloading", "downloaded",
+  "compressing", "uploading",
   "magnet_error", "error", "virus", "dead",
 ]);
 
@@ -115,6 +117,12 @@ export function isSafeRealDebridPath(value: unknown): value is string {
     && segment.length <= 255 && !segment.endsWith(".") && !segment.endsWith(" "));
 }
 
+function decodeApiFilePath(value: unknown): string | null {
+  if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//")) return null;
+  const internal = value.slice(1);
+  return isSafeRealDebridPath(internal) ? internal : null;
+}
+
 function decodeFiles(value: unknown): readonly RealDebridFile[] {
   if (value === undefined) throw new RealDebridResolverError("file_list_missing");
   if (!Array.isArray(value)) throw new RealDebridResolverError("file_list_invalid");
@@ -124,12 +132,13 @@ function decodeFiles(value: unknown): readonly RealDebridFile[] {
     const item = object(entry);
     if (item === null) throw new RealDebridResolverError("file_list_invalid");
     if (!Number.isSafeInteger(item.id) || (item.id as number) <= 0) throw new RealDebridResolverError("file_id_invalid");
-    if (!isSafeRealDebridPath(item.path)
+    const path = decodeApiFilePath(item.path);
+    if (path === null
       || !Number.isSafeInteger(item.bytes) || (item.bytes as number) < 0 || (item.bytes as number) > MAX_FILE_BYTES
       || typeof item.selected !== "number" || (item.selected !== 0 && item.selected !== 1)) {
       throw new RealDebridResolverError("file_list_invalid");
     }
-    files.push(Object.freeze({ id: item.id as number, path: item.path, bytes: item.bytes as number, selected: item.selected === 1 }));
+    files.push(Object.freeze({ id: item.id as number, path, bytes: item.bytes as number, selected: item.selected === 1 }));
   }
   return Object.freeze(files);
 }

@@ -64,11 +64,19 @@ Também registra somente presença/conclusão e buckets `ZERO`, `ONE`, `MULTIPLE
 `TOO_MANY` ou `UNKNOWN`. Magnet, hash, path, nome, bytes, torrent ID, links, URL,
 payload e mensagens arbitrárias permanecem excluídos.
 
-A comparação autorizada permanece deliberadamente exata por path completo e
-tamanho. Um path com diretório raiz, sem diretório raiz ou com slash inicial são
-entradas distintas; basename não é usado. O modelo público usado pelo cliente
-prevê `files[].id`, `path`, `bytes`, `selected`, `status` e `links`, mas não há
-evidência runtime sanitizada suficiente para afirmar como o diretório raiz é
-representado antes de `selectFiles`. Portanto, esse formato é hipótese pendente:
-a entrada futura deve usar exatamente a representação observada, sem
-normalização implícita. Nenhum conteúdo, playback, Stremio ou Nuvio foi validado.
+A segunda execução única concluiu `GET info` e confirmou a presença do array de
+arquivos, mas terminou em `FILE_LIST_INVALID`, em 1349 ms e código 1, antes de
+`file_selected`. O cleanup foi completo e não houve repetição. A causa provável é
+fortemente sustentada pelo contrato oficial: paths de `files` começam com uma
+barra, enquanto o decoder anterior aplicava diretamente a política interna que
+rejeita paths absolutos. Nenhum valor da entrada, ID, tamanho ou payload foi
+registrado.
+
+A fronteira agora exige exatamente uma barra inicial no formato da API, remove
+somente essa barra e então aplica integralmente a validação interna ao restante.
+Não há resolução de filesystem, percent-decoding, remoção de barras adicionais
+ou fallback por basename. A comparação autorizada continua exata por path
+normalizado e tamanho. Os estados oficiais `compressing` e `uploading` passam a
+ser transitórios e continuam sujeitos ao timeout e ao limite de polling; links
+jamais inferem sucesso. A correção ainda requer validação runtime. Nenhum
+conteúdo, playback, Stremio ou Nuvio foi validado.
