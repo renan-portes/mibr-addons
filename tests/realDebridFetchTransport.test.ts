@@ -67,8 +67,8 @@ describe("RealDebridFetchTransport offline HTTPS boundary", () => {
     assert.equal(calls, 0);
   });
 
-  it("accepts only the five modeled endpoint pathname shapes", async () => {
-    const accepted = ["/torrents/addMagnet", "/torrents/info/id_1", "/torrents/selectFiles/id-1", "/unrestrict/link", "/torrents/delete/id"];
+  it("accepts only the account endpoint and five modeled candidate endpoint shapes", async () => {
+    const accepted = ["/user", "/torrents/addMagnet", "/torrents/info/id_1", "/torrents/selectFiles/id-1", "/unrestrict/link", "/torrents/delete/id"];
     for (const pathname of accepted) await new RealDebridFetchTransport({ lookup: PUBLIC_ADDRESSES, fetch: async () => response("{}") }).request(transportRequest({ pathname }));
     const rejected = ["", "x", "/../x", "/./x", "//host/x", "/x%2fy", "/x%2ey", "/x\\y", "/x\u0000y", "/x?token=y", "/x#fragment", "https://host/x", "/torrents/info/a/b", `/torrents/info/${"a".repeat(201)}`];
     for (const pathname of rejected) await rejectsCode(() => new RealDebridFetchTransport({ lookup: PUBLIC_ADDRESSES, fetch: async () => { throw new Error("must not fetch"); } }).request(transportRequest({ pathname })), "invalid_configuration");

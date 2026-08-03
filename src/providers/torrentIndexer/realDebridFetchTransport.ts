@@ -122,7 +122,7 @@ function isAllowedPathname(pathname: string): boolean {
     || pathname.includes("?") || pathname.includes("#") || /[\u0000-\u001f\u007f]/.test(pathname)) return false;
   const segments = pathname.slice(1).split("/");
   if (segments.some((segment) => segment.length === 0 || segment.length > 200 || segment === "." || segment === "..")) return false;
-  return pathname === "/torrents/addMagnet" || pathname === "/unrestrict/link"
+  return pathname === "/user" || pathname === "/torrents/addMagnet" || pathname === "/unrestrict/link"
     || /^\/torrents\/(?:info|selectFiles|delete)\/[A-Za-z0-9_-]{1,200}$/.test(pathname);
 }
 
