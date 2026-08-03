@@ -95,7 +95,16 @@ O diagnóstico agora separa `GLOBAL_TIMEOUT`, `POLLING_EXHAUSTED`,
 `POLLING_DELAY_TIMEOUT`, `INFO_REQUEST_TIMEOUT`, `CANCELED` e
 `TERMINAL_TORRENT_STATUS`. Registra apenas início do polling, bucket de tentativas,
 categoria allowlisted do último estado e flags de deadline/limite. O laboratório,
-sem alterar os defaults do resolver, usa até 10 snapshots por fase, delay
+sem alterar os defaults do resolver, usava até 10 snapshots por fase, delay
 cancelável de 1500 ms e deadline total de 30 segundos. Cada GET conta como uma
 tentativa; somente GET é repetido. Estados transitórios continuam aguardando,
 `downloaded` é o único sucesso e estados terminais encerram imediatamente.
+
+A execução seguinte confirmou polling iniciado e último estado sanitizado
+`DOWNLOADING`. O limite de 10 GETs foi atingido (`MANY`), sem atingir o deadline
+global; o resultado foi `POLLING_EXHAUSTED`, em 17766 ms, código 1 e cleanup
+completo. Não houve falha estrutural, URL final ou playback. Para uma única nova
+validação, somente o laboratório passa a usar no máximo 20 GETs, o mesmo delay
+cancelável de 1500 ms e deadline total de 45 segundos. Polling infinito continua
+proibido e os defaults do produto permanecem 3 tentativas, 20 segundos e sem
+delay.

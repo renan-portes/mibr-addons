@@ -388,7 +388,8 @@ describe("RealDebridCandidateResolver offline adapter", () => {
   });
 
   it("validates resolver options and keeps the existing provider default tests intact", () => {
-    for (const options of [{ pollAttempts: 0 }, { pollAttempts: 11 }, { totalTimeoutMs: 0 }, { totalTimeoutMs: 60_001 }, { cleanupTimeoutMs: 0 }, { cleanupTimeoutMs: 5_001 }]) {
+    assert.doesNotThrow(() => setup([], { pollAttempts: 20 }));
+    for (const options of [{ pollAttempts: 0 }, { pollAttempts: 21 }, { totalTimeoutMs: 0 }, { totalTimeoutMs: 60_001 }, { cleanupTimeoutMs: 0 }, { cleanupTimeoutMs: 5_001 }]) {
       assert.throws(() => setup([], options).resolver, (error: unknown) => error instanceof RealDebridResolverError && error.code === "invalid_configuration");
     }
   });
