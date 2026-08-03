@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { sanitizeAccountPayload } from "../lab/real-debrid-runtime/tools/runtime-test.js";
-import { buildFailureReport, CandidateStageTracker, RuntimeLifecycleExit, RuntimeValidationError, runOfflineLifecycle, validatePosixMode, validateRuntimeConfiguration } from "../lab/real-debrid-runtime/tools/runtime-lab-support.js";
+import { loadRuntimeToken, sanitizeAccountPayload, type RuntimeTokenFileAccess } from "../lab/real-debrid-runtime/tools/runtime-test.js";
+import { buildFailureReport, CandidateStageTracker, RuntimeLifecycleExit, RuntimeValidationError, runOfflineLifecycle, validatePosixMode, validateRuntimeConfiguration, validateRuntimeSecretMetadata, type RuntimeSecretMetadata } from "../lab/real-debrid-runtime/tools/runtime-lab-support.js";
 
 const root = new URL("../", import.meta.url);
 const read = (path: string) => readFileSync(new URL(path, root), "utf8");
@@ -55,6 +55,45 @@ describe("Real-Debrid authenticated runtime laboratory", () => {
     assert.deepEqual(validateRuntimeConfiguration(base), { mode: "account", token: "opaque-synthetic" });
     validatePosixMode(0o600);
     for (const mode of [undefined, 0o640, 0o604, 0o666]) assert.throws(() => validatePosixMode(mode), (error: unknown) => error instanceof RuntimeValidationError && error.code === "PERMISSIONS_UNSAFE");
+  });
+
+  it("accepts only a traversable 1000:1000 directory and a private regular secret", () => {
+    const metadata = (overrides: Partial<RuntimeSecretMetadata> = {}): RuntimeSecretMetadata => ({ kind: "file", uid: 1_000, gid: 1_000, mode: 0o400, size: 1, readable: true, ...overrides });
+    const directory = metadata({ kind: "directory", mode: 0o700, size: 0 });
+    validateRuntimeSecretMetadata(directory, metadata());
+    validateRuntimeSecretMetadata(directory, metadata({ mode: 0o600 }));
+    for (const invalid of [
+      [metadata({ kind: "directory", uid: 0, gid: 0, mode: 0o700, size: 0 }), metadata()],
+      [directory, metadata({ uid: 0, gid: 0, mode: 0o600 })],
+      [directory, metadata({ uid: 1_001 })],
+      [directory, metadata({ gid: 1_001 })],
+      [directory, metadata({ mode: 0o644 })],
+      [directory, metadata({ kind: "other" })],
+    ] as const) assert.throws(() => validateRuntimeSecretMetadata(invalid[0], invalid[1]), (error: unknown) => error instanceof RuntimeValidationError && error.code === "TOKEN_FILE_INVALID_PERMISSIONS");
+    assert.throws(() => validateRuntimeSecretMetadata(directory, metadata({ kind: "missing" })), (error: unknown) => error instanceof RuntimeValidationError && error.code === "TOKEN_FILE_MISSING");
+    assert.throws(() => validateRuntimeSecretMetadata(directory, metadata({ size: 0 })), (error: unknown) => error instanceof RuntimeValidationError && error.code === "TOKEN_FILE_EMPTY");
+    assert.throws(() => validateRuntimeSecretMetadata(directory, metadata({ readable: false })), (error: unknown) => error instanceof RuntimeValidationError && error.code === "TOKEN_FILE_UNREADABLE");
+  });
+
+  it("classifies token-file failures before any transport can start", async () => {
+    const access = (overrides: Partial<Awaited<ReturnType<RuntimeTokenFileAccess["lstat"]>>> = {}, token = "synthetic-token"): RuntimeTokenFileAccess => ({
+      lstat: async () => ({ isFile: () => true, size: token.length, mode: 0o100400, uid: 1_000, gid: 1_000, ...overrides }),
+      access: async () => {}, readFile: async () => token,
+    });
+    let transportCalls = 0;
+    const run = async (path: string | undefined, fileAccess: RuntimeTokenFileAccess): Promise<void> => { await loadRuntimeToken(path, fileAccess); transportCalls += 1; };
+    await assert.rejects(run(undefined, access()), (error: unknown) => error instanceof RuntimeValidationError && error.code === "INVALID_CONFIGURATION");
+    await assert.rejects(run("secret", { ...access(), lstat: async () => { throw Object.assign(new Error("opaque"), { code: "ENOENT" }); } }), (error: unknown) => error instanceof RuntimeValidationError && error.code === "TOKEN_FILE_MISSING");
+    await assert.rejects(run("secret", access({ size: 0 }, "")), (error: unknown) => error instanceof RuntimeValidationError && error.code === "TOKEN_FILE_EMPTY");
+    await assert.rejects(run("secret", access({ isFile: () => false })), (error: unknown) => error instanceof RuntimeValidationError && error.code === "TOKEN_FILE_INVALID_PERMISSIONS");
+    await assert.rejects(run("secret", { ...access(), access: async () => { throw new Error("opaque"); } }), (error: unknown) => error instanceof RuntimeValidationError && error.code === "TOKEN_FILE_UNREADABLE");
+    await assert.rejects(run("secret", access({}, "line1\nline2")), (error: unknown) => error instanceof RuntimeValidationError && error.code === "INVALID_CONFIGURATION");
+    assert.equal(transportCalls, 0);
+    for (const category of ["TOKEN_FILE_MISSING", "TOKEN_FILE_UNREADABLE", "TOKEN_FILE_EMPTY", "TOKEN_FILE_INVALID_PERMISSIONS", "INVALID_CONFIGURATION"]) {
+      const report = buildFailureReport("account", category, 0);
+      assert.equal(report.category, category); assert.equal(report.HTTP, 0); assert.equal(report.durationMs, 0);
+      assert.doesNotMatch(JSON.stringify(report), /synthetic-token|\/run\/secrets|real_debrid_token|pathname/i);
+    }
   });
 
   it("defines a disposable hardened service without published ports or persistent storage", () => {
@@ -142,7 +181,10 @@ describe("Real-Debrid authenticated runtime laboratory", () => {
     assert.match(powershell, /taskkill \/PID \$script:runtimeProcess\.Id \/T \/F/);
     assert.match(powershell, /finally[\s\S]*Stop-RuntimeTree[\s\S]*Invoke-ComposeCleanup/);
     assert.match(posix, /RUNTIME_TEMP_DIR=\$\(mktemp -d\)[\s\S]*rmdir "\$RUNTIME_TEMP_DIR"/);
+    assert.match(posix, /umask 077[\s\S]*mktemp -d[\s\S]*printf '%s' "\$TOKEN"[\s\S]*chown 1000:1000 "\$RUNTIME_TEMP_DIR" "\$SECRET_FILE"[\s\S]*chmod 700 "\$RUNTIME_TEMP_DIR"[\s\S]*chmod 400 "\$SECRET_FILE"/);
+    assert.match(posix, /stat -c '%u:%g:%a'[\s\S]*1000:1000:700[\s\S]*1000:1000:400/);
     assert.match(powershell, /GetTempPath[\s\S]*Remove-Item -LiteralPath \$tempDir/);
+    assert.match(powershell, /pending validation of UID 1000 bind-mount ownership/);
     assert.doesNotMatch(`${posix}\n${powershell}`, /\bretry\b|for\s*\(.*docker|while\s*\(.*docker/i);
     assert.match(tool, /type ExitCode = 0 \| 1 \| 2/);
     assert.match(tool, /return result === null \? 2 : 0/);

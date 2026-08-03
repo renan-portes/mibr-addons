@@ -10,6 +10,14 @@ durante `npm ci`. O diretório agora recebe ownership `node:node` antes da troca
 usuário. Nenhuma chamada à API ou tentativa de autenticação ocorreu; uma nova
 validação runtime permanece pendente.
 
+Na tentativa seguinte, o build passou, mas a execução terminou antes do HTTP:
+o launcher POSIX, executado como root, havia criado o segredo como `root:root 0600`,
+enquanto o container usa `1000:1000`. O arquivo montado não era legível. O script
+agora aplica `umask 077`, ownership `1000:1000`, diretório `0700` e segredo `0400`,
+validando tipo, tamanho, UID, GID e modos antes do Compose. A execução anterior
+registrou HTTP 0, duração 0 e cleanup completo; nenhuma autenticação ou chamada
+externa ocorreu. Uma nova validação runtime permanece pendente.
+
 ## Preparação no servidor
 
 1. Copie `.env.example` para `.env` e restrinja o arquivo ao usuário operador
@@ -61,8 +69,8 @@ de conteúdo comercial.
 - CPU, memória e PIDs limitados, rede bridge dedicada e nenhuma porta publicada;
 - container `--rm`, sem volumes persistentes e cleanup obrigatório.
 
-No POSIX, `INT`, `TERM` e `TSTP` possuem traps explícitos. No Windows, o script
-PowerShell trata `CancelKeyPress`, timeout e encerramento explícito da árvore com
-`taskkill /T`; Windows/PowerShell não possuem equivalência direta para SIGTERM e
-SIGTSTP. Em ambos, cleanup é idempotente e best-effort: sua falha não substitui o
-código principal.
+No POSIX, `INT`, `TERM` e `TSTP` possuem traps explícitos. ACL exclusiva no host
+Windows não comprova que um bind mount seja legível pelo UID Linux 1000; por isso,
+o launcher PowerShell falha de forma fechada e permanece pendente de validação
+runtime específica, sem tornar o segredo world-readable. O cleanup continua
+idempotente e best-effort: sua falha não substitui o código principal.

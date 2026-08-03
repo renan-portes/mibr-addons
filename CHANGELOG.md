@@ -30,6 +30,7 @@
 ### Fixed
 
 - Ownership do diretório de trabalho da imagem de ferramentas do laboratório Real-Debrid ajustado antes do `npm ci` não-root; nova validação runtime ainda pendente.
+- Segredo efêmero do laboratório Real-Debrid preparado e validado como `1000:1000` com modos restritos antes do Compose, evitando falha de leitura pré-HTTP pelo container não-root.
 - Isolamento de falhas para impedir que um provider com erro ou timeout derrube os demais.
 - Validação estrita da porta configurada por ambiente.
 - Inicialização do FlareSolverr v3.3.21 com ChromeDriver efêmero e exceção `read_only: false` restrita ao serviço.

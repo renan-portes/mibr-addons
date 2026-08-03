@@ -15,10 +15,31 @@ export interface RuntimeConfiguration {
 }
 
 export class RuntimeValidationError extends Error {
-  constructor(readonly code: "ENV_MISSING" | "NOT_AUTHORIZED" | "TOKEN_INVALID" | "MODE_INVALID" | "CANDIDATE_NOT_AUTHORIZED" | "CANDIDATE_INPUT_INVALID" | "PERMISSIONS_UNSAFE") {
+  constructor(readonly code: "ENV_MISSING" | "NOT_AUTHORIZED" | "TOKEN_INVALID" | "MODE_INVALID" | "CANDIDATE_NOT_AUTHORIZED" | "CANDIDATE_INPUT_INVALID" | "PERMISSIONS_UNSAFE" | RuntimeTokenFileCategory) {
     super(`Runtime configuration rejected (${code})`);
     this.name = "RuntimeValidationError";
   }
+}
+
+export type RuntimeTokenFileCategory = "TOKEN_FILE_MISSING" | "TOKEN_FILE_UNREADABLE" | "TOKEN_FILE_EMPTY" | "TOKEN_FILE_INVALID_PERMISSIONS" | "INVALID_CONFIGURATION";
+
+export interface RuntimeSecretMetadata {
+  readonly kind: "file" | "directory" | "other" | "missing";
+  readonly uid: number;
+  readonly gid: number;
+  readonly mode: number;
+  readonly size: number;
+  readonly readable: boolean;
+}
+
+export function validateRuntimeSecretMetadata(directory: RuntimeSecretMetadata, file: RuntimeSecretMetadata): void {
+  if (directory.kind === "missing" || file.kind === "missing") throw new RuntimeValidationError("TOKEN_FILE_MISSING");
+  if (directory.kind !== "directory" || file.kind !== "file") throw new RuntimeValidationError("TOKEN_FILE_INVALID_PERMISSIONS");
+  if (directory.uid !== 1_000 || directory.gid !== 1_000 || (directory.mode & 0o777) !== 0o700) throw new RuntimeValidationError("TOKEN_FILE_INVALID_PERMISSIONS");
+  const fileMode = file.mode & 0o777;
+  if (file.uid !== 1_000 || file.gid !== 1_000 || (fileMode !== 0o400 && fileMode !== 0o600)) throw new RuntimeValidationError("TOKEN_FILE_INVALID_PERMISSIONS");
+  if (!file.readable) throw new RuntimeValidationError("TOKEN_FILE_UNREADABLE");
+  if (file.size < 1) throw new RuntimeValidationError("TOKEN_FILE_EMPTY");
 }
 
 export function validateToken(token: string | undefined): string {
@@ -49,7 +70,7 @@ export function validateRuntimeConfiguration(values: Readonly<Record<string, str
   return Object.freeze({ mode, token, candidate: Object.freeze({ magnet, infoHash: infoHash.toLowerCase(), path, bytes }) });
 }
 
-const ERROR_CATEGORIES = new Set(["INVALID_CONFIGURATION", "CANCELED", "TIMEOUT", "TRANSPORT_ERROR", "UNEXPECTED_HTTP_STATUS", "RATE_LIMITED", "INVALID_CONTENT_TYPE", "INVALID_JSON", "RESPONSE_TOO_LARGE", "INVALID_RESPONSE", "UNKNOWN_STATUS", "TERMINAL_STATUS", "FILE_NOT_FOUND", "AMBIGUOUS_FILE_SELECTION", "LINK_NOT_FOUND", "AMBIGUOUS_LINK", "INVALID_FINAL_URL", "CLEANUP_FAILED"]);
+const ERROR_CATEGORIES = new Set(["TOKEN_FILE_MISSING", "TOKEN_FILE_UNREADABLE", "TOKEN_FILE_EMPTY", "TOKEN_FILE_INVALID_PERMISSIONS", "INVALID_CONFIGURATION", "CANCELED", "TIMEOUT", "TRANSPORT_ERROR", "UNEXPECTED_HTTP_STATUS", "RATE_LIMITED", "INVALID_CONTENT_TYPE", "INVALID_JSON", "RESPONSE_TOO_LARGE", "INVALID_RESPONSE", "UNKNOWN_STATUS", "TERMINAL_STATUS", "FILE_NOT_FOUND", "AMBIGUOUS_FILE_SELECTION", "LINK_NOT_FOUND", "AMBIGUOUS_LINK", "INVALID_FINAL_URL", "CLEANUP_FAILED"]);
 
 export function opaqueCategory(code: string | undefined): string {
   const normalized = code?.toUpperCase() ?? "UNKNOWN";
