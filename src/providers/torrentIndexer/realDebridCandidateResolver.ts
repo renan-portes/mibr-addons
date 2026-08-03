@@ -88,7 +88,7 @@ export class RealDebridCandidateResolver implements TorrentCandidateResolver {
     let primary: unknown;
     try {
       torrentId = await this.api.addMagnet(request.magnet, main.signal); this.check(main.signal);
-      let info = await this.api.info(torrentId, main.signal); this.check(main.signal);
+      let info = await this.readInfo(torrentId, main.signal);
       info = await this.waitForFiles(torrentId, info, main.signal);
       const file = request.files.length > 0
         ? selectAuthorizedFile(info.files, request.files)
@@ -96,7 +96,7 @@ export class RealDebridCandidateResolver implements TorrentCandidateResolver {
       if (file === null) result = null;
       else {
         await this.api.selectFile(torrentId, file.id, main.signal); this.check(main.signal);
-        info = await this.api.info(torrentId, main.signal); this.check(main.signal); // Mandatory post-select snapshot.
+        info = await this.readInfo(torrentId, main.signal); // Mandatory post-select snapshot and attempt 1.
         info = await this.waitUntilDownloaded(torrentId, info, main.signal);
         const chosenStillExists = info.files.some((entry) => entry.id === file.id);
         if (!chosenStillExists) throw new RealDebridResolverError("file_not_found");
@@ -111,7 +111,9 @@ export class RealDebridCandidateResolver implements TorrentCandidateResolver {
         result = validated;
       }
     } catch (error) {
-      primary = error instanceof RealDebridResolverError ? error : new RealDebridResolverError("transport_error");
+      primary = main.signal.aborted
+        ? this.signalError(main.signal)
+        : error instanceof RealDebridResolverError ? error : new RealDebridResolverError("transport_error");
     } finally {
       clearTimeout(mainTimer);
       request.signal.removeEventListener("abort", abortMain);
@@ -123,11 +125,32 @@ export class RealDebridCandidateResolver implements TorrentCandidateResolver {
     return result;
   }
 
-  private check(signal: AbortSignal): void { if (signal.aborted) throw errorFromSignal(signal); }
+  private signalError(signal: AbortSignal): RealDebridResolverError {
+    return new RealDebridResolverError(signal.reason instanceof DOMException && signal.reason.name === "TimeoutError" ? "global_timeout" : "canceled");
+  }
+
+  private check(signal: AbortSignal): void { if (signal.aborted) throw this.signalError(signal); }
+
+  private async readInfo(torrentId: string, signal: AbortSignal): Promise<RealDebridTorrentInfo> {
+    try {
+      const info = await this.api.info(torrentId, signal);
+      this.check(signal);
+      return info;
+    } catch (error) {
+      this.check(signal);
+      if (error instanceof RealDebridResolverError && error.code === "timeout") throw new RealDebridResolverError("info_request_timeout");
+      throw error;
+    }
+  }
 
   private async waitDelay(signal: AbortSignal): Promise<void> {
     const operation = Promise.resolve().then(() => this.delay(signal));
-    await raceAgainstSignal(operation, signal);
+    try { await raceAgainstSignal(operation, signal); }
+    catch (error) {
+      this.check(signal);
+      if (error instanceof RealDebridResolverError && error.code === "timeout") throw new RealDebridResolverError("polling_delay_timeout");
+      throw error;
+    }
     this.check(signal);
   }
 
@@ -139,9 +162,9 @@ export class RealDebridCandidateResolver implements TorrentCandidateResolver {
       if (info.status === "downloaded") return info;
       if (attempt + 1 >= this.attempts) break;
       await this.waitDelay(signal);
-      info = await this.api.info(torrentId, signal); this.check(signal);
+      info = await this.readInfo(torrentId, signal);
     }
-    throw new RealDebridResolverError("timeout");
+    throw new RealDebridResolverError("polling_exhausted");
   }
 
   private async waitForFiles(torrentId: string, initial: RealDebridTorrentInfo, signal: AbortSignal): Promise<RealDebridTorrentInfo> {
@@ -152,9 +175,9 @@ export class RealDebridCandidateResolver implements TorrentCandidateResolver {
       if (info.files.length > 0) return info;
       if (attempt + 1 >= this.attempts) break;
       await this.waitDelay(signal);
-      info = await this.api.info(torrentId, signal); this.check(signal);
+      info = await this.readInfo(torrentId, signal);
     }
-    throw new RealDebridResolverError("timeout");
+    throw new RealDebridResolverError("polling_exhausted");
   }
 
   private async runCleanup(torrentId: string, parent: AbortSignal): Promise<void> {

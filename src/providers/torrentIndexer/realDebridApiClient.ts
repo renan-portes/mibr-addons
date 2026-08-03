@@ -1,7 +1,8 @@
 export const REAL_DEBRID_API_BASE_URL = "https://api.real-debrid.com/rest/1.0" as const;
 
 export type RealDebridErrorCode =
-  | "invalid_configuration" | "canceled" | "timeout" | "transport_error"
+  | "invalid_configuration" | "canceled" | "timeout" | "global_timeout"
+  | "polling_exhausted" | "polling_delay_timeout" | "info_request_timeout" | "transport_error"
   | "unexpected_http_status" | "rate_limited" | "invalid_content_type" | "invalid_json"
   | "response_too_large" | "invalid_response" | "unknown_status"
   | "info_http_error" | "info_invalid_json" | "info_invalid_response"

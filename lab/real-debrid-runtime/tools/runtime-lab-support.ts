@@ -70,7 +70,7 @@ export function validateRuntimeConfiguration(values: Readonly<Record<string, str
   return Object.freeze({ mode, token, candidate: Object.freeze({ magnet, infoHash: infoHash.toLowerCase(), path, bytes }) });
 }
 
-const ERROR_CATEGORIES = new Set(["TOKEN_FILE_MISSING", "TOKEN_FILE_UNREADABLE", "TOKEN_FILE_EMPTY", "TOKEN_FILE_INVALID_PERMISSIONS", "INVALID_CONFIGURATION", "CANCELED", "TIMEOUT", "TRANSPORT_ERROR", "UNEXPECTED_HTTP_STATUS", "RATE_LIMITED", "INVALID_CONTENT_TYPE", "INVALID_JSON", "RESPONSE_TOO_LARGE", "INVALID_RESPONSE", "INFO_HTTP_ERROR", "INFO_INVALID_JSON", "INFO_INVALID_RESPONSE", "UNKNOWN_TORRENT_STATUS", "TERMINAL_TORRENT_STATUS", "FILE_LIST_MISSING", "FILE_LIST_INVALID", "AUTHORIZED_FILE_NOT_FOUND", "AUTHORIZED_FILE_SIZE_MISMATCH", "AMBIGUOUS_AUTHORIZED_FILE", "FILE_ID_INVALID", "UNKNOWN_STATUS", "TERMINAL_STATUS", "FILE_NOT_FOUND", "AMBIGUOUS_FILE_SELECTION", "LINK_NOT_FOUND", "AMBIGUOUS_LINK", "INVALID_FINAL_URL", "CLEANUP_FAILED"]);
+const ERROR_CATEGORIES = new Set(["TOKEN_FILE_MISSING", "TOKEN_FILE_UNREADABLE", "TOKEN_FILE_EMPTY", "TOKEN_FILE_INVALID_PERMISSIONS", "INVALID_CONFIGURATION", "CANCELED", "TIMEOUT", "GLOBAL_TIMEOUT", "POLLING_EXHAUSTED", "POLLING_DELAY_TIMEOUT", "INFO_REQUEST_TIMEOUT", "TRANSPORT_ERROR", "UNEXPECTED_HTTP_STATUS", "RATE_LIMITED", "INVALID_CONTENT_TYPE", "INVALID_JSON", "RESPONSE_TOO_LARGE", "INVALID_RESPONSE", "INFO_HTTP_ERROR", "INFO_INVALID_JSON", "INFO_INVALID_RESPONSE", "UNKNOWN_TORRENT_STATUS", "TERMINAL_TORRENT_STATUS", "FILE_LIST_MISSING", "FILE_LIST_INVALID", "AUTHORIZED_FILE_NOT_FOUND", "AUTHORIZED_FILE_SIZE_MISMATCH", "AMBIGUOUS_AUTHORIZED_FILE", "FILE_ID_INVALID", "UNKNOWN_STATUS", "TERMINAL_STATUS", "FILE_NOT_FOUND", "AMBIGUOUS_FILE_SELECTION", "LINK_NOT_FOUND", "AMBIGUOUS_LINK", "INVALID_FINAL_URL", "CLEANUP_FAILED"]);
 
 export function opaqueCategory(code: string | undefined): string {
   const normalized = code?.toUpperCase() ?? "UNKNOWN";
@@ -118,7 +118,48 @@ export function candidateRuntimeCategory(code: string | undefined, phase: "info"
     if (code === "file_list_too_many") return "FILE_LIST_INVALID";
   }
   if (code === "terminal_status") return "TERMINAL_TORRENT_STATUS";
+  if (code === "global_timeout") return "GLOBAL_TIMEOUT";
+  if (code === "polling_exhausted") return "POLLING_EXHAUSTED";
+  if (code === "polling_delay_timeout") return "POLLING_DELAY_TIMEOUT";
+  if (code === "info_request_timeout") return "INFO_REQUEST_TIMEOUT";
   return opaqueCategory(code);
+}
+
+export type CandidatePollingAttemptsBucket = "ONE" | "FEW" | "MANY" | "UNKNOWN";
+export type CandidateStatusCategory = "WAITING" | "QUEUED" | "DOWNLOADING" | "COMPRESSING" | "UPLOADING" | "DOWNLOADED" | "TERMINAL" | "UNKNOWN";
+export interface CandidatePollingDiagnostics {
+  readonly pollingStarted: "SIM" | "NÃO";
+  readonly pollingAttemptsBucket: CandidatePollingAttemptsBucket;
+  readonly lastStatusCategory: CandidateStatusCategory;
+  readonly globalDeadlineReached: "SIM" | "NÃO";
+  readonly pollingLimitReached: "SIM" | "NÃO";
+}
+
+export class CandidatePollingDiagnosticTracker {
+  private attempts = 0;
+  private lastStatus: CandidateStatusCategory = "UNKNOWN";
+  private globalDeadline = false;
+  private pollingLimit = false;
+
+  startAttempt(): void { this.attempts += 1; }
+  recordStatus(status: string): void {
+    const categories: Readonly<Record<string, CandidateStatusCategory>> = Object.freeze({
+      magnet_conversion: "WAITING", waiting_files_selection: "WAITING", queued: "QUEUED", downloading: "DOWNLOADING",
+      compressing: "COMPRESSING", uploading: "UPLOADING", downloaded: "DOWNLOADED",
+      magnet_error: "TERMINAL", error: "TERMINAL", virus: "TERMINAL", dead: "TERMINAL",
+    });
+    this.lastStatus = categories[status] ?? "UNKNOWN";
+  }
+  recordFailure(code: string | undefined): void {
+    this.globalDeadline = code === "global_timeout";
+    this.pollingLimit = code === "polling_exhausted";
+  }
+  snapshot(): CandidatePollingDiagnostics {
+    return Object.freeze({ pollingStarted: this.attempts > 0 ? "SIM" : "NÃO",
+      pollingAttemptsBucket: this.attempts === 0 ? "UNKNOWN" : this.attempts === 1 ? "ONE" : this.attempts <= 5 ? "FEW" : "MANY",
+      lastStatusCategory: this.lastStatus, globalDeadlineReached: this.globalDeadline ? "SIM" : "NÃO",
+      pollingLimitReached: this.pollingLimit ? "SIM" : "NÃO" });
+  }
 }
 
 export type CandidateFileCountBucket = "ZERO" | "ONE" | "MULTIPLE" | "TOO_MANY" | "UNKNOWN";

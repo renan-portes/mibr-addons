@@ -31,6 +31,7 @@
   - modo `account` validado no commit `e13652b6dedfd77b77cd02cfe22af492ad8869d2`: um `GET /user`, HTTP 200, `SUCCESS`, código 0, sanitização e cleanup completos; conteúdo e playback não testados nessa fase.
   - primeira execução única de `candidate`: autenticação e `addMagnet` validados; falha `INVALID_RESPONSE` antes de `file_selected`, em 1366 ms, código 1 e cleanup completo. Diagnóstico estrutural foi refinado offline; causa específica e representação do path raiz continuam pendentes, sem nova execução.
   - segunda execução única de `candidate`: `GET info` e presença de `files` confirmados; `FILE_LIST_INVALID` antes de `file_selected`, em 1349 ms, código 1 e cleanup completo. A incompatibilidade provável com o slash inicial contratual foi corrigida offline; nova validação runtime permanece pendente.
+  - terceira execução única de `candidate`: autenticação, arquivo autorizado e `selectFiles` validados; `TIMEOUT` após `file_selected`, em aproximadamente 2899 ms, código 1 e cleanup completo. O laboratório agora distingue deadline, polling, delay e GET, usando até 10 snapshots, delay de 1500 ms e deadline de 30 s; nova execução permanece pendente.
 - [ ] Integração com resolver autorizado real e validação de rede/DNS por hop
 - [ ] Resultado positivo com item real no self-host (não comprovado pela validação parcial)
 - [ ] Consultas funcionais a conteúdo comercial (fora de escopo)

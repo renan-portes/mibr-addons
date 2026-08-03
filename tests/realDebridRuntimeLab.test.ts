@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { loadRuntimeToken, sanitizeAccountPayload, type RuntimeTokenFileAccess } from "../lab/real-debrid-runtime/tools/runtime-test.js";
-import { buildFailureReport, CandidateDiagnosticTracker, candidateRuntimeCategory, CandidateStageTracker, opaqueCategory, RuntimeLifecycleExit, RuntimeValidationError, runOfflineLifecycle, validatePosixMode, validateRuntimeConfiguration, validateRuntimeSecretMetadata, type RuntimeSecretMetadata } from "../lab/real-debrid-runtime/tools/runtime-lab-support.js";
+import { buildFailureReport, CandidateDiagnosticTracker, CandidatePollingDiagnosticTracker, candidateRuntimeCategory, CandidateStageTracker, opaqueCategory, RuntimeLifecycleExit, RuntimeValidationError, runOfflineLifecycle, validatePosixMode, validateRuntimeConfiguration, validateRuntimeSecretMetadata, type RuntimeSecretMetadata } from "../lab/real-debrid-runtime/tools/runtime-lab-support.js";
 
 const root = new URL("../", import.meta.url);
 const read = (path: string) => readFileSync(new URL(path, root), "utf8");
@@ -167,7 +167,7 @@ describe("Real-Debrid authenticated runtime laboratory", () => {
   });
 
   it("classifies post-add failures and emits only allowlisted structural diagnostics", () => {
-    const categories = ["INFO_HTTP_ERROR", "INFO_INVALID_JSON", "INFO_INVALID_RESPONSE", "UNKNOWN_TORRENT_STATUS", "TERMINAL_TORRENT_STATUS", "FILE_LIST_MISSING", "FILE_LIST_INVALID", "AUTHORIZED_FILE_NOT_FOUND", "AUTHORIZED_FILE_SIZE_MISMATCH", "AMBIGUOUS_AUTHORIZED_FILE", "FILE_ID_INVALID", "TIMEOUT", "CANCELED", "UNKNOWN"];
+    const categories = ["INFO_HTTP_ERROR", "INFO_INVALID_JSON", "INFO_INVALID_RESPONSE", "UNKNOWN_TORRENT_STATUS", "TERMINAL_TORRENT_STATUS", "FILE_LIST_MISSING", "FILE_LIST_INVALID", "AUTHORIZED_FILE_NOT_FOUND", "AUTHORIZED_FILE_SIZE_MISMATCH", "AMBIGUOUS_AUTHORIZED_FILE", "FILE_ID_INVALID", "GLOBAL_TIMEOUT", "POLLING_EXHAUSTED", "POLLING_DELAY_TIMEOUT", "INFO_REQUEST_TIMEOUT", "TIMEOUT", "CANCELED", "UNKNOWN"];
     for (const value of categories) assert.equal(opaqueCategory(value), value);
     const mappings: Array<[string | undefined, "info" | "workflow", string]> = [
       ["unexpected_http_status", "info", "INFO_HTTP_ERROR"], ["rate_limited", "info", "INFO_HTTP_ERROR"],
@@ -178,6 +178,8 @@ describe("Real-Debrid authenticated runtime laboratory", () => {
       ["authorized_file_not_found", "workflow", "AUTHORIZED_FILE_NOT_FOUND"],
       ["authorized_file_size_mismatch", "workflow", "AUTHORIZED_FILE_SIZE_MISMATCH"],
       ["ambiguous_authorized_file", "workflow", "AMBIGUOUS_AUTHORIZED_FILE"],
+      ["global_timeout", "workflow", "GLOBAL_TIMEOUT"], ["polling_exhausted", "workflow", "POLLING_EXHAUSTED"],
+      ["polling_delay_timeout", "workflow", "POLLING_DELAY_TIMEOUT"], ["info_request_timeout", "workflow", "INFO_REQUEST_TIMEOUT"],
       ["timeout", "workflow", "TIMEOUT"], ["canceled", "workflow", "CANCELED"], [undefined, "workflow", "UNKNOWN"],
     ];
     for (const [code, phase, expected] of mappings) assert.equal(candidateRuntimeCategory(code, phase), expected);
@@ -195,6 +197,13 @@ describe("Real-Debrid authenticated runtime laboratory", () => {
     const serialized = JSON.stringify(tracker.snapshot());
     for (const forbidden of ["root/authorized.mkv", "magnet:?", "torrent-1", "https://", "bytes", "path"]) assert.equal(serialized.toLowerCase().includes(forbidden.toLowerCase()), false);
     assert.match(tool, /diagnostics\.snapshot\(\)/);
+    const polling = new CandidatePollingDiagnosticTracker();
+    polling.startAttempt(); polling.recordStatus("queued"); polling.startAttempt(); polling.recordStatus("compressing"); polling.recordFailure("polling_exhausted");
+    assert.deepEqual(polling.snapshot(), { pollingStarted: "SIM", pollingAttemptsBucket: "FEW", lastStatusCategory: "COMPRESSING", globalDeadlineReached: "NÃO", pollingLimitReached: "SIM" });
+    const global = new CandidatePollingDiagnosticTracker(); global.startAttempt(); global.recordStatus("downloading"); global.recordFailure("global_timeout");
+    assert.deepEqual(global.snapshot(), { pollingStarted: "SIM", pollingAttemptsBucket: "ONE", lastStatusCategory: "DOWNLOADING", globalDeadlineReached: "SIM", pollingLimitReached: "NÃO" });
+    assert.match(tool, /pollAttempts: 10/); assert.match(tool, /totalTimeoutMs: 30_000/); assert.match(tool, /setTimeout\(finish, 1_500\)/);
+    for (const forbidden of ["torrentId", "magnet", "infoHash", "path", "link", "url"]) assert.equal(JSON.stringify(polling.snapshot()).includes(forbidden), false);
   });
 
   it("preserves one invocation, no retry, global timeout, cleanup and exit codes", () => {

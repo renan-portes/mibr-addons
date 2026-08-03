@@ -22,6 +22,7 @@
 - Modo `account` do laboratório Real-Debrid validado no docker-server com transporte HTTPS real, segredo efêmero read-only, resposta HTTP 200 sanitizada e cleanup completo; playback permanece não testado.
 - Primeira execução única do modo `candidate` registrada: autenticação e `addMagnet` concluídos, falha sanitizada antes de `file_selected`, cleanup completo e diagnóstico estrutural offline mais preciso, sem expor entrada ou resposta.
 - Segunda execução única do modo `candidate` registrada com `GET info` concluído e `FILE_LIST_INVALID`; decoder ajustado ao slash inicial contratual sem relaxar a comparação autorizada, com nova validação runtime ainda pendente.
+- Terceira execução única de `candidate` registrada após `file_selected`, com `TIMEOUT` em aproximadamente 2899 ms e cleanup completo; polling do laboratório ampliado de forma limitada e categorias sanitizadas separadas sem alterar os defaults do produto.
 - Timeout e cancelamento por provider.
 
 ### Changed

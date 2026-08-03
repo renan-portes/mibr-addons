@@ -11,7 +11,7 @@ import { RealDebridFetchTransport } from "../../../src/providers/torrentIndexer/
 import { RealDebridApiClient } from "../../../src/providers/torrentIndexer/realDebridApiClient.js";
 import { RealDebridCandidateResolver } from "../../../src/providers/torrentIndexer/realDebridCandidateResolver.js";
 import type { RealDebridTorrentInfo } from "../../../src/providers/torrentIndexer/realDebridApiClient.js";
-import { buildFailureReport, CandidateDiagnosticTracker, candidateRuntimeCategory, CandidateStageTracker, opaqueCategory, RuntimeValidationError, validateToken } from "./runtime-lab-support.js";
+import { buildFailureReport, CandidateDiagnosticTracker, CandidatePollingDiagnosticTracker, candidateRuntimeCategory, CandidateStageTracker, opaqueCategory, RuntimeValidationError, validateToken } from "./runtime-lab-support.js";
 
 type ExitCode = 0 | 1 | 2;
 type SafeScalar = string | number | boolean;
@@ -120,13 +120,17 @@ async function candidate(token: string): Promise<ExitCode> {
   if (!/^[a-fA-F0-9]{40}$/.test(infoHash) || !Number.isSafeInteger(bytes) || bytes < 0) throw new RealDebridResolverError("invalid_configuration");
   const stages = new CandidateStageTracker();
   const diagnostics = new CandidateDiagnosticTracker();
+  const polling = new CandidatePollingDiagnosticTracker();
+  let postSelect = false;
   class TrackingApiClient extends RealDebridApiClient {
     override async addMagnet(value: string, signal: AbortSignal): Promise<string> {
       const id = await super.addMagnet(value, signal); stages.complete("authenticated"); stages.complete("magnet_added"); return id;
     }
     override async info(id: string, signal: AbortSignal): Promise<RealDebridTorrentInfo> {
+      if (postSelect) polling.startAttempt();
       try {
         const info = await super.info(id, signal); diagnostics.recordInfo(info, path, bytes);
+        if (postSelect) polling.recordStatus(info.status);
         if (info.status === "downloaded") stages.complete("downloaded"); return info;
       } catch (error) {
         const code = error instanceof RealDebridResolverError ? error.code : "transport_error";
@@ -137,7 +141,7 @@ async function candidate(token: string): Promise<ExitCode> {
       }
     }
     override async selectFile(id: string, fileId: number, signal: AbortSignal): Promise<void> {
-      await super.selectFile(id, fileId, signal); stages.complete("file_selected");
+      await super.selectFile(id, fileId, signal); stages.complete("file_selected"); postSelect = true;
     }
     override async unrestrict(link: string, signal: AbortSignal): Promise<string> {
       const url = await super.unrestrict(link, signal); stages.complete("link_unrestricted"); return url;
@@ -146,22 +150,32 @@ async function candidate(token: string): Promise<ExitCode> {
       stages.complete("cleanup_attempted"); await super.delete(id, signal); stages.complete("cleanup_completed");
     }
   }
-  const resolver = new RealDebridCandidateResolver(new TrackingApiClient(new RealDebridFetchTransport({ timeoutMs: 20_000 }), token), { totalTimeoutMs: 20_000 });
+  const pollDelay = (signal: AbortSignal): Promise<void> => new Promise((resolve, reject) => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const finish = () => { signal.removeEventListener("abort", onAbort); resolve(); };
+    const onAbort = () => { if (timer !== undefined) clearTimeout(timer); signal.removeEventListener("abort", onAbort); reject(new RealDebridResolverError("canceled")); };
+    if (signal.aborted) { onAbort(); return; }
+    signal.addEventListener("abort", onAbort, { once: true });
+    timer = setTimeout(finish, 1_500);
+  });
+  const resolver = new RealDebridCandidateResolver(new TrackingApiClient(new RealDebridFetchTransport({ timeoutMs: 20_000 }), token),
+    { pollAttempts: 10, totalTimeoutMs: 30_000, delay: pollDelay });
   try {
     // CANDIDATE_RESOLUTION_ONCE: one resolver chain; POST/DELETE are not repeated.
     const result = await resolver.resolve(Object.freeze({
       infoHash: infoHash.toLowerCase(), magnet,
       files: Object.freeze([Object.freeze({ path, sizeBytes: bytes })]),
       media: Object.freeze({ type: "movie" as const, id: "authorized-runtime-input" }),
-      signal: AbortSignal.timeout(20_000),
+      signal: new AbortController().signal,
     }));
     if (result !== null) stages.complete("final_url_validated");
     emit({ status: result === null ? "PARTIAL" : "SUCCESS", stagesCompleted: stages.snapshot(), durationMs: Math.round(performance.now() - started), finalUrlValid: result === null ? "NÃO" : "SIM", cleanup: stages.snapshot().includes("cleanup_completed") ? "SIM" : "NÃO", category: result === null ? "NO_RESOLUTION" : "SUCCESS" });
     return result === null ? 2 : 0;
   } catch (error) {
     const rawCode = error instanceof RealDebridResolverError ? error.code : undefined;
+    polling.recordFailure(rawCode);
     const runtimeCode = candidateRuntimeCategory(rawCode, "workflow");
-    emit(Object.freeze({ ...buildFailureReport("candidate", runtimeCode, Math.round(performance.now() - started)), stagesCompleted: stages.snapshot(), cleanup: stages.snapshot().includes("cleanup_completed") ? "SIM" : "NÃO", ...diagnostics.snapshot() }));
+    emit(Object.freeze({ ...buildFailureReport("candidate", runtimeCode, Math.round(performance.now() - started)), stagesCompleted: stages.snapshot(), cleanup: stages.snapshot().includes("cleanup_completed") ? "SIM" : "NÃO", ...diagnostics.snapshot(), ...polling.snapshot() }));
     return 1;
   }
 }
