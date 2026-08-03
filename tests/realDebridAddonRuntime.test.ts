@@ -265,6 +265,34 @@ describe("experimental Real-Debrid addon runtime", () => {
     assert.match(compose, /EXPERIMENTAL_ADDON_HTTP_HOST: "0\.0\.0\.0"/);
     assert.match(compose, /EXPERIMENTAL_ADDON_HTTP_PORT: "7007"/);
     assert.doesNotMatch(compose, /^\s*-\s*"0\.0\.0\.0:/m);
+
+    const dockerfile = readFileSync(new URL("../lab/real-debrid-addon-runtime/Dockerfile.tools", import.meta.url), "utf8");
+    assert.match(dockerfile, /ENTRYPOINT \["\/opt\/runtime-tools\/node_modules\/\.bin\/tsx"\]/);
+    assert.match(compose, /command: \["\/workspace\/lab\/real-debrid-addon-runtime\/tools\/http-server\.ts"\]/);
+    assert.doesNotMatch(compose, /addon-runtime-http-lab:[\s\S]*command:.*dry-run\.ts/);
+  });
+
+  it("defines fixed startup markers without exposing configuration or arbitrary errors", () => {
+    const tool = readFileSync(new URL("../lab/real-debrid-addon-runtime/tools/http-server.ts", import.meta.url), "utf8");
+    const starting = tool.indexOf("EXPERIMENTAL_HTTP_STARTING");
+    const listen = tool.indexOf("const server = createExperimentalAddonHttpServer");
+    const listening = tool.indexOf("EXPERIMENTAL_HTTP_LISTENING");
+    assert.ok(starting >= 0 && starting < listen && listen < listening);
+    assert.match(tool, /EXPERIMENTAL_HTTP_CONFIGURATION_ERROR/);
+    assert.match(tool, /EXPERIMENTAL_HTTP_RUNTIME_ERROR/);
+    assert.doesNotMatch(tool, /console\.(log|error)|\.stack|String\(error\)|error\.message/);
+    assert.match(tool, /port !== 7007/);
+  });
+
+  it("fails closed with only a fixed marker for invalid tool configuration", () => {
+    const result = spawnSync(process.execPath, ["node_modules/tsx/dist/cli.mjs", "lab/real-debrid-addon-runtime/tools/http-server.ts"], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      env: { ...process.env, EXPERIMENTAL_ADDON_HTTP_HOST: "invalid", EXPERIMENTAL_ADDON_HTTP_PORT: "7007" },
+    });
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, "EXPERIMENTAL_HTTP_STARTING\n");
+    assert.equal(result.stderr, "EXPERIMENTAL_HTTP_CONFIGURATION_ERROR\n");
   });
 
   it("defines a bounded, loopback-only experimental HTTP launcher", () => {
@@ -282,6 +310,10 @@ describe("experimental Real-Debrid addon runtime", () => {
     assert.match(launcher, /cleanup\(\)/);
     assert.match(launcher, /\[ "\$cleaned" -eq 0 \] \|\| return 0/);
     assert.doesNotMatch(launcher, /REAL_DEBRID_TOKEN=/);
+    for (const field of ["serviceContainerPresent", "serviceRunning", "serviceExitCodePresent", "expectedInternalPort", "publishedLoopbackPresent", "serverStartupMarkerPresent", "serverListeningMarkerPresent", "diagnosticCategory"]) {
+      assert.match(launcher, new RegExp(field));
+    }
+    assert.doesNotMatch(launcher, /compose logs[^\n]*\|\s*(cat|tee)|docker inspect[^\n]*printf/);
   });
 
   it("executes the HTTP launcher with only local fake commands across bounded failures", () => {
@@ -293,7 +325,7 @@ describe("experimental Real-Debrid addon runtime", () => {
     try {
       mkdirSync(bin, { recursive: true });
       const fake = (name: string, source: string) => { const path = join(bin, name); writeFileSync(path, source); chmodSync(path, 0o700); };
-      fake("docker", `#!/bin/sh\necho "docker $*" >> "$FAKE_LOG"\ncase "$*" in *" up "*) exit "\${FAKE_UP_STATUS:-0}";; *" ps "*) [ "\${FAKE_SERVICE_RUNNING:-1}" = 1 ] && echo synthetic-container;; inspect\\ *) [ "\${FAKE_SERVICE_RUNNING:-1}" = 1 ] && echo true || echo false;; *" down "*) exit "\${FAKE_DOWN_STATUS:-0}";; esac\n`);
+      fake("docker", `#!/bin/sh\necho "docker $*" >> "$FAKE_LOG"\ncase "$*" in *" up "*) exit "\${FAKE_UP_STATUS:-0}";; *" ps -a -q "*) [ "\${FAKE_SERVICE_PRESENT:-1}" = 1 ] && echo synthetic-container;; *" ps -q "*) [ "\${FAKE_SERVICE_RUNNING:-1}" = 1 ] && echo synthetic-container;; inspect\\ *State.Running*) [ "\${FAKE_SERVICE_RUNNING:-1}" = 1 ] && echo true || echo false;; inspect\\ *State.ExitCode*) echo 1;; inspect\\ *Path*) [ "\${FAKE_COMMAND_MATCH:-1}" = 1 ] && echo '/opt/runtime-tools/node_modules/.bin/tsx|/workspace/lab/real-debrid-addon-runtime/tools/http-server.ts' || echo mismatch;; *" port "*) [ "\${FAKE_PUBLISHED:-1}" = 1 ] && echo "127.0.0.1:17007";; *" logs "*) [ "\${FAKE_STARTING:-1}" = 1 ] && echo EXPERIMENTAL_HTTP_STARTING; [ "\${FAKE_LISTENING:-1}" = 1 ] && echo EXPERIMENTAL_HTTP_LISTENING; [ "\${FAKE_CONFIG_ERROR:-0}" = 1 ] && echo EXPERIMENTAL_HTTP_CONFIGURATION_ERROR;; *" down "*) exit "\${FAKE_DOWN_STATUS:-0}";; esac\n`);
       fake("mktemp", `#!/bin/sh\necho mktemp >> "$FAKE_LOG"\n/bin/mkdir -p "$FAKE_TEMP_DIR"\nprintf '%s\\n' "$FAKE_TEMP_DIR"\n`);
       fake("chmod", `#!/bin/sh\n/bin/chmod "$@"\n`);
       fake("chown", `#!/bin/sh\necho chown >> "$FAKE_LOG"\n`);
@@ -301,16 +333,20 @@ describe("experimental Real-Debrid addon runtime", () => {
       fake("rm", `#!/bin/sh\necho rm >> "$FAKE_LOG"\n[ "\${FAKE_RM_STATUS:-0}" = 0 ] || exit "$FAKE_RM_STATUS"\n/bin/rm "$@"\n`);
       fake("rmdir", `#!/bin/sh\necho rmdir >> "$FAKE_LOG"\n[ "\${FAKE_RMDIR_STATUS:-0}" = 0 ] || exit "$FAKE_RMDIR_STATUS"\n/bin/rmdir "$@"\n`);
       fake("sleep", `#!/bin/sh\necho sleep >> "$FAKE_LOG"\n`);
-      fake("curl", `#!/bin/sh\nheaders= body= url=\nwhile [ "$#" -gt 0 ]; do case "$1" in -D) headers=$2; shift 2;; -o) body=$2; shift 2;; *) url=$1; shift;; esac; done\necho "curl $url" >> "$FAKE_LOG"\ncase "$url" in */health) n=$(cat "$FAKE_COUNT" 2>/dev/null || echo 0); n=$((n+1)); echo "$n" > "$FAKE_COUNT"; [ "$n" -le "\${FAKE_HEALTH_FAILS:-0}" ] && exit 28; mode=health; setting="\${FAKE_health_MODE:-ok}";; */manifest.json) mode=manifest; setting="\${FAKE_manifest_MODE:-ok}";; *) mode=stream; setting="\${FAKE_stream_MODE:-ok}";; esac\ncase "$mode" in health) payload='{"status":"ok"}';; manifest) payload='{"id":"experimental","name":"experimental","resources":["stream"]}';; stream) payload='{"streams":[]}';; esac\ncase "$setting" in invalid) payload='{' ;; http|redirect) code=500 ;; *) code=200;; esac\nprintf 'HTTP/1.1 %s OK\\r\\nContent-Type: application/json\\r\\n\\r\\n' "$code" > "$headers"\nprintf '%s' "$payload" > "$body"\nprintf '%s' "$code"\n`);
+      fake("curl", `#!/bin/sh\nheaders= body= url=\nwhile [ "$#" -gt 0 ]; do case "$1" in -D) headers=$2; shift 2;; -o) body=$2; shift 2;; *) url=$1; shift;; esac; done\necho "curl $url" >> "$FAKE_LOG"\ncase "$url" in */health) n=$(cat "$FAKE_COUNT" 2>/dev/null || echo 0); n=$((n+1)); echo "$n" > "$FAKE_COUNT"; [ "\${FAKE_health_MODE:-ok}" = reset ] && exit 56; [ "$n" -le "\${FAKE_HEALTH_FAILS:-0}" ] && exit 28; mode=health; setting="\${FAKE_health_MODE:-ok}";; */manifest.json) mode=manifest; setting="\${FAKE_manifest_MODE:-ok}";; *) mode=stream; setting="\${FAKE_stream_MODE:-ok}";; esac\ncase "$mode" in health) payload='{"status":"ok"}';; manifest) payload='{"id":"experimental","name":"experimental","resources":["stream"]}';; stream) payload='{"streams":[]}';; esac\ncase "$setting" in invalid) payload='{' ;; http|redirect) code=500 ;; *) code=200;; esac\nprintf 'HTTP/1.1 %s OK\\r\\nContent-Type: application/json\\r\\n\\r\\n' "$code" > "$headers"\nprintf '%s' "$payload" > "$body"\nprintf '%s' "$code"\n`);
       const cases = [
-        ["success", "0", "0", "1", "ok", "ok", "1"], ["up", "17", "0", "0", "ok", "ok", "1"], ["service-exited", "0", "0", "0", "ok", "ok", "0"], ["health-timeout", "0", "5", "5", "ok", "ok", "1"],
-        ["health-last", "0", "4", "5", "ok", "ok", "1"], ["health-redirect", "0", "0", "5", "ok", "ok", "1"], ["manifest-invalid", "0", "0", "1", "invalid", "ok", "1"], ["stream-invalid", "0", "0", "1", "ok", "invalid", "1"],
-        ["manifest-http", "0", "0", "1", "http", "ok", "1"], ["stream-http", "0", "0", "1", "ok", "http", "1"], ["manifest-redirect", "0", "0", "1", "redirect", "ok", "1"], ["stream-redirect", "0", "0", "1", "ok", "redirect", "1"],
+        ["success", "0", "0", "1", "ok", "ok", "1", "1", "1", ""], ["up", "17", "0", "0", "ok", "ok", "1", "1", "1", ""],
+        ["service-not-created", "0", "0", "0", "ok", "ok", "0", "0", "0", "SERVICE_NOT_CREATED"], ["service-exited", "0", "0", "0", "ok", "ok", "0", "1", "1", "SERVICE_EXITED"],
+        ["command-mismatch", "0", "5", "5", "ok", "ok", "1", "1", "0", "COMMAND_MISMATCH"], ["listen-not-confirmed", "0", "5", "5", "ok", "ok", "1", "1", "0", "LISTEN_NOT_CONFIRMED"],
+        ["configuration-missing", "0", "5", "5", "ok", "ok", "1", "1", "0", "CONFIGURATION_MISSING"], ["connection-reset", "0", "0", "5", "reset", "ok", "1", "1", "1", "CONNECTION_RESET"],
+        ["health-timeout", "0", "5", "5", "ok", "ok", "1", "1", "1", "HEALTH_TIMEOUT"], ["health-last", "0", "4", "5", "ok", "ok", "1", "1", "1", ""],
+        ["health-redirect", "0", "0", "5", "ok", "ok", "1", "1", "1", "HEALTH_TIMEOUT"], ["manifest-invalid", "0", "0", "1", "invalid", "ok", "1", "1", "1", ""], ["stream-invalid", "0", "0", "1", "ok", "invalid", "1", "1", "1", ""],
+        ["manifest-http", "0", "0", "1", "http", "ok", "1", "1", "1", ""], ["stream-http", "0", "0", "1", "ok", "http", "1", "1", "1", ""], ["manifest-redirect", "0", "0", "1", "redirect", "ok", "1", "1", "1", ""], ["stream-redirect", "0", "0", "1", "ok", "redirect", "1", "1", "1", ""],
       ] as const;
-      for (const [name, up, healthFails, expectedHealth, manifestMode, streamMode, running] of cases) {
+      for (const [name, up, healthFails, expectedHealth, manifestMode, streamMode, running, present, listening, category] of cases) {
         rmSync(log, { force: true }); rmSync(work, { recursive: true, force: true }); rmSync(join(root, "count"), { force: true });
         const command = process.platform === "win32" ? 'export PATH="$(/usr/bin/cygpath -u "$TEST_BIN"):$PATH"; exec /bin/sh "$TEST_LAUNCHER"' : 'export PATH="$TEST_BIN:$PATH"; exec sh "$TEST_LAUNCHER"';
-        const result = spawnSync(shell, ["-c", command], { cwd: process.cwd(), encoding: "utf8", env: { ...process.env, TEST_BIN: bin, TEST_LAUNCHER: "lab/real-debrid-addon-runtime/scripts/http-offline.sh", FAKE_LOG: log, FAKE_TEMP_DIR: work, FAKE_COUNT: join(root, "count"), FAKE_UP_STATUS: up, FAKE_HEALTH_FAILS: healthFails, FAKE_SERVICE_RUNNING: running, FAKE_health_MODE: name === "health-redirect" ? "redirect" : "ok", FAKE_manifest_MODE: manifestMode, FAKE_stream_MODE: streamMode, FAKE_DOWN_STATUS: name === "success" ? "9" : "0", FAKE_RM_STATUS: "0", FAKE_RMDIR_STATUS: "0" } });
+        const result = spawnSync(shell, ["-c", command], { cwd: process.cwd(), encoding: "utf8", env: { ...process.env, TEST_BIN: bin, TEST_LAUNCHER: "lab/real-debrid-addon-runtime/scripts/http-offline.sh", FAKE_LOG: log, FAKE_TEMP_DIR: work, FAKE_COUNT: join(root, "count"), FAKE_UP_STATUS: up, FAKE_HEALTH_FAILS: healthFails, FAKE_SERVICE_RUNNING: running, FAKE_SERVICE_PRESENT: present, FAKE_COMMAND_MATCH: name === "command-mismatch" ? "0" : "1", FAKE_STARTING: "1", FAKE_LISTENING: listening, FAKE_CONFIG_ERROR: name === "configuration-missing" ? "1" : "0", FAKE_health_MODE: name === "health-redirect" ? "redirect" : manifestMode === "reset" ? "reset" : "ok", FAKE_manifest_MODE: manifestMode, FAKE_stream_MODE: streamMode, FAKE_DOWN_STATUS: name === "success" ? "9" : "0", FAKE_RM_STATUS: "0", FAKE_RMDIR_STATUS: "0" } });
         assert.equal(result.status, name === "up" ? 17 : name === "success" || name === "health-last" ? 0 : 1, `${name}: ${result.stdout} ${result.stderr}`);
         const calls = readFileSync(log, "utf8").trim().split("\n");
         assert.equal(calls.filter((x) => x.includes(" down ")).length, 1);
@@ -318,9 +354,8 @@ describe("experimental Real-Debrid addon runtime", () => {
         const configIndex = calls.findIndex((x) => x.includes(" config "));
         if (configIndex !== -1) assert.ok(calls.indexOf("chown") < configIndex);
         assert.equal(calls.filter((x) => x.includes("/health")).length, Number(expectedHealth));
-        if (name === "service-exited") assert.match(result.stdout, /SERVICE_EXITED/);
-        if (name === "health-timeout" || name === "health-redirect") assert.match(result.stdout, /HEALTH_TIMEOUT/);
-        assert.equal(calls.filter((x) => x.includes("/manifest.json")).length, name === "up" || name === "service-exited" || name === "health-timeout" || name === "health-redirect" ? 0 : 1);
+        if (category) assert.match(result.stdout, new RegExp(`diagnosticCategory: ${category}`));
+        assert.equal(calls.filter((x) => x.includes("/manifest.json")).length, name === "up" || category !== "" ? 0 : 1);
         assert.equal(calls.filter((x) => x.includes("tt0000001")).length, name === "success" || name === "health-last" || name === "stream-invalid" || name === "stream-http" || name === "stream-redirect" ? 1 : 0);
         assert.equal(result.stdout.includes("127.0.0.1"), false);
       }

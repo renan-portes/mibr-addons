@@ -2,7 +2,7 @@
 
 - [ ] Validate the experimental addon manifest on the docker-server before any Stremio or Nuvio installation; the offline no-port dry-run is complete.
 
-- [ ] Re-run the isolated offline experimental HTTP addon runtime on the docker-server after the internal-container bind correction, then validate its manifest before any Stremio or Nuvio installation.
+- [ ] Re-run the isolated offline experimental HTTP addon runtime with fixed startup/listening markers and allowlisted process diagnostics; two reset-only health attempts completed cleanup, and the final cause remains unconfirmed before manifest validation.
 
 - [ ] Start the isolated Real-Debrid addon runtime lab on the docker-server and validate its experimental manifest before any Stremio or Nuvio installation.
 
