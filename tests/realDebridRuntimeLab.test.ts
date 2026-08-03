@@ -75,8 +75,10 @@ describe("Real-Debrid authenticated runtime laboratory", () => {
   it("builds a pinned non-root tools image from the lockfile without scripts", () => {
     const dockerfile = read("lab/real-debrid-runtime/Dockerfile.tools");
     assert.match(dockerfile, /^FROM node:24\.4\.1-bookworm-slim/m);
-    assert.match(dockerfile, /npm ci --ignore-scripts/);
-    assert.match(dockerfile, /USER node/);
+    assert.match(dockerfile, /WORKDIR \/opt\/runtime-tools\s+RUN chown node:node \/opt\/runtime-tools/);
+    assert.match(dockerfile, /RUN chown node:node \/opt\/runtime-tools[\s\S]*USER node[\s\S]*RUN npm ci --ignore-scripts/);
+    assert.ok(dockerfile.indexOf("USER node") < dockerfile.indexOf("RUN npm ci --ignore-scripts"));
+    assert.doesNotMatch(dockerfile.slice(0, dockerfile.indexOf("USER node")), /RUN npm ci/);
     assert.doesNotMatch(dockerfile, /ARG.*TOKEN|ENV.*TOKEN|\.env/);
   });
 

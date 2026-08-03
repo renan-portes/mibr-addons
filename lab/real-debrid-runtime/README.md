@@ -4,6 +4,12 @@ Laboratório manual, autenticado e descartável para validar o transporte HTTPS 
 em uma fase separada, o resolver de candidatos. Nada aqui registra o provider no
 bootstrap, habilita a feature flag ou publica portas.
 
+A primeira tentativa no docker-server falhou ainda no build, antes da execução:
+o `WORKDIR` pertencia a root e o usuário `node` não podia criar `node_modules`
+durante `npm ci`. O diretório agora recebe ownership `node:node` antes da troca de
+usuário. Nenhuma chamada à API ou tentativa de autenticação ocorreu; uma nova
+validação runtime permanece pendente.
+
 ## Preparação no servidor
 
 1. Copie `.env.example` para `.env` e restrinja o arquivo ao usuário operador

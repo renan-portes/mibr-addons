@@ -8,6 +8,12 @@ Compose versionado e seu `docker compose config` não conhecem o valor; o contai
 recebe apenas `REAL_DEBRID_TOKEN_FILE`, nunca o token no environment. Não há
 credencial, payload real ou configuração operacional versionada.
 
+A primeira tentativa runtime falhou no build, antes de iniciar o container: o
+diretório de trabalho criado como root não permitia que o usuário `node` criasse
+`node_modules` no `npm ci`. O build agora transfere o ownership do diretório antes
+de trocar de usuário. Nenhuma chamada à API ou autenticação foi tentada, e a nova
+execução runtime continua pendente.
+
 A primeira fase, `account`, limita-se a uma chamada idempotente `GET /user` e
 produz relatório por allowlist, sem dados pessoais. A segunda, `candidate`, é
 separada, exige autorização adicional e entrada temporária de conteúdo público,
