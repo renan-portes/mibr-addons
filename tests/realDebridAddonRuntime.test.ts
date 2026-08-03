@@ -274,6 +274,8 @@ describe("experimental Real-Debrid addon runtime", () => {
       fake("docker", `#!/bin/sh\necho "docker $*" >> "$FAKE_LOG"\ncase "$*" in *" up "*) exit "\${FAKE_UP_STATUS:-0}";; *" down "*) exit "\${FAKE_DOWN_STATUS:-0}";; esac\n`);
       fake("mktemp", `#!/bin/sh\necho mktemp >> "$FAKE_LOG"\n/bin/mkdir -p "$FAKE_TEMP_DIR"\nprintf '%s\\n' "$FAKE_TEMP_DIR"\n`);
       fake("chmod", `#!/bin/sh\n/bin/chmod "$@"\n`);
+      fake("chown", `#!/bin/sh\necho chown >> "$FAKE_LOG"\n`);
+      fake("stat", `#!/bin/sh\necho "stat $*" >> "$FAKE_LOG"\ncase "$*" in *%a*) case "$*" in *compose.override.yml*) echo 600;; *) echo 400;; esac;; *%u*|*%g*) echo 1000;; *%s*) echo 0;; *%F*) echo 'regular file';; *) exit 1;; esac\n`);
       fake("rm", `#!/bin/sh\necho rm >> "$FAKE_LOG"\n[ "\${FAKE_RM_STATUS:-0}" = 0 ] || exit "$FAKE_RM_STATUS"\n/bin/rm "$@"\n`);
       fake("rmdir", `#!/bin/sh\necho rmdir >> "$FAKE_LOG"\n[ "\${FAKE_RMDIR_STATUS:-0}" = 0 ] || exit "$FAKE_RMDIR_STATUS"\n/bin/rmdir "$@"\n`);
       fake("sleep", `#!/bin/sh\necho sleep >> "$FAKE_LOG"\n`);
@@ -291,6 +293,8 @@ describe("experimental Real-Debrid addon runtime", () => {
         const calls = readFileSync(log, "utf8").trim().split("\n");
         assert.equal(calls.filter((x) => x.includes(" down ")).length, 1);
         assert.equal(calls.filter((x) => x.includes(" up ")).length, 1);
+        const configIndex = calls.findIndex((x) => x.includes(" config "));
+        if (configIndex !== -1) assert.ok(calls.indexOf("chown") < configIndex);
         assert.equal(calls.filter((x) => x.includes("/health")).length, Number(expectedHealth));
         assert.equal(calls.filter((x) => x.includes("/manifest.json")).length, name === "up" || name === "health-timeout" || name === "health-redirect" ? 0 : 1);
         assert.equal(calls.filter((x) => x.includes("tt0000001")).length, name === "success" || name === "health-last" || name === "stream-invalid" || name === "stream-http" || name === "stream-redirect" ? 1 : 0);
