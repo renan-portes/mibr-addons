@@ -245,6 +245,28 @@ describe("experimental Real-Debrid addon runtime", () => {
     }
   });
 
+  it("uses loopback by default and permits the Docker-only internal bind", async () => {
+    const runtime = createExperimentalRealDebridAddonRuntime(config(false), { client: new StaticClient(), parser });
+    const local = createExperimentalAddonHttpServer({ runtime });
+    await once(local, "listening");
+    const localAddress = local.address() as { address: string };
+    assert.equal(localAddress.address, "127.0.0.1");
+    local.close();
+    await once(local, "close");
+
+    const container = createExperimentalAddonHttpServer({ bind: "0.0.0.0", port: 0, runtime });
+    await once(container, "listening");
+    const containerAddress = container.address() as { address: string };
+    assert.equal(containerAddress.address, "0.0.0.0");
+    container.close();
+    await once(container, "close");
+
+    const compose = readFileSync(new URL("../lab/real-debrid-addon-runtime/compose.yml", import.meta.url), "utf8");
+    assert.match(compose, /EXPERIMENTAL_ADDON_HTTP_HOST: "0\.0\.0\.0"/);
+    assert.match(compose, /EXPERIMENTAL_ADDON_HTTP_PORT: "7007"/);
+    assert.doesNotMatch(compose, /^\s*-\s*"0\.0\.0\.0:/m);
+  });
+
   it("defines a bounded, loopback-only experimental HTTP launcher", () => {
     const launcher = readFileSync(new URL("../lab/real-debrid-addon-runtime/scripts/http-offline.sh", import.meta.url), "utf8");
     assert.match(launcher, /set -eu/);
@@ -259,7 +281,7 @@ describe("experimental Real-Debrid addon runtime", () => {
     assert.match(launcher, /trap .*TSTP/);
     assert.match(launcher, /cleanup\(\)/);
     assert.match(launcher, /\[ "\$cleaned" -eq 0 \] \|\| return 0/);
-    assert.doesNotMatch(launcher, /0\.0\.0\.0|REAL_DEBRID_TOKEN=/);
+    assert.doesNotMatch(launcher, /REAL_DEBRID_TOKEN=/);
   });
 
   it("executes the HTTP launcher with only local fake commands across bounded failures", () => {
@@ -271,7 +293,7 @@ describe("experimental Real-Debrid addon runtime", () => {
     try {
       mkdirSync(bin, { recursive: true });
       const fake = (name: string, source: string) => { const path = join(bin, name); writeFileSync(path, source); chmodSync(path, 0o700); };
-      fake("docker", `#!/bin/sh\necho "docker $*" >> "$FAKE_LOG"\ncase "$*" in *" up "*) exit "\${FAKE_UP_STATUS:-0}";; *" down "*) exit "\${FAKE_DOWN_STATUS:-0}";; esac\n`);
+      fake("docker", `#!/bin/sh\necho "docker $*" >> "$FAKE_LOG"\ncase "$*" in *" up "*) exit "\${FAKE_UP_STATUS:-0}";; *" ps "*) [ "\${FAKE_SERVICE_RUNNING:-1}" = 1 ] && echo synthetic-container;; inspect\\ *) [ "\${FAKE_SERVICE_RUNNING:-1}" = 1 ] && echo true || echo false;; *" down "*) exit "\${FAKE_DOWN_STATUS:-0}";; esac\n`);
       fake("mktemp", `#!/bin/sh\necho mktemp >> "$FAKE_LOG"\n/bin/mkdir -p "$FAKE_TEMP_DIR"\nprintf '%s\\n' "$FAKE_TEMP_DIR"\n`);
       fake("chmod", `#!/bin/sh\n/bin/chmod "$@"\n`);
       fake("chown", `#!/bin/sh\necho chown >> "$FAKE_LOG"\n`);
@@ -281,22 +303,24 @@ describe("experimental Real-Debrid addon runtime", () => {
       fake("sleep", `#!/bin/sh\necho sleep >> "$FAKE_LOG"\n`);
       fake("curl", `#!/bin/sh\nheaders= body= url=\nwhile [ "$#" -gt 0 ]; do case "$1" in -D) headers=$2; shift 2;; -o) body=$2; shift 2;; *) url=$1; shift;; esac; done\necho "curl $url" >> "$FAKE_LOG"\ncase "$url" in */health) n=$(cat "$FAKE_COUNT" 2>/dev/null || echo 0); n=$((n+1)); echo "$n" > "$FAKE_COUNT"; [ "$n" -le "\${FAKE_HEALTH_FAILS:-0}" ] && exit 28; mode=health; setting="\${FAKE_health_MODE:-ok}";; */manifest.json) mode=manifest; setting="\${FAKE_manifest_MODE:-ok}";; *) mode=stream; setting="\${FAKE_stream_MODE:-ok}";; esac\ncase "$mode" in health) payload='{"status":"ok"}';; manifest) payload='{"id":"experimental","name":"experimental","resources":["stream"]}';; stream) payload='{"streams":[]}';; esac\ncase "$setting" in invalid) payload='{' ;; http|redirect) code=500 ;; *) code=200;; esac\nprintf 'HTTP/1.1 %s OK\\r\\nContent-Type: application/json\\r\\n\\r\\n' "$code" > "$headers"\nprintf '%s' "$payload" > "$body"\nprintf '%s' "$code"\n`);
       const cases = [
-        ["success", "0", "0", "1", "ok", "ok"], ["up", "17", "0", "0", "ok", "ok"], ["health-timeout", "0", "5", "5", "ok", "ok"],
-        ["health-last", "0", "4", "5", "ok", "ok"], ["health-redirect", "0", "0", "5", "ok", "ok"], ["manifest-invalid", "0", "0", "1", "invalid", "ok"], ["stream-invalid", "0", "0", "1", "ok", "invalid"],
-        ["manifest-http", "0", "0", "1", "http", "ok"], ["stream-http", "0", "0", "1", "ok", "http"], ["manifest-redirect", "0", "0", "1", "redirect", "ok"], ["stream-redirect", "0", "0", "1", "ok", "redirect"],
+        ["success", "0", "0", "1", "ok", "ok", "1"], ["up", "17", "0", "0", "ok", "ok", "1"], ["service-exited", "0", "0", "0", "ok", "ok", "0"], ["health-timeout", "0", "5", "5", "ok", "ok", "1"],
+        ["health-last", "0", "4", "5", "ok", "ok", "1"], ["health-redirect", "0", "0", "5", "ok", "ok", "1"], ["manifest-invalid", "0", "0", "1", "invalid", "ok", "1"], ["stream-invalid", "0", "0", "1", "ok", "invalid", "1"],
+        ["manifest-http", "0", "0", "1", "http", "ok", "1"], ["stream-http", "0", "0", "1", "ok", "http", "1"], ["manifest-redirect", "0", "0", "1", "redirect", "ok", "1"], ["stream-redirect", "0", "0", "1", "ok", "redirect", "1"],
       ] as const;
-      for (const [name, up, healthFails, expectedHealth, manifestMode, streamMode] of cases) {
+      for (const [name, up, healthFails, expectedHealth, manifestMode, streamMode, running] of cases) {
         rmSync(log, { force: true }); rmSync(work, { recursive: true, force: true }); rmSync(join(root, "count"), { force: true });
         const command = process.platform === "win32" ? 'export PATH="$(/usr/bin/cygpath -u "$TEST_BIN"):$PATH"; exec /bin/sh "$TEST_LAUNCHER"' : 'export PATH="$TEST_BIN:$PATH"; exec sh "$TEST_LAUNCHER"';
-        const result = spawnSync(shell, ["-c", command], { cwd: process.cwd(), encoding: "utf8", env: { ...process.env, TEST_BIN: bin, TEST_LAUNCHER: "lab/real-debrid-addon-runtime/scripts/http-offline.sh", FAKE_LOG: log, FAKE_TEMP_DIR: work, FAKE_COUNT: join(root, "count"), FAKE_UP_STATUS: up, FAKE_HEALTH_FAILS: healthFails, FAKE_health_MODE: name === "health-redirect" ? "redirect" : "ok", FAKE_manifest_MODE: manifestMode, FAKE_stream_MODE: streamMode, FAKE_DOWN_STATUS: name === "success" ? "9" : "0", FAKE_RM_STATUS: "0", FAKE_RMDIR_STATUS: "0" } });
-        assert.equal(result.status, name === "up" ? 17 : name === "success" || name === "health-last" ? 0 : 1);
+        const result = spawnSync(shell, ["-c", command], { cwd: process.cwd(), encoding: "utf8", env: { ...process.env, TEST_BIN: bin, TEST_LAUNCHER: "lab/real-debrid-addon-runtime/scripts/http-offline.sh", FAKE_LOG: log, FAKE_TEMP_DIR: work, FAKE_COUNT: join(root, "count"), FAKE_UP_STATUS: up, FAKE_HEALTH_FAILS: healthFails, FAKE_SERVICE_RUNNING: running, FAKE_health_MODE: name === "health-redirect" ? "redirect" : "ok", FAKE_manifest_MODE: manifestMode, FAKE_stream_MODE: streamMode, FAKE_DOWN_STATUS: name === "success" ? "9" : "0", FAKE_RM_STATUS: "0", FAKE_RMDIR_STATUS: "0" } });
+        assert.equal(result.status, name === "up" ? 17 : name === "success" || name === "health-last" ? 0 : 1, `${name}: ${result.stdout} ${result.stderr}`);
         const calls = readFileSync(log, "utf8").trim().split("\n");
         assert.equal(calls.filter((x) => x.includes(" down ")).length, 1);
         assert.equal(calls.filter((x) => x.includes(" up ")).length, 1);
         const configIndex = calls.findIndex((x) => x.includes(" config "));
         if (configIndex !== -1) assert.ok(calls.indexOf("chown") < configIndex);
         assert.equal(calls.filter((x) => x.includes("/health")).length, Number(expectedHealth));
-        assert.equal(calls.filter((x) => x.includes("/manifest.json")).length, name === "up" || name === "health-timeout" || name === "health-redirect" ? 0 : 1);
+        if (name === "service-exited") assert.match(result.stdout, /SERVICE_EXITED/);
+        if (name === "health-timeout" || name === "health-redirect") assert.match(result.stdout, /HEALTH_TIMEOUT/);
+        assert.equal(calls.filter((x) => x.includes("/manifest.json")).length, name === "up" || name === "service-exited" || name === "health-timeout" || name === "health-redirect" ? 0 : 1);
         assert.equal(calls.filter((x) => x.includes("tt0000001")).length, name === "success" || name === "health-last" || name === "stream-invalid" || name === "stream-http" || name === "stream-redirect" ? 1 : 0);
         assert.equal(result.stdout.includes("127.0.0.1"), false);
       }

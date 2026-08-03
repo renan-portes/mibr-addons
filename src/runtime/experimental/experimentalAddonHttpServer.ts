@@ -18,7 +18,7 @@ function send(response: ServerResponse, status: number, body: object): void {
 function validOptions(options: ExperimentalAddonHttpServerOptions): { bind: string; port: number } {
   const bind = options.bind ?? "127.0.0.1";
   const port = options.port ?? 0;
-  if (bind !== "127.0.0.1" || !Number.isInteger(port) || port < 0 || port > 65535) throw new Error("Experimental HTTP runtime rejected (invalid_configuration)");
+  if ((bind !== "127.0.0.1" && bind !== "0.0.0.0") || !Number.isInteger(port) || port < 0 || port > 65535) throw new Error("Experimental HTTP runtime rejected (invalid_configuration)");
   return { bind, port };
 }
 

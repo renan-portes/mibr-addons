@@ -55,6 +55,18 @@ grep -Eiq '0\.0\.0\.0|host[ _-]?network|privileged|docker\.sock|token|authorizat
 docker compose -f "$compose_file" -f "$override" --profile experimental-http config >/dev/null || { main_status=$?; exit "$main_status"; }
 docker compose -f "$compose_file" -f "$override" --profile experimental-http up -d addon-runtime-http-lab || { main_status=$?; exit "$main_status"; }
 
+service_running() {
+  service_id=$(docker compose -f "$compose_file" -f "$override" --profile experimental-http ps -q addon-runtime-http-lab 2>/dev/null || :)
+  [ -n "$service_id" ] || return 1
+  [ "$(docker inspect -f '{{.State.Running}}' "$service_id" 2>/dev/null || :)" = true ]
+}
+
+if ! service_running; then
+  printf '%s\n' SERVICE_EXITED
+  main_status=1
+  exit "$main_status"
+fi
+
 fetch_json() {
   path=$1
   : > "$headers"; : > "$body"
@@ -67,8 +79,13 @@ fetch_json() {
 attempt=0
 while :; do
   if fetch_json health && node -e 'const x=JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8")); process.exit(x.status === "ok" ? 0 : 1)' "$body" >/dev/null 2>&1; then break; fi
+  if ! service_running; then
+    printf '%s\n' SERVICE_EXITED
+    main_status=1
+    exit "$main_status"
+  fi
   attempt=$((attempt + 1))
-  [ "$attempt" -lt 5 ] || { main_status=1; exit "$main_status"; }
+  [ "$attempt" -lt 5 ] || { printf '%s\n' HEALTH_TIMEOUT; main_status=1; exit "$main_status"; }
   sleep 1
 done
 fetch_json manifest.json || { main_status=1; exit "$main_status"; }
