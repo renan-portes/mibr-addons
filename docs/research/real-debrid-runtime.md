@@ -80,3 +80,22 @@ normalizado e tamanho. Os estados oficiais `compressing` e `uploading` passam a
 ser transitórios e continuam sujeitos ao timeout e ao limite de polling; links
 jamais inferem sucesso. A correção ainda requer validação runtime. Nenhum
 conteúdo, playback, Stremio ou Nuvio foi validado.
+
+A terceira execução real e única avançou por autenticação, `addMagnet`,
+correspondência exata de path/tamanho/ID e `selectFiles`. Ela terminou depois de
+`file_selected`, em aproximadamente 2899 ms, com a categoria agregada `TIMEOUT`,
+código 1 e cleanup completo; não houve `unrestrict`, URL final, repetição externa
+ou playback. A política então vigente permitia no máximo três snapshots `GET
+info` por fase, contando o snapshot inicial, sem delay intencional e sob deadline
+global de 20 segundos. A duração é compatível com esgotamento rápido do polling,
+mas o relatório antigo não distinguia isso de deadline global, timeout do GET ou
+do delay.
+
+O diagnóstico agora separa `GLOBAL_TIMEOUT`, `POLLING_EXHAUSTED`,
+`POLLING_DELAY_TIMEOUT`, `INFO_REQUEST_TIMEOUT`, `CANCELED` e
+`TERMINAL_TORRENT_STATUS`. Registra apenas início do polling, bucket de tentativas,
+categoria allowlisted do último estado e flags de deadline/limite. O laboratório,
+sem alterar os defaults do resolver, usa até 10 snapshots por fase, delay
+cancelável de 1500 ms e deadline total de 30 segundos. Cada GET conta como uma
+tentativa; somente GET é repetido. Estados transitórios continuam aguardando,
+`downloaded` é o único sucesso e estados terminais encerram imediatamente.

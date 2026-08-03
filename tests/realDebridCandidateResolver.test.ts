@@ -131,8 +131,46 @@ describe("RealDebridCandidateResolver offline adapter", () => {
     current.transport.assertExhausted();
 
     const limited = setup([json({ id: "torrent-1" }), json(info("queued", [], [])), json(info("queued", [], [])), noContent], { pollAttempts: 2, delay: async () => {} });
-    await assert.rejects(() => limited.resolver.resolve(request()), (error: unknown) => error instanceof RealDebridResolverError && error.code === "timeout");
+    await assert.rejects(() => limited.resolver.resolve(request()), (error: unknown) => error instanceof RealDebridResolverError && error.code === "polling_exhausted");
     limited.transport.assertExhausted();
+  });
+
+  it("accepts every documented transient post-select state and succeeds on the last attempt", async () => {
+    for (const status of ["queued", "downloading", "compressing", "uploading"] as const) {
+      const current = setup([json({ id: "torrent-1" }), json(info("waiting_files_selection")), noContent,
+        json(info(status, [{ ...FILE, selected: 1 }])), json(selected()),
+        json({ download: "https://media.example.invalid/x" }), noContent], { pollAttempts: 2, delay: async () => {} });
+      assert.notEqual(await current.resolver.resolve(request()), null);
+      assert.equal(current.transport.calls.filter((call) => call.pathname === "/torrents/info/torrent-1").length, 3);
+      assert.equal(current.transport.calls.filter((call) => call.pathname === "/torrents/selectFiles/torrent-1").length, 1);
+      assert.equal(current.transport.calls.filter((call) => call.pathname === "/unrestrict/link").length, 1);
+      current.transport.assertExhausted();
+    }
+  });
+
+  it("distinguishes info and delay timeouts and never unrestricts after either failure", async () => {
+    const infoTimeout = setup([json({ id: "torrent-1" }), json(info("waiting_files_selection")), noContent, noContent]);
+    const originalInfo = infoTimeout.api.info.bind(infoTimeout.api); let infoCalls = 0;
+    infoTimeout.api.info = async (...args) => { infoCalls += 1; if (infoCalls === 2) throw new RealDebridResolverError("timeout"); return await originalInfo(...args); };
+    await assert.rejects(() => infoTimeout.resolver.resolve(request()), (error: unknown) => error instanceof RealDebridResolverError && error.code === "info_request_timeout");
+    assert.equal(infoTimeout.transport.calls.some((call) => call.pathname === "/unrestrict/link"), false);
+    infoTimeout.transport.assertExhausted();
+
+    const delayTimeout = setup([json({ id: "torrent-1" }), json(info("waiting_files_selection")), noContent,
+      json(info("downloading", [{ ...FILE, selected: 1 }])), noContent],
+    { delay: async () => { throw new RealDebridResolverError("timeout"); } });
+    await assert.rejects(() => delayTimeout.resolver.resolve(request()), (error: unknown) => error instanceof RealDebridResolverError && error.code === "polling_delay_timeout");
+    assert.equal(delayTimeout.transport.calls.some((call) => call.pathname === "/unrestrict/link"), false);
+    delayTimeout.transport.assertExhausted();
+  });
+
+  it("stops immediately on a terminal post-select state and still cleans up", async () => {
+    const current = setup([json({ id: "torrent-1" }), json(info("waiting_files_selection")), noContent,
+      json(info("dead", [{ ...FILE, selected: 1 }])), noContent]);
+    await assert.rejects(() => current.resolver.resolve(request()), (error: unknown) => error instanceof RealDebridResolverError && error.code === "terminal_status");
+    assert.equal(current.transport.calls.filter((call) => call.method === "POST").length, 2);
+    assert.equal(current.transport.calls.some((call) => call.pathname === "/unrestrict/link"), false);
+    current.transport.assertExhausted();
   });
 
   it("limits a non-cooperative delay and cancellation during delay without later HTTP", async (context) => {
@@ -141,7 +179,7 @@ describe("RealDebridCandidateResolver offline adapter", () => {
     const timed = setup([json({ id: "torrent-1" }), json(info("queued", [], [])), noContent], { totalTimeoutMs: 20, delay: () => { delayStarted.resolve(); return never.promise; } });
     const pending = timed.resolver.resolve(request()); await delayStarted.promise;
     context.mock.timers.tick(20);
-    await assert.rejects(() => pending, (error: unknown) => error instanceof RealDebridResolverError && error.code === "timeout");
+    await assert.rejects(() => pending, (error: unknown) => error instanceof RealDebridResolverError && error.code === "global_timeout");
     timed.transport.assertExhausted();
     never.reject(new Error("late secret")); await new Promise<void>((resolve) => setImmediate(resolve));
 
@@ -160,7 +198,7 @@ describe("RealDebridCandidateResolver offline adapter", () => {
     const pending = timed.resolver.resolve(request()); await Promise.resolve();
     setTimeout(() => response.resolve(json({ id: "torrent-1" })), 20);
     context.mock.timers.tick(20);
-    await assert.rejects(() => pending, (error: unknown) => error instanceof RealDebridResolverError && error.code === "timeout");
+    await assert.rejects(() => pending, (error: unknown) => error instanceof RealDebridResolverError && error.code === "global_timeout");
     timed.transport.assertExhausted();
 
     const controller = new AbortController(); const same = deferred<RealDebridTransportResponse>();

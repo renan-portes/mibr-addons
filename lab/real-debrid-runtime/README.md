@@ -83,6 +83,21 @@ por path completo e tamanho exatos depois de uma única normalização contratua
 fronteira: a API deve fornecer exatamente uma barra inicial, que o decoder remove
 antes de aplicar a política interna defensiva. Não há fallback por basename.
 
+A terceira execução única alcançou `file_selected` e terminou depois da seleção,
+em aproximadamente 2899 ms, com `TIMEOUT`, código 1 e cleanup completo. A
+configuração anterior era o default do resolver: até três snapshots `GET info`
+por fase, sem delay intencional e deadline total de 20 s. Isso é compatível com
+esgotamento rápido do polling, mas o diagnóstico anterior agregava polling,
+deadline global e timeout do GET/delay.
+
+Para a próxima validação controlada, somente este laboratório usa até 10
+snapshots por fase, 1500 ms entre GETs e deadline total de 30 s. Os defaults do
+produto permanecem inalterados. O relatório diferencia `GLOBAL_TIMEOUT`,
+`POLLING_EXHAUSTED`, `POLLING_DELAY_TIMEOUT`, `INFO_REQUEST_TIMEOUT`, `CANCELED` e
+`TERMINAL_TORRENT_STATUS`, acrescentando apenas buckets e flags allowlisted. O
+código final de polling esgotado permanece `1`; não há retry de POST, segunda
+cadeia ou emissão de status bruto e dados do conteúdo.
+
 Uma segunda execução única concluiu `GET info`, confirmou a presença de `files` e
 terminou com `FILE_LIST_INVALID`, em 1349 ms e código 1, ainda antes de
 `file_selected`. A causa provável, fortemente sustentada pelo contrato oficial,
