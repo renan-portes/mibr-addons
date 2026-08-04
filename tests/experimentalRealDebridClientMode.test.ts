@@ -411,4 +411,41 @@ describe("experimental Real-Debrid client mode", () => {
       } finally { rmSync(root, { recursive: true, force: true }); }
     });
   }
+
+  for (const [scenario, interfaces, bridge, expectedStatus] of [
+    ["normalizes an LXC eth0@if6 interface", "2: eth0@if6 inet 192.168.100.101/24 scope global eth0", "0", 0],
+    ["accepts a plain eth0 interface", "2: eth0 inet 192.168.100.101/24 scope global eth0", "0", 0],
+    ["rejects docker0", "2: docker0 inet 192.168.100.101/24 scope global docker0", "0", 2],
+    ["rejects a Docker bridge name", "2: br-abcdef inet 192.168.100.101/24 scope global br-abcdef", "0", 2],
+    ["rejects a veth name", "2: veth1234 inet 192.168.100.101/24 scope global veth1234", "0", 2],
+    ["rejects an interface with bridge sysfs metadata", "2: eth0 inet 192.168.100.101/24 scope global eth0", "1", 2],
+    ["rejects no matching interface", "2: eth0 inet 192.168.100.102/24 scope global eth0", "0", 2],
+    ["rejects two interfaces with the same address", "2: eth0 inet 192.168.100.101/24 scope global eth0\n3: eth1 inet 192.168.100.101/24 scope global eth1", "0", 2],
+    ["rejects an address present only on a Docker bridge", "2: br-deadbeef inet 192.168.100.101/24 scope global br-deadbeef", "0", 2],
+    ["normalizes before applying the forbidden-name policy", "2: docker0@if9 inet 192.168.100.101/24 scope global docker0", "0", 2],
+  ] as const) {
+    it(`enforces LAN interface policy and ${scenario}`, () => {
+      const root = mkdtempSync(join(tmpdir(), "mibr-real-launcher-lan-"));
+      const bin = join(root, "bin"); const events = join(root, "events"); const token = join(root, "token"); const candidates = join(root, "candidates.json");
+      const hash = "a".repeat(40);
+      const fake = (name: string, source: string) => { const path = join(bin, name); writeFileSync(path, source); chmodSync(path, 0o700); };
+      try {
+        mkdirSync(bin); writeFileSync(events, ""); writeFileSync(token, "SYNTHETIC_REAL_DEBRID_TOKEN_DO_NOT_LEAK"); writeFileSync(candidates, JSON.stringify([{ imdbId: "tt0000001", type: "movie", magnet: `magnet:?xt=urn:btih:${hash}`, infoHash: hash, filePath: "safe/video.mkv", fileBytes: 1 }]));
+        fake("cp", "#!/bin/sh\n/usr/bin/cp \"$@\"\n"); fake("chown", "#!/bin/sh\nexit 0\n"); fake("chmod", "#!/bin/sh\nexit 0\n"); fake("ss", "#!/bin/sh\nexit 0\n"); fake("sleep", "#!/bin/sh\nexit 0\n");
+        fake("stat", "#!/bin/sh\ncase \"$*\" in *%a*) case \"$*\" in *override*) echo 600;; *) echo 400;; esac;; *%u*|*%g*) echo 1000;; *) exit 1;; esac\n");
+        fake("ip", "#!/bin/sh\nprintf '%s\\n' \"$FAKE_INTERFACES\"\n");
+        fake("test", "#!/bin/sh\n[ \"$FAKE_BRIDGE\" != 1 ]\n");
+        fake("docker", "#!/bin/sh\ncase \"$*\" in *' config'*) echo COMPOSE_CONFIG >> \"$FAKE_EVENTS\";; *' up '*) echo COMPOSE_UP >> \"$FAKE_EVENTS\";; *' down '*) echo COMPOSE_DOWN >> \"$FAKE_EVENTS\";; esac\nexit 0\n");
+        fake("curl", "#!/bin/sh\nurl= out=; while [ $# -gt 0 ]; do case \"$1\" in --dump-header) shift 2;; --output) out=$2; shift 2;; --write-out|--proto|--connect-timeout|--max-time|--max-redirs|--request) shift 2;; *) url=$1; shift;; esac; done\ncase \"$url\" in */health) echo HEALTH_VALIDATED >> \"$FAKE_EVENTS\";; */manifest.json) echo MANIFEST_VALIDATED >> \"$FAKE_EVENTS\";; *) exit 1;; esac\nprintf '{}' > \"$out\"; printf '200\\napplication/json\\n'\n");
+        const shell = process.platform === "win32" ? "C:\\Program Files\\Git\\bin\\bash.exe" : "sh";
+        const toShellPath = (value: string): string => process.platform === "win32" ? `/${value.replaceAll("\\", "/").charAt(0).toLowerCase()}${value.replaceAll("\\", "/").slice(2)}` : value;
+        const shellBin = toShellPath(bin);
+        const command = ['cp() { "$FAKE_BIN/cp" "$@"; }', 'chown() { "$FAKE_BIN/chown" "$@"; }', 'chmod() { "$FAKE_BIN/chmod" "$@"; }', 'stat() { "$FAKE_BIN/stat" "$@"; }', 'ip() { "$FAKE_BIN/ip" "$@"; }', 'test() { "$FAKE_BIN/test" "$@"; }', 'docker() { "$FAKE_BIN/docker" "$@"; }', 'curl() { "$FAKE_BIN/curl" "$@"; }', 'ss() { "$FAKE_BIN/ss" "$@"; }', 'sleep() { "$FAKE_BIN/sleep" "$@"; }', '. lab/real-debrid-addon-runtime/scripts/real-client-access.sh'].join("\n");
+        const result = spawnSync(shell, ["-c", command], { cwd: process.cwd(), encoding: "utf8", env: { ...process.env, PATH: process.platform === "win32" ? `${shellBin}:/usr/bin:/bin` : `${bin}:${process.env.PATH ?? ""}`, FAKE_BIN: shellBin, FAKE_EVENTS: toShellPath(events), FAKE_INTERFACES: interfaces, FAKE_BRIDGE: bridge, EXPERIMENTAL_ADDON_CLIENT_ACCESS_AUTHORIZED: "true", EXPERIMENTAL_ADDON_LAN_ACCESS_AUTHORIZED: "true", EXPERIMENTAL_ADDON_REAL_DEBRID_ENABLED: "true", EXPERIMENTAL_ADDON_REAL_DEBRID_AUTHORIZED: "true", EXPERIMENTAL_ADDON_CLIENT_ACCESS_MODE: "LAN", EXPERIMENTAL_ADDON_CLIENT_ACCESS_HOST: "192.168.100.101", EXPERIMENTAL_ADDON_CLIENT_ACCESS_PORT: "17007", EXPERIMENTAL_ADDON_CLIENT_ACCESS_TIMEOUT_SECONDS: "1", EXPERIMENTAL_ADDON_AUTHORIZED_IMDB_IDS: "tt0000001", EXPERIMENTAL_ADDON_REAL_DEBRID_TOKEN_FILE: toShellPath(token), EXPERIMENTAL_ADDON_CANDIDATES_FILE: toShellPath(candidates) } });
+        assert.equal(result.status, expectedStatus); assert.equal(result.signal, null); assert.equal(result.stderr, ""); assert.doesNotMatch(result.stdout, /192\.168|eth0|docker|br-|veth|\/sys|SYNTHETIC|magnet|Authorization/i);
+        if (expectedStatus === 0) assert.deepEqual(readFileSync(events, "utf8").trim().split("\n"), ["COMPOSE_CONFIG", "COMPOSE_UP", "HEALTH_VALIDATED", "MANIFEST_VALIDATED", "COMPOSE_DOWN"]);
+        else { assert.equal(result.stdout, "CONFIGURATION_INVALID\n"); assert.equal(readFileSync(events, "utf8"), ""); }
+      } finally { rmSync(root, { recursive: true, force: true }); }
+    });
+  }
 });

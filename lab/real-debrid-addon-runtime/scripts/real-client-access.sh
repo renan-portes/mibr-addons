@@ -31,7 +31,17 @@ case "$port" in ''|*[!0-9]*) invalid;; esac; [ "$port" -ge 1024 ] && [ "$port" -
 is_private_ipv4() { old_ifs=$IFS; IFS=.; set -- $1; IFS=$old_ifs; [ "$#" -eq 4 ] || return 1; for octet do case "$octet" in ''|*[!0-9]*) return 1;; esac; [ "$octet" -le 255 ] || return 1; done; [ "$1" -eq 10 ] && return 0; [ "$1" -eq 172 ] && [ "$2" -ge 16 ] && [ "$2" -le 31 ] && return 0; [ "$1" -eq 192 ] && [ "$2" -eq 168 ]; }
 case "${EXPERIMENTAL_ADDON_CLIENT_ACCESS_MODE:-LOOPBACK}" in
   LOOPBACK) [ "$host" = 127.0.0.1 ] || invalid;;
-  LAN) [ "${EXPERIMENTAL_ADDON_LAN_ACCESS_AUTHORIZED:-}" = true ] || invalid; is_private_ipv4 "$host" || invalid; command -v ip >/dev/null 2>&1 || invalid; ip -o -4 addr show up | grep -Eq "[[:space:]]${host}/" || invalid;;
+  LAN)
+    [ "${EXPERIMENTAL_ADDON_LAN_ACCESS_AUTHORIZED:-}" = true ] || invalid
+    is_private_ipv4 "$host" || invalid
+    command -v ip >/dev/null 2>&1 || invalid
+    lan_interfaces=$(ip -o -4 addr show up 2>/dev/null | awk -v target="$host" '$3 == "inet" { split($4, address, "/"); if (address[1] == target) { name=$2; sub(/@[^[:space:]]+$/, "", name); print name } }')
+    [ -n "$lan_interfaces" ] || invalid
+    [ "$(printf '%s\n' "$lan_interfaces" | wc -l | tr -d ' ')" = 1 ] || invalid
+    lan_interface=$lan_interfaces
+    case "$lan_interface" in ''|*[!A-Za-z0-9_.:-]*|lo|docker*|br-*|veth*|virbr*|podman*|cni*|flannel*|cali*|tun*|tap*) invalid;; esac
+    test ! -d "/sys/class/net/$lan_interface/bridge" || invalid
+    ;;
   *) invalid;;
 esac
 command -v ss >/dev/null 2>&1 || invalid
