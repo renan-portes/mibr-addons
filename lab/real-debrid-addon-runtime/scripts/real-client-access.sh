@@ -35,6 +35,8 @@ case "${EXPERIMENTAL_ADDON_CLIENT_ACCESS_MODE:-LOOPBACK}" in
   *) invalid;;
 esac
 command -v ss >/dev/null 2>&1 || invalid
+command -v docker >/dev/null 2>&1 || invalid
+command -v curl >/dev/null 2>&1 || invalid
 ss -H -ltn | awk '{print $4}' | grep -Eq "(^|:)${port}$" && invalid
 cat > "$override" <<EOF
 services:

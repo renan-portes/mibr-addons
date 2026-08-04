@@ -378,4 +378,37 @@ describe("experimental Real-Debrid client mode", () => {
       assert.deepEqual(readFileSync(events, "utf8").trim().split("\n"), ["COMPOSE_CONFIG", "COMPOSE_UP", "HEALTH_VALIDATED", "MANIFEST_VALIDATED", "COMPOSE_DOWN"]);
     } finally { rmSync(root, { recursive: true, force: true }); }
   });
+
+  for (const [scenario, expectedStatus, expectedEvents] of [
+    ["health-timeout", 1, ["COMPOSE_CONFIG", "COMPOSE_UP", "HEALTH", "HEALTH", "HEALTH", "HEALTH", "HEALTH", "COMPOSE_DOWN"]],
+    ["manifest-invalid", 1, ["COMPOSE_CONFIG", "COMPOSE_UP", "HEALTH", "MANIFEST", "COMPOSE_DOWN"]],
+    ["compose-up-failed", 2, ["COMPOSE_CONFIG", "COMPOSE_UP", "COMPOSE_DOWN"]],
+    ["compose-config-invalid", 2, ["COMPOSE_CONFIG"]],
+    ["docker-unavailable", 2, ["COMPOSE_CONFIG"]],
+    ["curl-unavailable", 1, ["COMPOSE_CONFIG", "COMPOSE_UP", "HEALTH", "HEALTH", "HEALTH", "HEALTH", "HEALTH", "COMPOSE_DOWN"]],
+  ] as const) {
+    it(`fails closed with local fakes when ${scenario}`, () => {
+      const root = mkdtempSync(join(tmpdir(), "mibr-real-launcher-failure-"));
+      const bin = join(root, "bin"); const events = join(root, "events"); const token = join(root, "token"); const candidates = join(root, "candidates.json");
+      const hash = "a".repeat(40);
+      const fake = (name: string, source: string) => { const path = join(bin, name); writeFileSync(path, source); chmodSync(path, 0o700); };
+      try {
+        mkdirSync(bin); writeFileSync(token, "SYNTHETIC_REAL_DEBRID_TOKEN_DO_NOT_LEAK"); writeFileSync(candidates, JSON.stringify([{ imdbId: "tt0000001", type: "movie", magnet: `magnet:?xt=urn:btih:${hash}`, infoHash: hash, filePath: "safe/video.mkv", fileBytes: 1 }]));
+        fake("cp", "#!/bin/sh\n/usr/bin/cp \"$@\"\n"); fake("chown", "#!/bin/sh\nexit 0\n"); fake("chmod", "#!/bin/sh\nexit 0\n");
+        fake("stat", "#!/bin/sh\ncase \"$*\" in *%a*) case \"$*\" in *override*) echo 600;; *) echo 400;; esac;; *%u*|*%g*) echo 1000;; *) exit 1;; esac\n");
+        fake("ss", "#!/bin/sh\nexit 0\n"); fake("sleep", "#!/bin/sh\nexit 0\n");
+        fake("docker", "#!/bin/sh\ncase \"$*\" in *' config'*) echo COMPOSE_CONFIG >> \"$FAKE_EVENTS\"; case \"$FAKE_SCENARIO\" in compose-config-invalid|docker-unavailable) exit 1;; esac;; *' up '*) echo COMPOSE_UP >> \"$FAKE_EVENTS\"; [ \"$FAKE_SCENARIO\" = compose-up-failed ] && exit 1;; *' down '*) echo COMPOSE_DOWN >> \"$FAKE_EVENTS\";; esac\nexit 0\n");
+        fake("curl", "#!/bin/sh\nurl= out=; while [ $# -gt 0 ]; do case \"$1\" in --dump-header) shift 2;; --output) out=$2; shift 2;; --write-out|--proto|--connect-timeout|--max-time|--max-redirs|--request) shift 2;; *) url=$1; shift;; esac; done\ncase \"$url\" in */health) echo HEALTH >> \"$FAKE_EVENTS\"; case \"$FAKE_SCENARIO\" in health-timeout|curl-unavailable) exit 1;; esac;; */manifest.json) echo MANIFEST >> \"$FAKE_EVENTS\"; [ \"$FAKE_SCENARIO\" = manifest-invalid ] && exit 1;; *) exit 1;; esac\nprintf '{}' > \"$out\"; printf '200\\napplication/json\\n'\n");
+        const shell = process.platform === "win32" ? "C:\\Program Files\\Git\\bin\\bash.exe" : "sh";
+        const toShellPath = (value: string): string => process.platform === "win32" ? `/${value.replaceAll("\\", "/").charAt(0).toLowerCase()}${value.replaceAll("\\", "/").slice(2)}` : value;
+        const shellBin = toShellPath(bin);
+        const command = process.platform === "win32" ? [
+          'cp() { "$FAKE_BIN/cp" "$@"; }', 'chown() { "$FAKE_BIN/chown" "$@"; }', 'chmod() { "$FAKE_BIN/chmod" "$@"; }', 'stat() { "$FAKE_BIN/stat" "$@"; }', 'docker() { "$FAKE_BIN/docker" "$@"; }', 'curl() { "$FAKE_BIN/curl" "$@"; }', 'ss() { "$FAKE_BIN/ss" "$@"; }', 'sleep() { "$FAKE_BIN/sleep" "$@"; }', '. lab/real-debrid-addon-runtime/scripts/real-client-access.sh',
+        ].join("\n") : "exec sh lab/real-debrid-addon-runtime/scripts/real-client-access.sh";
+        const result = spawnSync(shell, ["-c", command], { cwd: process.cwd(), encoding: "utf8", env: { ...process.env, PATH: process.platform === "win32" ? `${shellBin}:/usr/bin:/bin` : `${bin}:${process.env.PATH ?? ""}`, FAKE_BIN: shellBin, FAKE_EVENTS: toShellPath(events), FAKE_SCENARIO: scenario, EXPERIMENTAL_ADDON_CLIENT_ACCESS_AUTHORIZED: "true", EXPERIMENTAL_ADDON_REAL_DEBRID_ENABLED: "true", EXPERIMENTAL_ADDON_REAL_DEBRID_AUTHORIZED: "true", EXPERIMENTAL_ADDON_CLIENT_ACCESS_MODE: "LOOPBACK", EXPERIMENTAL_ADDON_CLIENT_ACCESS_HOST: "127.0.0.1", EXPERIMENTAL_ADDON_CLIENT_ACCESS_PORT: "17007", EXPERIMENTAL_ADDON_CLIENT_ACCESS_TIMEOUT_SECONDS: "1", EXPERIMENTAL_ADDON_AUTHORIZED_IMDB_IDS: "tt0000001", EXPERIMENTAL_ADDON_REAL_DEBRID_TOKEN_FILE: toShellPath(token), EXPERIMENTAL_ADDON_CANDIDATES_FILE: toShellPath(candidates) } });
+        assert.equal(result.status, expectedStatus); assert.equal(result.signal, null); assert.doesNotMatch(result.stdout, /CLIENT_ACCESS_READY|SYNTHETIC|magnet|Authorization/i);
+        assert.deepEqual(readFileSync(events, "utf8").trim().split("\n"), expectedEvents);
+      } finally { rmSync(root, { recursive: true, force: true }); }
+    });
+  }
 });
