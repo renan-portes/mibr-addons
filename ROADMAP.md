@@ -6,7 +6,8 @@
 - [x] Bound that launcher to one explicit unoccupied port in `1024..65535` and an optional maximum lifetime of 3600 seconds, with executable cleanup and failure coverage.
 
 - [ ] Runtime-validate the new offline/fake client-access launcher: loopback is the default, LAN requires two explicit authorizations, and no firewall, WAN forwarding, public DNS or tunnel is created automatically.
-- [ ] Runtime-validate the separately authorized experimental Real-Debrid client mode using only allowlisted open or authorized content; no WAN exposure or playback is enabled.
+- [x] Runtime-validate controlled LOOPBACK startup of the separately authorized experimental Real-Debrid client mode on `dd7c9a6`: file-only token, health and experimental manifest passed; manual interruption returned `130` with complete cleanup and no `/stream` query.
+- [ ] Perform one controlled `/stream` query with legally authorized content, an exact allowlisted IMDb ID, coherent magnet/info-hash input, no discovery or automatic retry, and mandatory cleanup; playback remains out of scope.
 
 - [ ] Start the isolated Real-Debrid addon runtime lab on the docker-server and validate its experimental manifest before any Stremio or Nuvio installation.
 

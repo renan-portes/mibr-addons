@@ -11,6 +11,7 @@
 - Added a separate offline/fake experimental client-access launcher with strict loopback/LAN authorization, one-port publication, pre-readiness validation and no automatic firewall or WAN exposure.
 - Added an isolated, explicit experimental Real-Debrid client mode with a file-only ephemeral secret and exact IMDb allowlist; it remains disabled by default.
 - Hardened that launcher with executable failure/signal cleanup coverage, sanitized Compose failures, exact one-port override validation, an explicit `1024..65535` port range and a maximum optional lifetime of 3600 seconds.
+- Recorded a successful controlled LOOPBACK startup validation of the experimental Real-Debrid client launcher on `dd7c9a6`: file-only token, health and experimental manifest passed, expected manual-interrupt code `130`, and complete cleanup; no `/stream` query or Real-Debrid candidate request occurred.
 
 - Added an isolated, opt-in experimental addon-runtime composition for the torrent indexer and Real-Debrid resolver; the standard bootstrap and public addon surface remain unchanged.
 
