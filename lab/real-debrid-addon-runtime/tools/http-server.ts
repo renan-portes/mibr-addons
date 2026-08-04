@@ -5,7 +5,7 @@ import type { DataClient } from "../../../src/types/dataClient.js";
 import type { Parser } from "../../../src/types/parser.js";
 import type { TorrentIndexerRawResponse, TorrentIndexerRequest, TorrentIndexerResponse } from "../../../src/providers/torrentIndexer/torrentIndexerTypes.js";
 
-let candidates: readonly { readonly imdbId: string; readonly magnet: string; readonly infoHash: string; readonly filePath: string; readonly fileBytes: number }[] = [];
+let candidates: readonly { readonly imdbId: string; readonly type: "movie" | "series"; readonly magnet: string; readonly infoHash: string; readonly filePath: string; readonly fileBytes: number }[] = [];
 const client: DataClient<TorrentIndexerRequest, TorrentIndexerRawResponse> = { async fetch() { return undefined; } };
 const parser: Parser<TorrentIndexerRawResponse, TorrentIndexerResponse> = { parse: () => ({ items: candidates.map((candidate) => ({ title: "Authorized experimental candidate", imdb: candidate.imdbId, magnet: candidate.magnet, infoHash: candidate.infoHash, audio: [], trackers: [], files: [{ path: candidate.filePath, size: String(candidate.fileBytes) }], peers: { seeders: 0, leechers: 0 } })) }) };
 
@@ -19,7 +19,13 @@ try {
   }
   const mode = createExperimentalRealDebridClientMode(process.env);
   candidates = mode.candidates;
-  const runtime = createExperimentalRealDebridAddonRuntime({ enabled: mode.enabled, token: mode.token, authorizedImdbIds: mode.authorizedImdbIds, source: { indexer: "runtime-lab" } }, { client, parser });
+  const runtime = createExperimentalRealDebridAddonRuntime({
+    enabled: mode.enabled,
+    token: mode.token,
+    authorizedImdbIds: mode.authorizedImdbIds,
+    authorizedCandidates: mode.candidates.map(({ imdbId, type }) => Object.freeze({ imdbId, type })),
+    source: { indexer: "runtime-lab" },
+  }, { client, parser });
   if (mode.enabled) process.stdout.write("REAL_DEBRID_MODE_ENABLED\n");
   const marker = (value: string) => process.stdout.write(`${value}\n`);
   const server = createExperimentalAddonHttpServer({ bind, port, runtime, marker });

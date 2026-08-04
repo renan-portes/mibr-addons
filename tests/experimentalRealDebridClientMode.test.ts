@@ -55,6 +55,14 @@ describe("experimental Real-Debrid client mode", () => {
     assert.equal(result.candidates.length, 1);
   });
 
+  it("rejects two valid candidates before experimental composition", () => {
+    const payload = JSON.stringify([validCandidate("tt0000001"), validCandidate("tt0000002")]);
+    assertSanitizedModeError(() => createExperimentalRealDebridClientMode(
+      realModeEnvironment({ EXPERIMENTAL_ADDON_AUTHORIZED_IMDB_IDS: "tt0000001,tt0000002" }),
+      fakeFileSystem(payload),
+    ));
+  });
+
   for (const [label, magnet] of [
     ["a minimal valid magnet", `magnet:?xt=urn:btih:${"a".repeat(40)}`],
     ["a valid magnet with additional parameters", `magnet:?xt=urn:btih:${"a".repeat(40)}&dn=synthetic`],

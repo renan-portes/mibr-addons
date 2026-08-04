@@ -53,6 +53,25 @@ describe("RealDebridCandidateResolver offline adapter", () => {
     current.transport.assertExhausted();
   });
 
+  it("accepts only an absolute HTTPS final URL for authorized Real-Debrid resolution", async () => {
+    const invalidUrls = [
+      "http://media.example.invalid/movie.mkv",
+      "/relative/movie.mkv",
+      "not-a-url",
+      "https://user:password@media.example.invalid/movie.mkv",
+      "https://media.example.invalid/movie.mkv#fragment",
+    ];
+    for (const value of invalidUrls) {
+      const current = setup([json({ id: "torrent-1" }), json(info("waiting_files_selection")), noContent, json(selected()), json({ download: value }), noContent]);
+      await assert.rejects(() => current.resolver.resolve(request()), (error: unknown) => error instanceof RealDebridResolverError && error.code === "invalid_final_url");
+      assert.equal(current.transport.calls.filter((call) => call.pathname === "/torrents/addMagnet").length, 1);
+      assert.equal(current.transport.calls.filter((call) => call.pathname.includes("selectFiles")).length, 1);
+      assert.equal(current.transport.calls.filter((call) => call.pathname === "/unrestrict/link").length, 1);
+      assert.equal(current.transport.calls.filter((call) => call.method === "DELETE").length, 1);
+      current.transport.assertExhausted();
+    }
+  });
+
   it("associates only one selected ID with exactly one final link, regardless of file order", async () => {
     const other = { id: 8, path: "/folder/other.mkv", bytes: 1_000, selected: 0 };
     const current = setup([json({ id: "torrent-1" }), json(info("waiting_files_selection", [FILE, other])), noContent,

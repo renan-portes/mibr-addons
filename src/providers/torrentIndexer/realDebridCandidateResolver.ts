@@ -106,7 +106,7 @@ export class RealDebridCandidateResolver implements TorrentCandidateResolver {
         if (info.links.length !== 1) throw new RealDebridResolverError("ambiguous_link");
         const download = await this.api.unrestrict(info.links[0]!, main.signal); this.check(main.signal);
         const validated = validateResolvedTorrentCandidate({ url: download, name: file.path.split("/").at(-1), sizeBytes: file.bytes > 0 ? file.bytes : undefined, source: "authorized-resolver" });
-        if (validated === null) throw new RealDebridResolverError("invalid_final_url");
+        if (validated === null || new URL(validated.url).protocol !== "https:") throw new RealDebridResolverError("invalid_final_url");
         this.check(main.signal);
         result = validated;
       }

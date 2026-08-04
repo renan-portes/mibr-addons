@@ -36,8 +36,14 @@ const parser: Parser<TorrentIndexerRawResponse, TorrentIndexerResponse> = {
   parse: () => ({ items: [{ title: "Synthetic", imdb: "tt0000001", infoHash: HASH, audio: [], trackers: [], files: [{ path: "video.mkv", size: "1 GB" }], peers: {} }] }),
 };
 
-function config(enabled: boolean, token?: string) {
-  return { enabled, ...(token === undefined ? {} : { token }), source: { indexer: "synthetic" } };
+function config(enabled: boolean, token?: string, type: "movie" | "series" = "movie", imdbId = "tt0000001") {
+  return {
+    enabled,
+    ...(token === undefined ? {} : { token }),
+    authorizedImdbIds: [imdbId],
+    authorizedCandidates: [{ imdbId, type }],
+    source: { indexer: "synthetic" },
+  };
 }
 
 async function localRequest(port: number, path: string, method = "GET", agent?: Agent): Promise<{ status: number; contentType: string; contentLength: string; body: string }> {
@@ -82,7 +88,8 @@ describe("experimental Real-Debrid addon runtime", () => {
 
   it("registers only an isolated provider and maps a fake resolved candidate", async () => {
     const counts = { transport: 0, api: 0, resolver: 0 };
-    const resolver = new FakeTorrentCandidateResolver([{ url: "https://media.example.invalid/stream.mp4", name: "Synthetic", sizeBytes: 1, source: "local-test" }]);
+    const markedCandidateData = "DO_NOT_EXPOSE_candidate-file-name.mkv";
+    const resolver = new FakeTorrentCandidateResolver([{ url: "https://media.example.invalid/stream.mp4", name: markedCandidateData, sizeBytes: 1, source: "local-test" }]);
     const runtime = createExperimentalRealDebridAddonRuntime(config(true, TOKEN), {
       client: new StaticClient(), parser,
       wiring: {
@@ -95,10 +102,68 @@ describe("experimental Real-Debrid addon runtime", () => {
     assert.equal(runtime.providerManager.get("torrent-indexer"), runtime.provider);
     assert.equal(streams.length, 1);
     assert.equal(streams[0]?.url, "https://media.example.invalid/stream.mp4");
+    assert.equal(streams[0]?.title, "Real-Debrid");
+    assert.equal(JSON.stringify(streams).includes(markedCandidateData), false);
     assert.deepEqual(counts, { transport: 1, api: 1, resolver: 1 });
     assert.equal(JSON.stringify(runtime).includes(TOKEN), false);
     assert.equal(Object.keys(runtime).some((key) => /token/i.test(key)), false);
     assert.equal(JSON.stringify({ ...runtime }).includes(TOKEN), false);
+  });
+
+  it("authorizes exactly one type and IMDb pair without invoking the provider for mismatches", async () => {
+    const client = new StaticClient();
+    const resolver = new FakeTorrentCandidateResolver([{ url: "https://media.example.invalid/stream.mp4", source: "local-test" }]);
+    const runtime = createExperimentalRealDebridAddonRuntime(config(true, TOKEN, "series"), {
+      client, parser,
+      wiring: {
+        createTransport: () => new FakeRealDebridTransport([]),
+        createApiClient: (transport, token) => new RealDebridApiClient(transport, token),
+        createResolver: () => resolver,
+      },
+    });
+
+    assert.equal((await runtime.provider.getStreams({ type: "series", id: "tt0000001" }, new AbortController().signal)).length, 1);
+    const callsAfterAuthorized = client.calls;
+    const resolverCallsAfterAuthorized = resolver.requests.length;
+    assert.deepEqual(await runtime.provider.getStreams({ type: "movie", id: "tt0000001" }, new AbortController().signal), []);
+    assert.deepEqual(await runtime.provider.getStreams({ type: "series", id: "tt0000002" }, new AbortController().signal), []);
+    assert.equal(client.calls, callsAfterAuthorized);
+    assert.equal(resolver.requests.length, resolverCallsAfterAuthorized);
+  });
+
+  it("rejects multiple authorized candidates before composition and limits resolution to one candidate", async () => {
+    let managers = 0;
+    let transports = 0;
+    assert.throws(() => createExperimentalRealDebridAddonRuntime({
+      ...config(true, TOKEN),
+      authorizedImdbIds: ["tt0000001", "tt0000002"],
+      authorizedCandidates: [{ imdbId: "tt0000001", type: "movie" }, { imdbId: "tt0000002", type: "movie" }],
+    }, {
+      client: new StaticClient(), parser,
+      createProviderManager: () => { managers += 1; throw new Error("must not construct"); },
+      wiring: { createTransport: () => { transports += 1; return new FakeRealDebridTransport([]); } },
+    }), ExperimentalRealDebridAddonRuntimeError);
+    assert.deepEqual({ managers, transports }, { managers: 0, transports: 0 });
+
+    const secondHash = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    const twoItemsParser: Parser<TorrentIndexerRawResponse, TorrentIndexerResponse> = {
+      parse: () => ({ items: [
+        { title: "First", imdb: "tt0000001", infoHash: HASH, audio: [], trackers: [], files: [{ path: "first.mkv", size: "1 GB" }], peers: {} },
+        { title: "Second", imdb: "tt0000001", infoHash: secondHash, audio: [], trackers: [], files: [{ path: "second.mkv", size: "1 GB" }], peers: {} },
+      ] }),
+    };
+    const resolver = new FakeTorrentCandidateResolver([new Error("first candidate failed"), { url: "https://media.example.invalid/second.mp4", source: "local-test" }]);
+    const runtime = createExperimentalRealDebridAddonRuntime(config(true, TOKEN), {
+      client: new StaticClient(), parser: twoItemsParser,
+      wiring: {
+        createTransport: () => new FakeRealDebridTransport([]),
+        createApiClient: (transport, token) => new RealDebridApiClient(transport, token),
+        createResolver: () => resolver,
+      },
+    });
+    assert.deepEqual(await runtime.provider.getStreams(QUERY, new AbortController().signal), []);
+    assert.equal(resolver.requests.length, 1);
+    assert.equal(resolver.requests[0]?.infoHash, HASH);
   });
 
   it("propagates cancellation and leaves the standard bootstrap, manifest and router isolated", async () => {
@@ -343,7 +408,8 @@ describe("experimental Real-Debrid addon runtime", () => {
   });
 
   it("does not abort provider work after a normal completed response", async () => {
-    const resolver = new FakeTorrentCandidateResolver([{ url: "https://media.example.invalid/stream.mp4", name: "Synthetic", sizeBytes: 1, source: "local-test" }]);
+    const markedCandidateData = "DO_NOT_EXPOSE_runtime-file-name.mkv";
+    const resolver = new FakeTorrentCandidateResolver([{ url: "https://media.example.invalid/stream.mp4", name: markedCandidateData, sizeBytes: 1, source: "local-test" }]);
     const runtime = createExperimentalRealDebridAddonRuntime(config(true, TOKEN), {
       client: new StaticClient(), parser,
       wiring: {
@@ -359,6 +425,8 @@ describe("experimental Real-Debrid addon runtime", () => {
     try {
       const normal = await localRequest(port, "/stream/movie/tt0000001.json");
       assert.equal(normal.status, 200);
+      assert.deepEqual(JSON.parse(normal.body), { streams: [{ name: "Torrent candidate resolver", title: "Real-Debrid", url: "https://media.example.invalid/stream.mp4" }] });
+      assert.equal(normal.body.includes(markedCandidateData), false);
       assert.equal(resolver.requests[0]?.signal.aborted, false);
       assert.equal(markers.includes("EXPERIMENTAL_HTTP_CLIENT_ABORTED"), false);
     } finally {

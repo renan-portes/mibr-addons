@@ -71,7 +71,7 @@ function readCandidates(path: string | undefined, allowed: readonly string[], fi
     const info = fileSystem.lstat(path);
     if (!info.isFile() || info.isSymbolicLink() || info.size < 2 || info.size > MAX_CANDIDATE_BYTES || info.uid !== 1000 || info.gid !== 1000 || (info.mode & 0o777) !== 0o400) throw new ExperimentalRealDebridClientModeError();
     const raw: unknown = JSON.parse(fileSystem.readFile(path));
-    if (!Array.isArray(raw) || raw.length > MAX_IDS || raw.length !== allowed.length) throw new ExperimentalRealDebridClientModeError();
+    if (!Array.isArray(raw) || raw.length !== 1) throw new ExperimentalRealDebridClientModeError();
     const candidates = raw.map((value): ExperimentalAuthorizedCandidate => {
       if (value === null || typeof value !== "object") throw new ExperimentalRealDebridClientModeError();
       const candidate = value as Record<string, unknown>;

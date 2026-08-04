@@ -20,6 +20,7 @@ export type ExperimentalRealDebridAddonRuntimeConfig = Readonly<{
   enabled: boolean;
   token?: string;
   authorizedImdbIds?: readonly string[];
+  authorizedCandidates?: readonly Readonly<{ readonly imdbId: string; readonly type: StreamQuery["type"] }>[];
   source: TorrentIndexerSource;
   providerManager?: ProviderManagerOptions;
 }>;
@@ -36,10 +37,36 @@ export interface ExperimentalRealDebridAddonRuntime {
   readonly providerManager: ProviderManager;
 }
 
-function authorizedProvider(provider: TorrentIndexerProvider, allowed: readonly string[] | undefined): StreamProvider {
-  const ids = new Set(allowed ?? []);
-  if (ids.size === 0) return Object.freeze({ id: provider.id, name: provider.name, getStreams: async () => [] });
-  return Object.freeze({ id: provider.id, name: provider.name, getStreams: (query: StreamQuery, signal: AbortSignal): Promise<StreamResult[]> => ids.has(query.id) ? provider.getStreams(query, signal) : Promise.resolve([]) });
+const IMDB = /^tt\d{7,10}$/;
+const FIXED_STREAM_TITLE = "Real-Debrid";
+
+type AuthorizedCandidate = Readonly<{ readonly imdbId: string; readonly type: StreamQuery["type"] }>;
+
+function singleAuthorizedCandidate(config: ExperimentalRealDebridAddonRuntimeConfig): AuthorizedCandidate | undefined {
+  if (config.enabled !== true) return undefined;
+  const candidates = config.authorizedCandidates;
+  const allowed = config.authorizedImdbIds ?? [];
+  if (candidates?.length !== 1
+    || !IMDB.test(candidates[0]!.imdbId)
+    || (candidates[0]!.type !== "movie" && candidates[0]!.type !== "series")
+    || !allowed.includes(candidates[0]!.imdbId)) {
+    throw new ExperimentalRealDebridAddonRuntimeError();
+  }
+  return Object.freeze({ imdbId: candidates[0]!.imdbId, type: candidates[0]!.type });
+}
+
+function authorizedProvider(provider: TorrentIndexerProvider, allowed: AuthorizedCandidate | undefined): StreamProvider {
+  if (allowed === undefined) return Object.freeze({ id: provider.id, name: provider.name, getStreams: async () => [] });
+  return Object.freeze({
+    id: provider.id,
+    name: provider.name,
+    getStreams: async (query: StreamQuery, signal: AbortSignal): Promise<StreamResult[]> => {
+      const imdb = /^tt\d{7,10}/.exec(query.id)?.[0];
+      if (query.type !== allowed.type || imdb !== allowed.imdbId) return [];
+      const streams = await provider.getStreams(query, signal);
+      return streams.map((stream) => Object.freeze({ ...stream, title: FIXED_STREAM_TITLE }));
+    },
+  });
 }
 
 export class ExperimentalRealDebridAddonRuntimeError extends Error {
@@ -54,7 +81,7 @@ function wiringConfig(config: ExperimentalRealDebridAddonRuntimeConfig): RealDeb
   if (config.enabled !== true || typeof config.token !== "string" || config.token.trim().length === 0) {
     throw new ExperimentalRealDebridAddonRuntimeError();
   }
-  return Object.freeze({ enabled: true, token: config.token });
+  return Object.freeze({ enabled: true, token: config.token, candidateLimit: 1 });
 }
 
 /**
@@ -65,15 +92,17 @@ export function createExperimentalRealDebridAddonRuntime(
   config: ExperimentalRealDebridAddonRuntimeConfig,
   dependencies: ExperimentalRealDebridAddonRuntimeDependencies,
 ): ExperimentalRealDebridAddonRuntime {
+  const wiring = wiringConfig(config);
+  const allowed = singleAuthorizedCandidate(config);
   const manager = (dependencies.createProviderManager ?? ((options) => new ProviderManager(options)))(config.providerManager);
   const provider = createRealDebridTorrentIndexerProvider(
     dependencies.client,
     dependencies.parser,
     config.source,
-    wiringConfig(config),
+    wiring,
     dependencies.wiring,
   );
-  const guardedProvider = authorizedProvider(provider, config.enabled === true ? config.authorizedImdbIds : undefined);
+  const guardedProvider = authorizedProvider(provider, allowed);
   manager.register(guardedProvider);
   return Object.freeze({ provider: guardedProvider, providerManager: manager });
 }
