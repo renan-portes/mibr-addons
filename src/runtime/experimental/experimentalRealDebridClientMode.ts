@@ -26,12 +26,28 @@ const candidateFileSystem: CandidateFileSystem = Object.freeze({ lstat: (path) =
 function exactTrue(value: string | undefined): boolean { return value === "true"; }
 
 function parseAllowlist(value: string | undefined): readonly string[] {
-  if (value === undefined || value === "") return Object.freeze([]);
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new ExperimentalRealDebridClientModeError();
+  }
   const values = value.split(",");
   if (values.length > MAX_IDS || values.some((id) => !IMDB.test(id)) || new Set(values).size !== values.length) {
     throw new ExperimentalRealDebridClientModeError();
   }
   return Object.freeze([...values]);
+}
+
+function validMagnet(magnet: string, infoHash: string): boolean {
+  if (!magnet.startsWith("magnet:?")) return false;
+  const expected = infoHash.toLowerCase();
+  let hasXt = false;
+  for (const parameter of magnet.slice("magnet:?".length).split("&")) {
+    const separator = parameter.indexOf("=");
+    if (separator < 1 || parameter.slice(0, separator) !== "xt") continue;
+    hasXt = true;
+    const match = /^urn:btih:([a-f0-9]{40})$/i.exec(parameter.slice(separator + 1));
+    if (match?.[1]?.toLowerCase() !== expected) return false;
+  }
+  return hasXt;
 }
 
 function readSecret(path: string | undefined, fileSystem: CandidateFileSystem): string {
@@ -60,7 +76,13 @@ function readCandidates(path: string | undefined, allowed: readonly string[], fi
       if (value === null || typeof value !== "object") throw new ExperimentalRealDebridClientModeError();
       const candidate = value as Record<string, unknown>;
       const { imdbId, type, magnet, infoHash, filePath, fileBytes } = candidate;
-      if (typeof imdbId !== "string" || !allowed.includes(imdbId) || (type !== "movie" && type !== "series") || typeof magnet !== "string" || typeof infoHash !== "string" || !/^[a-f0-9]{40}$/.test(infoHash) || !magnet.includes(`xt=urn:btih:${infoHash}`) || typeof filePath !== "string" || filePath.length === 0 || filePath.startsWith("/") || /[%\\\u0000-\u001f]|(^|\/)\.\.?($|\/)/.test(filePath) || typeof fileBytes !== "number" || !Number.isSafeInteger(fileBytes) || fileBytes < 0) throw new ExperimentalRealDebridClientModeError();
+      const imdbIdValid = typeof imdbId === "string" && allowed.includes(imdbId);
+      const typeValid = type === "movie" || type === "series";
+      const infoHashValid = typeof infoHash === "string" && /^[a-f0-9]{40}$/i.test(infoHash);
+      const magnetValid = typeof magnet === "string" && infoHashValid && validMagnet(magnet, infoHash);
+      const filePathValid = typeof filePath === "string" && filePath.length > 0 && !filePath.startsWith("/") && !/[%\\\u0000-\u001f]|(^|\/)\.\.?($|\/)/.test(filePath);
+      const fileBytesValid = typeof fileBytes === "number" && Number.isSafeInteger(fileBytes) && fileBytes >= 0;
+      if (!imdbIdValid || !typeValid || !infoHashValid || !magnetValid || !filePathValid || !fileBytesValid) throw new ExperimentalRealDebridClientModeError();
       return Object.freeze({ imdbId, type, magnet, infoHash, filePath, fileBytes: fileBytes as number });
     });
     if (new Set(candidates.map((candidate) => candidate.imdbId)).size !== candidates.length) throw new ExperimentalRealDebridClientModeError();

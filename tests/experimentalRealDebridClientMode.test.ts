@@ -11,7 +11,75 @@ describe("experimental Real-Debrid client mode", () => {
     lstat: () => ({ isFile: () => true, isSymbolicLink: () => false, uid: 1000, gid: 1000, mode: 0o100400, size: candidateText.length }),
     readFile: (path: string) => path === "token" ? "synthetic-token" : candidateText,
   });
-  const validCandidate = (id: string) => ({ imdbId: id, type: "movie", magnet: `magnet:?xt=urn:btih=${"a".repeat(40)}`, infoHash: "a".repeat(40), filePath: "safe/video.mkv", fileBytes: 1 });
+  const validCandidate = (id: string) => ({ imdbId: id, type: "movie", magnet: `magnet:?xt=urn:btih:${"a".repeat(40)}`, infoHash: "a".repeat(40), filePath: "safe/video.mkv", fileBytes: 1 });
+  const realModeEnvironment = (overrides: Readonly<Record<string, string | undefined>> = {}) => ({
+    EXPERIMENTAL_ADDON_CLIENT_ACCESS_AUTHORIZED: "true",
+    EXPERIMENTAL_ADDON_REAL_DEBRID_ENABLED: "true",
+    EXPERIMENTAL_ADDON_REAL_DEBRID_AUTHORIZED: "true",
+    REAL_DEBRID_TOKEN_FILE: "token",
+    EXPERIMENTAL_ADDON_CANDIDATES_FILE: "candidates",
+    EXPERIMENTAL_ADDON_AUTHORIZED_IMDB_IDS: "tt0000001",
+    ...overrides,
+  });
+  const assertSanitizedModeError = (action: () => unknown): void => {
+    let error: unknown;
+    try { action(); } catch (caught) { error = caught; }
+    assert.ok(error instanceof ExperimentalRealDebridClientModeError);
+    assert.doesNotMatch(String(error), /synthetic-token|magnet|safe\/video|aaaa|authorization|fileBytes/i);
+    assert.deepEqual(Object.keys(error as object), ["name"]);
+    assert.deepEqual(Object.keys({ ...(error as unknown as Record<string, unknown>) }), ["name"]);
+    assert.doesNotMatch(JSON.stringify(error), /synthetic-token|magnet|safe\/video|aaaa|authorization|fileBytes/i);
+  };
+
+  for (const [label, value] of [
+    ["an absent allowlist", undefined],
+    ["an empty allowlist", ""],
+    ["a whitespace allowlist", " \t "],
+    ["only separators in the allowlist", ",,,"],
+    ["a normalized-empty allowlist", " , "],
+  ] as const) {
+    it(`rejects ${label} before reading files or composing the real mode`, () => {
+      let reads = 0;
+      const fileSystem = Object.freeze({
+        lstat: () => { reads += 1; return { isFile: () => true, isSymbolicLink: () => false, uid: 1000, gid: 1000, mode: 0o100400, size: 1 }; },
+        readFile: () => { reads += 1; return "synthetic-token"; },
+      });
+      assertSanitizedModeError(() => createExperimentalRealDebridClientMode(realModeEnvironment({ EXPERIMENTAL_ADDON_AUTHORIZED_IMDB_IDS: value }), fileSystem));
+      assert.equal(reads, 0);
+    });
+  }
+
+  it("accepts one valid allowlisted IMDb ID", () => {
+    const result = createExperimentalRealDebridClientMode(realModeEnvironment(), fakeFileSystem(JSON.stringify([validCandidate("tt0000001")])))
+    assert.deepEqual(result.authorizedImdbIds, ["tt0000001"]);
+    assert.equal(result.candidates.length, 1);
+  });
+
+  for (const [label, magnet] of [
+    ["a minimal valid magnet", `magnet:?xt=urn:btih:${"a".repeat(40)}`],
+    ["a valid magnet with additional parameters", `magnet:?xt=urn:btih:${"a".repeat(40)}&dn=synthetic`],
+    ["a valid magnet with xt after additional parameters", `magnet:?dn=synthetic&xt=urn:btih:${"a".repeat(40)}`],
+  ] as const) {
+    it(`accepts ${label}`, () => {
+      const result = createExperimentalRealDebridClientMode(realModeEnvironment(), fakeFileSystem(JSON.stringify([{ ...validCandidate("tt0000001"), magnet }])))
+      assert.equal(result.candidates.length, 1);
+    });
+  }
+
+  for (const [label, magnet] of [
+    ["embedded xt text", `prefix-xt=urn:btih:${"a".repeat(40)}`],
+    ["a prefix before magnet", `prefixmagnet:?xt=urn:btih:${"a".repeat(40)}`],
+    ["an HTTP URL", `https://example.invalid/?xt=urn:btih:${"a".repeat(40)}`],
+    ["a magnet without xt", "magnet:?dn=synthetic"],
+    ["an empty xt", "magnet:?xt="],
+    ["a malformed xt hash", "magnet:?xt=urn:btih:invalid"],
+    ["a divergent xt hash", `magnet:?xt=urn:btih:${"b".repeat(40)}`],
+    ["conflicting xt values", `magnet:?xt=urn:btih:${"a".repeat(40)}&xt=urn:btih:${"b".repeat(40)}`],
+  ] as const) {
+    it(`rejects ${label} without exposing candidate data`, () => {
+      assertSanitizedModeError(() => createExperimentalRealDebridClientMode(realModeEnvironment(), fakeFileSystem(JSON.stringify([{ ...validCandidate("tt0000001"), magnet }]))));
+    });
+  }
   for (const [label, payload, allowlist] of [
     ["invalid JSON", "{", "tt0000001"],
     ["empty array", "[]", "tt0000001"],
