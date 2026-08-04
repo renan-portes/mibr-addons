@@ -6,6 +6,7 @@
 - [x] Bound that launcher to one explicit unoccupied port in `1024..65535` and an optional maximum lifetime of 3600 seconds, with executable cleanup and failure coverage.
 
 - [ ] Runtime-validate the new offline/fake client-access launcher: loopback is the default, LAN requires two explicit authorizations, and no firewall, WAN forwarding, public DNS or tunnel is created automatically.
+- [ ] Runtime-validate the separately authorized experimental Real-Debrid client mode using only allowlisted open or authorized content; no WAN exposure or playback is enabled.
 
 - [ ] Start the isolated Real-Debrid addon runtime lab on the docker-server and validate its experimental manifest before any Stremio or Nuvio installation.
 

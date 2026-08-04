@@ -13,10 +13,13 @@ import type {
   TorrentIndexerSource,
 } from "../providers/torrentIndexer/torrentIndexerTypes.js";
 import type { TorrentIndexerProvider } from "../providers/torrentIndexer/torrentIndexerProvider.js";
+import type { StreamProvider, StreamQuery } from "../types/streamProvider.js";
+import type { StreamResult } from "../types/streamResult.js";
 
 export type ExperimentalRealDebridAddonRuntimeConfig = Readonly<{
   enabled: boolean;
   token?: string;
+  authorizedImdbIds?: readonly string[];
   source: TorrentIndexerSource;
   providerManager?: ProviderManagerOptions;
 }>;
@@ -29,8 +32,14 @@ export type ExperimentalRealDebridAddonRuntimeDependencies = Readonly<{
 }>;
 
 export interface ExperimentalRealDebridAddonRuntime {
-  readonly provider: TorrentIndexerProvider;
+  readonly provider: StreamProvider;
   readonly providerManager: ProviderManager;
+}
+
+function authorizedProvider(provider: TorrentIndexerProvider, allowed: readonly string[] | undefined): StreamProvider {
+  const ids = new Set(allowed ?? []);
+  if (ids.size === 0) return Object.freeze({ id: provider.id, name: provider.name, getStreams: async () => [] });
+  return Object.freeze({ id: provider.id, name: provider.name, getStreams: (query: StreamQuery, signal: AbortSignal): Promise<StreamResult[]> => ids.has(query.id) ? provider.getStreams(query, signal) : Promise.resolve([]) });
 }
 
 export class ExperimentalRealDebridAddonRuntimeError extends Error {
@@ -64,6 +73,7 @@ export function createExperimentalRealDebridAddonRuntime(
     wiringConfig(config),
     dependencies.wiring,
   );
-  manager.register(provider);
-  return Object.freeze({ provider, providerManager: manager });
+  const guardedProvider = authorizedProvider(provider, config.enabled === true ? config.authorizedImdbIds : undefined);
+  manager.register(guardedProvider);
+  return Object.freeze({ provider: guardedProvider, providerManager: manager });
 }
