@@ -35,12 +35,16 @@ services:
     environment:
       EXPERIMENTAL_ADDON_HTTP_HOST: "0.0.0.0"
       EXPERIMENTAL_ADDON_HTTP_PORT: "7007"
+      REAL_DEBRID_TOKEN_FILE: /run/secrets/real_debrid_token
+      EXPERIMENTAL_ADDON_CANDIDATES_FILE: /run/secrets/authorized_candidates.json
     read_only: true
     user: "1000:1000"
     init: true
     restart: "no"
     volumes:
       - ../..:/workspace:ro
+      - ${REAL_DEBRID_TOKEN_FILE_HOST:?set only in a disposable local override}:/run/secrets/real_debrid_token:ro
+      - ${EXPERIMENTAL_ADDON_CANDIDATES_FILE_HOST:?set only in a disposable local override}:/run/secrets/authorized_candidates.json:ro
     tmpfs:
       - /tmp:rw,noexec,nosuid,nodev,size=16m,mode=0700,uid=1000,gid=1000
     cap_drop: [ALL]
