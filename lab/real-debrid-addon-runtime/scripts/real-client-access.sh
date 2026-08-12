@@ -68,6 +68,11 @@ validate_local_json() {
 attempt=0
 while ! validate_local_json health; do attempt=$((attempt + 1)); [ "$attempt" -lt 5 ] || { main_status=1; exit 1; }; sleep 1; done
 validate_local_json manifest.json || { main_status=1; exit 1; }
+target_imdb=$(grep -o '"imdbId"[[:space:]]*:[[:space:]]*"[^"]*"' "$candidates" 2>/dev/null | head -n 1 | cut -d'"' -f4 || :)
+target_type=$(grep -o '"type"[[:space:]]*:[[:space:]]*"[^"]*"' "$candidates" 2>/dev/null | head -n 1 | cut -d'"' -f4 || :)
+[ -n "$target_imdb" ] || target_imdb=$(printf '%s\n' "${EXPERIMENTAL_ADDON_AUTHORIZED_IMDB_IDS:-}" | cut -d',' -f1 | tr -d ' ')
+[ -n "$target_type" ] || target_type=movie
+validate_local_json "stream/${target_type}/${target_imdb}.json" || { main_status=1; exit 1; }
 printf '%s\n' CLIENT_ACCESS_READY REAL_DEBRID_MODE_ENABLED "accessMode: ${EXPERIMENTAL_ADDON_CLIENT_ACCESS_MODE:-LOOPBACK}" "hostPortPresent: SIM" "manifestPath: /manifest.json"
 access_timeout=${EXPERIMENTAL_ADDON_CLIENT_ACCESS_TIMEOUT_SECONDS:-0}
 case "$access_timeout" in ''|*[!0-9]*) invalid;; esac

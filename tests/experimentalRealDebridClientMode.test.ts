@@ -315,7 +315,7 @@ describe("experimental Real-Debrid client mode", () => {
       fake("stat", "#!/bin/sh\ncase \"$*\" in *%a*) case \"$*\" in *override*) echo 600;; *) echo 400;; esac;; *%u*|*%g*) echo 1000;; *) exit 1;; esac\n");
       fake("ss", "#!/bin/sh\nexit 0\n"); fake("ip", "#!/bin/sh\nexit 0\n"); fake("sleep", "#!/bin/sh\nexit 0\n");
       fake("docker", "#!/bin/sh\ncase \"$*\" in *' config'*) echo COMPOSE_CONFIG >> \"$FAKE_EVENTS\";; *' up '*) echo COMPOSE_UP >> \"$FAKE_EVENTS\";; *' down '*) echo COMPOSE_DOWN >> \"$FAKE_EVENTS\";; esac\nexit 0\n");
-      fake("curl", "#!/bin/sh\nh= b=; while [ $# -gt 0 ]; do case \"$1\" in --dump-header) h=$2; shift 2;; --output) b=$2; shift 2;; --write-out|--proto|--connect-timeout|--max-time|--max-redirs|--request) shift 2;; *) shift;; esac; done; printf 'HTTP/1.1 200 OK\\r\\nContent-Type: application/json\\r\\n\\r\\n' > \"$h\"; printf '{}' > \"$b\"; n=$(cat \"$FAKE_EVENTS\" 2>/dev/null | wc -l); [ \"$n\" -eq 2 ] && echo HEALTH_VALIDATED >> \"$FAKE_EVENTS\" || echo MANIFEST_VALIDATED >> \"$FAKE_EVENTS\"; printf '200\\napplication/json\\n'\n");
+      fake("curl", "#!/bin/sh\nh= b=; while [ $# -gt 0 ]; do case \"$1\" in --dump-header) h=$2; shift 2;; --output) b=$2; shift 2;; --write-out|--proto|--connect-timeout|--max-time|--max-redirs|--request) shift 2;; *) shift;; esac; done; printf 'HTTP/1.1 200 OK\\r\\nContent-Type: application/json\\r\\n\\r\\n' > \"$h\"; printf '{}' > \"$b\"; n=$(cat \"$FAKE_EVENTS\" 2>/dev/null | wc -l); [ \"$n\" -eq 2 ] && echo HEALTH_VALIDATED >> \"$FAKE_EVENTS\" || { [ \"$n\" -eq 3 ] && echo MANIFEST_VALIDATED >> \"$FAKE_EVENTS\" || echo STREAM_VALIDATED >> \"$FAKE_EVENTS\"; }; printf '200\\napplication/json\\n'\n");
       const shell = process.platform === "win32"
         ? "C:\\Program Files\\Git\\bin\\bash.exe"
         : "sh";
@@ -383,13 +383,14 @@ describe("experimental Real-Debrid client mode", () => {
         result.stdout,
         /SYNTHETIC|magnet|safe\/video|Authorization/i
       );
-      assert.deepEqual(readFileSync(events, "utf8").trim().split("\n"), ["COMPOSE_CONFIG", "COMPOSE_UP", "HEALTH_VALIDATED", "MANIFEST_VALIDATED", "COMPOSE_DOWN"]);
+      assert.deepEqual(readFileSync(events, "utf8").trim().split("\n"), ["COMPOSE_CONFIG", "COMPOSE_UP", "HEALTH_VALIDATED", "MANIFEST_VALIDATED", "STREAM_VALIDATED", "COMPOSE_DOWN"]);
     } finally { rmSync(root, { recursive: true, force: true }); }
   });
 
   for (const [scenario, expectedStatus, expectedEvents] of [
     ["health-timeout", 1, ["COMPOSE_CONFIG", "COMPOSE_UP", "HEALTH", "HEALTH", "HEALTH", "HEALTH", "HEALTH", "COMPOSE_DOWN"]],
     ["manifest-invalid", 1, ["COMPOSE_CONFIG", "COMPOSE_UP", "HEALTH", "MANIFEST", "COMPOSE_DOWN"]],
+    ["stream-invalid", 1, ["COMPOSE_CONFIG", "COMPOSE_UP", "HEALTH", "MANIFEST", "STREAM", "COMPOSE_DOWN"]],
     ["compose-up-failed", 2, ["COMPOSE_CONFIG", "COMPOSE_UP", "COMPOSE_DOWN"]],
     ["compose-config-invalid", 2, ["COMPOSE_CONFIG"]],
     ["docker-unavailable", 2, ["COMPOSE_CONFIG"]],
@@ -406,7 +407,7 @@ describe("experimental Real-Debrid client mode", () => {
         fake("stat", "#!/bin/sh\ncase \"$*\" in *%a*) case \"$*\" in *override*) echo 600;; *) echo 400;; esac;; *%u*|*%g*) echo 1000;; *) exit 1;; esac\n");
         fake("ss", "#!/bin/sh\nexit 0\n"); fake("sleep", "#!/bin/sh\nexit 0\n");
         fake("docker", "#!/bin/sh\ncase \"$*\" in *' config'*) echo COMPOSE_CONFIG >> \"$FAKE_EVENTS\"; case \"$FAKE_SCENARIO\" in compose-config-invalid|docker-unavailable) exit 1;; esac;; *' up '*) echo COMPOSE_UP >> \"$FAKE_EVENTS\"; [ \"$FAKE_SCENARIO\" = compose-up-failed ] && exit 1;; *' down '*) echo COMPOSE_DOWN >> \"$FAKE_EVENTS\";; esac\nexit 0\n");
-        fake("curl", "#!/bin/sh\nurl= out=; while [ $# -gt 0 ]; do case \"$1\" in --dump-header) shift 2;; --output) out=$2; shift 2;; --write-out|--proto|--connect-timeout|--max-time|--max-redirs|--request) shift 2;; *) url=$1; shift;; esac; done\ncase \"$url\" in */health) echo HEALTH >> \"$FAKE_EVENTS\"; case \"$FAKE_SCENARIO\" in health-timeout|curl-unavailable) exit 1;; esac;; */manifest.json) echo MANIFEST >> \"$FAKE_EVENTS\"; [ \"$FAKE_SCENARIO\" = manifest-invalid ] && exit 1;; *) exit 1;; esac\nprintf '{}' > \"$out\"; printf '200\\napplication/json\\n'\n");
+        fake("curl", "#!/bin/sh\nurl= out=; while [ $# -gt 0 ]; do case \"$1\" in --dump-header) shift 2;; --output) out=$2; shift 2;; --write-out|--proto|--connect-timeout|--max-time|--max-redirs|--request) shift 2;; *) url=$1; shift;; esac; done\ncase \"$url\" in */health) echo HEALTH >> \"$FAKE_EVENTS\"; case \"$FAKE_SCENARIO\" in health-timeout|curl-unavailable) exit 1;; esac;; */manifest.json) echo MANIFEST >> \"$FAKE_EVENTS\"; [ \"$FAKE_SCENARIO\" = manifest-invalid ] && exit 1;; */stream/*|*/tt*) echo STREAM >> \"$FAKE_EVENTS\"; [ \"$FAKE_SCENARIO\" = stream-invalid ] && exit 1;; *) exit 1;; esac\nprintf '{}' > \"$out\"; printf '200\\napplication/json\\n'\n");
         const shell = process.platform === "win32" ? "C:\\Program Files\\Git\\bin\\bash.exe" : "sh";
         const toShellPath = (value: string): string => process.platform === "win32" ? `/${value.replaceAll("\\", "/").charAt(0).toLowerCase()}${value.replaceAll("\\", "/").slice(2)}` : value;
         const shellBin = toShellPath(bin);
@@ -444,14 +445,14 @@ describe("experimental Real-Debrid client mode", () => {
         fake("ip", "#!/bin/sh\nprintf '%s\\n' \"$FAKE_INTERFACES\"\n");
         fake("test", "#!/bin/sh\n[ \"$FAKE_BRIDGE\" != 1 ]\n");
         fake("docker", "#!/bin/sh\ncase \"$*\" in *' config'*) echo COMPOSE_CONFIG >> \"$FAKE_EVENTS\";; *' up '*) echo COMPOSE_UP >> \"$FAKE_EVENTS\";; *' down '*) echo COMPOSE_DOWN >> \"$FAKE_EVENTS\";; esac\nexit 0\n");
-        fake("curl", "#!/bin/sh\nurl= out=; while [ $# -gt 0 ]; do case \"$1\" in --dump-header) shift 2;; --output) out=$2; shift 2;; --write-out|--proto|--connect-timeout|--max-time|--max-redirs|--request) shift 2;; *) url=$1; shift;; esac; done\ncase \"$url\" in */health) echo HEALTH_VALIDATED >> \"$FAKE_EVENTS\";; */manifest.json) echo MANIFEST_VALIDATED >> \"$FAKE_EVENTS\";; *) exit 1;; esac\nprintf '{}' > \"$out\"; printf '200\\napplication/json\\n'\n");
+        fake("curl", "#!/bin/sh\nurl= out=; while [ $# -gt 0 ]; do case \"$1\" in --dump-header) shift 2;; --output) out=$2; shift 2;; --write-out|--proto|--connect-timeout|--max-time|--max-redirs|--request) shift 2;; *) url=$1; shift;; esac; done\ncase \"$url\" in */health) echo HEALTH_VALIDATED >> \"$FAKE_EVENTS\";; */manifest.json) echo MANIFEST_VALIDATED >> \"$FAKE_EVENTS\";; */stream/*|*/tt*) echo STREAM_VALIDATED >> \"$FAKE_EVENTS\";; *) exit 1;; esac\nprintf '{}' > \"$out\"; printf '200\\napplication/json\\n'\n");
         const shell = process.platform === "win32" ? "C:\\Program Files\\Git\\bin\\bash.exe" : "sh";
         const toShellPath = (value: string): string => process.platform === "win32" ? `/${value.replaceAll("\\", "/").charAt(0).toLowerCase()}${value.replaceAll("\\", "/").slice(2)}` : value;
         const shellBin = toShellPath(bin);
         const command = ['cp() { "$FAKE_BIN/cp" "$@"; }', 'chown() { "$FAKE_BIN/chown" "$@"; }', 'chmod() { "$FAKE_BIN/chmod" "$@"; }', 'stat() { "$FAKE_BIN/stat" "$@"; }', 'ip() { "$FAKE_BIN/ip" "$@"; }', 'test() { "$FAKE_BIN/test" "$@"; }', 'docker() { "$FAKE_BIN/docker" "$@"; }', 'curl() { "$FAKE_BIN/curl" "$@"; }', 'ss() { "$FAKE_BIN/ss" "$@"; }', 'sleep() { "$FAKE_BIN/sleep" "$@"; }', '. lab/real-debrid-addon-runtime/scripts/real-client-access.sh'].join("\n");
         const result = spawnSync(shell, ["-c", command], { cwd: process.cwd(), encoding: "utf8", env: { ...process.env, PATH: process.platform === "win32" ? `${shellBin}:/usr/bin:/bin` : `${bin}:${process.env.PATH ?? ""}`, FAKE_BIN: shellBin, FAKE_EVENTS: toShellPath(events), FAKE_INTERFACES: interfaces, FAKE_BRIDGE: bridge, EXPERIMENTAL_ADDON_CLIENT_ACCESS_AUTHORIZED: "true", EXPERIMENTAL_ADDON_LAN_ACCESS_AUTHORIZED: "true", EXPERIMENTAL_ADDON_REAL_DEBRID_ENABLED: "true", EXPERIMENTAL_ADDON_REAL_DEBRID_AUTHORIZED: "true", EXPERIMENTAL_ADDON_CLIENT_ACCESS_MODE: "LAN", EXPERIMENTAL_ADDON_CLIENT_ACCESS_HOST: "192.168.100.101", EXPERIMENTAL_ADDON_CLIENT_ACCESS_PORT: "17007", EXPERIMENTAL_ADDON_CLIENT_ACCESS_TIMEOUT_SECONDS: "1", EXPERIMENTAL_ADDON_AUTHORIZED_IMDB_IDS: "tt0000001", EXPERIMENTAL_ADDON_REAL_DEBRID_TOKEN_FILE: toShellPath(token), EXPERIMENTAL_ADDON_CANDIDATES_FILE: toShellPath(candidates) } });
         assert.equal(result.status, expectedStatus); assert.equal(result.signal, null); assert.equal(result.stderr, ""); assert.doesNotMatch(result.stdout, /192\.168|eth0|docker|br-|veth|\/sys|SYNTHETIC|magnet|Authorization/i);
-        if (expectedStatus === 0) assert.deepEqual(readFileSync(events, "utf8").trim().split("\n"), ["COMPOSE_CONFIG", "COMPOSE_UP", "HEALTH_VALIDATED", "MANIFEST_VALIDATED", "COMPOSE_DOWN"]);
+        if (expectedStatus === 0) assert.deepEqual(readFileSync(events, "utf8").trim().split("\n"), ["COMPOSE_CONFIG", "COMPOSE_UP", "HEALTH_VALIDATED", "MANIFEST_VALIDATED", "STREAM_VALIDATED", "COMPOSE_DOWN"]);
         else { assert.equal(result.stdout, "CONFIGURATION_INVALID\n"); assert.equal(readFileSync(events, "utf8"), ""); }
       } finally { rmSync(root, { recursive: true, force: true }); }
     });
