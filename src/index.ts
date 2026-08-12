@@ -24,6 +24,7 @@ export type { Parser } from "./types/parser.js";
 export { BluDVClient } from "./providers/bludv/bludvClient.js";
 export { BluDVParser } from "./providers/bludv/bludvParser.js";
 export { BluDVProvider } from "./providers/bludv/bludvProvider.js";
+export { createRealDebridBluDVProvider } from "./providers/bludv/realDebridBluDVWiring.js";
 export type { BluDVItem, BluDVRawResponse, BluDVRequest, BluDVResponse } from "./providers/bludv/bludvTypes.js";
 
 export function main(): void {
