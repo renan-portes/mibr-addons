@@ -1,4 +1,7 @@
 import { HttpDataClient } from "../clients/http/httpDataClient.js";
+import { BluDVClient } from "../providers/bludv/bludvClient.js";
+import { BluDVParser } from "../providers/bludv/bludvParser.js";
+import { BluDVProvider } from "../providers/bludv/bludvProvider.js";
 import { InternetArchiveDataClient } from "../providers/internetArchive/internetArchiveDataClient.js";
 import { InternetArchiveParser } from "../providers/internetArchive/internetArchiveParser.js";
 import { InternetArchiveProvider } from "../providers/internetArchive/internetArchiveProvider.js";
@@ -14,6 +17,13 @@ export function createDefaultProviderManager(options?: ProviderManagerOptions): 
   const iaClient = new InternetArchiveDataClient(httpClient);
   const iaParser = new InternetArchiveParser();
   manager.register(new InternetArchiveProvider(iaClient, iaParser));
+
+  const bludvBaseUrl = process.env.BLUDV_BASE_URL;
+  if (bludvBaseUrl) {
+    const bludvClient = new BluDVClient(httpClient, { baseUrl: bludvBaseUrl });
+    const bludvParser = new BluDVParser();
+    manager.register(new BluDVProvider({ client: bludvClient, parser: bludvParser }));
+  }
 
   return manager;
 }

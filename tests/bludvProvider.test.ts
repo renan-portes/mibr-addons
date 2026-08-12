@@ -6,6 +6,7 @@ import { BluDVClient } from "../src/providers/bludv/bludvClient.js";
 import { BluDVParser } from "../src/providers/bludv/bludvParser.js";
 import { BluDVProvider } from "../src/providers/bludv/bludvProvider.js";
 import type { BluDVRawResponse, BluDVRequest } from "../src/providers/bludv/bludvTypes.js";
+import type { TorrentCandidateResolver } from "../src/providers/torrentIndexer/torrentCandidateResolver.js";
 import { ProviderManager } from "../src/services/providerManager.js";
 import { StreamService } from "../src/services/streamService.js";
 import type { DataClient } from "../src/types/dataClient.js";
@@ -138,6 +139,58 @@ describe("BluDV Provider", () => {
       const streams = await service.getStreams("movie", "tt0068646");
 
       assert.equal(streams.length, 0);
+    });
+
+    it("resolves BluDV torrent candidates via Real-Debrid resolver and delivers playable HTTP stream to StreamService", async () => {
+      const content = await readFile(FIXTURE_URL, "utf8");
+      const json = JSON.parse(content);
+      const mockClient = new MockClient(json);
+
+      const mockResolver: TorrentCandidateResolver = {
+        async resolve(request) {
+          if (request.infoHash === "0123456789abcdef0123456789abcdef01234567") {
+            return {
+              url: "https://real-debrid.example.com/download/godfather.mp4",
+              source: "authorized-resolver",
+            };
+          }
+          return null;
+        },
+      };
+
+      const provider = new BluDVProvider({ client: mockClient, resolver: mockResolver });
+      const manager = new ProviderManager();
+      manager.register(provider);
+
+      const service = new StreamService(manager);
+      const streams = await service.getStreams("movie", "tt0068646");
+
+      assert.equal(streams.length, 1);
+      assert.equal(streams[0]?.name, "BluDV Provider (Real-Debrid)");
+      assert.equal(streams[0]?.url, "https://real-debrid.example.com/download/godfather.mp4");
+      assert.match(streams[0]?.title ?? "", /O Poderoso Chefão/);
+    });
+
+    it("handles candidate resolver failure gracefully without crashing", async () => {
+      const content = await readFile(FIXTURE_URL, "utf8");
+      const json = JSON.parse(content);
+      const mockClient = new MockClient(json);
+
+      const failingResolver: TorrentCandidateResolver = {
+        async resolve() {
+          throw new Error("Debrid API temporary error");
+        },
+      };
+
+      const provider = new BluDVProvider({ client: mockClient, resolver: failingResolver });
+      const streams = await provider.getStreams(
+        { type: "movie", id: "tt0068646" },
+        new AbortController().signal,
+      );
+
+      assert.equal(streams.length, 1);
+      assert.equal(streams[0]?.name, "BluDV Provider");
+      assert.equal(streams[0]?.url, "magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567&dn=Godfather");
     });
   });
 });
