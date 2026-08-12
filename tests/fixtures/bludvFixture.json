@@ -1,0 +1,41 @@
+{
+  "results": [
+    {
+      "title": "O Poderoso Chefão (1972) 1080p Dual Áudio",
+      "imdb": "tt0068646",
+      "audio": ["Português", "Inglês"],
+      "magnet": "magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567&dn=Godfather",
+      "info_hash": "0123456789abcdef0123456789abcdef01234567",
+      "trackers": ["udp://tracker.opentrackr.org:1337/announce"],
+      "size": "2.5 GB",
+      "files": [
+        {
+          "path": "Godfather.1972.1080p.mkv",
+          "size": "2.5 GB"
+        }
+      ],
+      "peers": {
+        "seeders": 150,
+        "leechers": 10
+      }
+    },
+    {
+      "title": "O Poderoso Chefão II (1974) 720p Dublado",
+      "imdb": "tt0071562",
+      "audio": ["Português"],
+      "info_hash": "abcdef0123456789abcdef0123456789abcdef01",
+      "size": "1.8 GB",
+      "files": [
+        {
+          "path": "Godfather2.720p.mkv",
+          "size": "1.8 GB"
+        }
+      ],
+      "peers": {
+        "seeders": 42,
+        "leechers": 3
+      }
+    }
+  ],
+  "count": 2
+}
