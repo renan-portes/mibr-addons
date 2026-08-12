@@ -10,6 +10,7 @@ function sendJson(
   response.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
     "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "*",
   });
   response.end(JSON.stringify(body));
@@ -20,6 +21,17 @@ export function createAddonServer(): Server {
     void (async () => {
       try {
         const method = request.method ?? "GET";
+
+        if (method === "OPTIONS") {
+          response.writeHead(204, {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+          });
+          response.end();
+          return;
+        }
+
         const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
         const result = await routeRequest(method, pathname);
 
