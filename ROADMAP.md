@@ -7,7 +7,7 @@
 
 - [x] Runtime-validate controlled LAN client access on `0214d8d`: normalized `eth0`, one explicit private TCP publication, health and experimental manifest reachable from a second LAN device, Docker bridges rejected, expected interrupt code `130`, and complete cleanup without firewall, WAN, DNS, tunnel, addon installation, `/stream`, or playback.
 - [x] Runtime-validate controlled LOOPBACK startup of the separately authorized experimental Real-Debrid client mode on `dd7c9a6`: file-only token, health and experimental manifest passed; manual interruption returned `130` with complete cleanup and no `/stream` query.
-- [ ] Perform one controlled `/stream` request with one legally authorized candidate, one exact allowlisted IMDb ID, one coherent magnet/info-hash pair, no discovery, no non-idempotent retry, no playback, and mandatory cleanup.
+- [x] Perform one controlled `/stream` request with one legally authorized candidate, one exact allowlisted IMDb ID, one coherent magnet/info-hash pair, no discovery, no non-idempotent retry, no playback, and mandatory cleanup.
 
 - [ ] Start the isolated Real-Debrid addon runtime lab on the docker-server and validate its experimental manifest before any Stremio or Nuvio installation.
 

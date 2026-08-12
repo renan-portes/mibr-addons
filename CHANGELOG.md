@@ -20,6 +20,7 @@
 
 ### Added
 
+- Validação defensiva do endpoint `/stream/:type/:id.json` no launcher `real-client-access.sh` para o candidato autorizado.
 - Arquitetura assíncrona de providers com contratos separados para client, parser e provider.
 - Modelo interno de streams e adaptador de saída para o protocolo Stremio.
 - Pipeline local de demonstração com fixtures e testes isolados.
