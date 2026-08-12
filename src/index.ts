@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { createAddonServer } from "./server/httpServer.js";
-import { getPort } from "./utils/env.js";
+import { getPort, loadEnvFile } from "./utils/env.js";
 
 export { getManifest } from "./addon/manifest.js";
 export {
@@ -28,6 +28,7 @@ export { createRealDebridBluDVProvider } from "./providers/bludv/realDebridBluDV
 export type { BluDVItem, BluDVRawResponse, BluDVRequest, BluDVResponse } from "./providers/bludv/bludvTypes.js";
 
 export function main(): void {
+  loadEnvFile();
   const port = getPort();
   const server = createAddonServer();
 
