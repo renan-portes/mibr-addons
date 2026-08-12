@@ -20,6 +20,7 @@
 
 ### Added
 
+- Integração do `BluDVProvider` com o `RealDebridCandidateResolver` (`realDebridBluDVWiring.ts`) para resolução de streams debrid.
 - Provider e parser BluDV (`BluDVProvider`, `BluDVClient`, `BluDVParser`) com fixtures sintéticas e suíte de testes isolados.
 - Validação defensiva do endpoint `/stream/:type/:id.json` no launcher `real-client-access.sh` para o candidato autorizado.
 - Arquitetura assíncrona de providers com contratos separados para client, parser e provider.

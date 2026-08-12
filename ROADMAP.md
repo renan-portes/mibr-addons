@@ -53,6 +53,7 @@
 - [x] Wiring interno opt-in do resolver Real-Debrid para o `TorrentIndexerProvider` (sem bootstrap ou configuração operacional; desativado por padrão)
 - [ ] Configuração operacional isolada e teste do addon com autorização explícita
 - [x] BluDV
+- [x] Conexão do `BluDVProvider` com o `RealDebridCandidateResolver`
 - [ ] Torrentio
 - [ ] Outros providers externos
 
