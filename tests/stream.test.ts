@@ -13,7 +13,7 @@ describe("MockProvider", () => {
     );
 
     assert.equal(streams.length, 2);
-    assert.match(streams[0]?.url ?? "", /tt1234567$/);
+    assert.match(streams[0]?.url ?? "", /BigBuckBunny.mp4$/);
   });
 });
 
