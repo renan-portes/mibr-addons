@@ -82,6 +82,15 @@ describe("BluDV Provider", () => {
       assert.equal(requestedUrl, "https://indexer.example.com/indexers/bludv?imdb=tt0068646&limit=5");
     });
 
+    it("supports mock mode for local testing without network", async () => {
+      const fakeHttpClient = {} as HttpDataClient;
+      const client = new BluDVClient(fakeHttpClient, { baseUrl: "mock" });
+      const result = await client.fetch({ imdb: "tt0068646" }, new AbortController().signal);
+      assert.equal(typeof result, "object");
+      assert.notEqual(result, null);
+      assert.equal(Array.isArray((result as { results: unknown[] }).results), true);
+    });
+
     it("rejects invalid base URL", () => {
       const fakeHttpClient = {} as HttpDataClient;
       assert.throws(() => new BluDVClient(fakeHttpClient, { baseUrl: "invalid-url" }));

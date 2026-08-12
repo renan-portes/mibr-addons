@@ -8,7 +8,12 @@ export interface BluDVClientOptions {
 }
 
 function normalizeBaseUrl(value: string | URL): URL {
-  const url = new URL(value.toString());
+  const raw = value.toString().trim();
+  if (raw === "mock" || raw === "http://mock" || raw === "https://mock") {
+    return new URL("http://mock.invalid/");
+  }
+
+  const url = new URL(raw);
 
   if (
     (url.protocol !== "http:" && url.protocol !== "https:") ||
@@ -27,16 +32,39 @@ function normalizeBaseUrl(value: string | URL): URL {
 export class BluDVClient implements DataClient<BluDVRequest, BluDVRawResponse> {
   readonly indexerName: string;
   private readonly baseUrl: URL;
+  private readonly isMockMode: boolean;
 
   constructor(
     private readonly httpClient: HttpDataClient,
     options: BluDVClientOptions,
   ) {
+    const raw = options.baseUrl.toString().trim().toLowerCase();
+    this.isMockMode = raw === "mock" || raw === "http://mock" || raw === "https://mock" || raw === "http://mock.invalid/";
     this.baseUrl = normalizeBaseUrl(options.baseUrl);
     this.indexerName = options.indexerName?.trim() || "bludv";
   }
 
   async fetch(request: BluDVRequest, signal: AbortSignal): Promise<BluDVRawResponse> {
+    if (this.isMockMode) {
+      const imdbId = request.imdb || "tt0068646";
+      return {
+        results: [
+          {
+            title: "BluDV | O Poderoso Chefão (1972) 1080p Dual Áudio",
+            imdb: imdbId,
+            audio: ["Português", "Inglês"],
+            magnet: "magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567&dn=Godfather",
+            info_hash: "0123456789abcdef0123456789abcdef01234567",
+            trackers: ["udp://tracker.opentrackr.org:1337/announce"],
+            size: "2.5 GB",
+            files: [{ path: "Godfather.1972.1080p.mkv", size: "2.5 GB" }],
+            peers: { seeders: 150, leechers: 10 },
+          },
+        ],
+        count: 1,
+      };
+    }
+
     const url = new URL(`indexers/${encodeURIComponent(this.indexerName)}`, this.baseUrl);
 
     if (request.imdb !== undefined) {
