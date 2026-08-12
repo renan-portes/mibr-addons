@@ -82,6 +82,10 @@ describe("http server", () => {
   it("responds to HTTP requests", async () => {
     const { port } = getServerAddress(server);
 
+    const optionsResponse = await fetch(`http://127.0.0.1:${port}/manifest.json`, { method: "OPTIONS" });
+    assert.equal(optionsResponse.status, 204);
+    assert.equal(optionsResponse.headers.get("access-control-allow-origin"), "*");
+
     const manifestResponse = await fetch(`http://127.0.0.1:${port}/manifest.json`);
     assert.equal(manifestResponse.status, 200);
     assert.equal(manifestResponse.headers.get("content-type"), "application/json; charset=utf-8");
