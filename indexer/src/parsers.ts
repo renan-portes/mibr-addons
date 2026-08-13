@@ -88,10 +88,11 @@ export function extractSeeders(text: string): number | undefined {
 export function extractLinks(html: string, hostContains: string, maxLinks = 8): string[] {
   const seen = new Set<string>();
   const results: string[] = [];
-  const re = /href="(https?:\/\/[^"]+)"/gi;
+  const re = /href="(https?:\/\/[^"#]+)"/gi;
+  const IGNORE_PATTERNS = /\/(category|page|tag|feed|wp-content|wp-includes|comments)\/|\?(s|feed)=|\/(contato|dmca|pedidos|termos|privacidade|politica-de-privacidade)\/?$/i;
   for (const match of html.matchAll(re)) {
     const href = match[1];
-    if (href.includes(hostContains) && !seen.has(href)) {
+    if (href.includes(hostContains) && !IGNORE_PATTERNS.test(href) && !seen.has(href)) {
       seen.add(href);
       results.push(href);
       if (results.length >= maxLinks) break;
