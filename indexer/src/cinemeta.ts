@@ -35,13 +35,25 @@ export async function resolveImdbTitle(
 
       const movie = data.movie_results?.[0];
       const tv = data.tv_results?.[0];
-      const match = movie ?? tv;
 
-      if (match) {
-        const title = "title" in match ? match.title : match.name;
-        const originalTitle = "original_title" in match ? match.original_title : match.original_name;
-        const dateStr = "release_date" in match ? match.release_date : match.first_air_date;
-        const year = dateStr ? Number(dateStr.slice(0, 4)) : undefined;
+      if (movie) {
+        const title = movie.title;
+        const originalTitle = movie.original_title;
+        const year = movie.release_date ? Number(movie.release_date.slice(0, 4)) : undefined;
+
+        if (title) {
+          const res: ResolvedTitle = {
+            title,
+            ...(originalTitle && originalTitle !== title ? { originalTitle } : {}),
+            ...(year && !Number.isNaN(year) ? { year } : {}),
+          };
+          cache.set(cleanId, res);
+          return res;
+        }
+      } else if (tv) {
+        const title = tv.name;
+        const originalTitle = tv.original_name;
+        const year = tv.first_air_date ? Number(tv.first_air_date.slice(0, 4)) : undefined;
 
         if (title) {
           const res: ResolvedTitle = {
