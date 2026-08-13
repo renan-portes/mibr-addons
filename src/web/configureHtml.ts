@@ -1,8 +1,8 @@
 import { manifest } from "../addon/manifest.js";
 
 /**
- * Configurator HTML page renderer.
- * Serves an interactive web configuration UI for MIBR Addons.
+ * MIBR Addons (Made in Brasil) — Configurator HTML page renderer.
+ * Serves an interactive web configuration UI focused on PT-BR dubbed content.
  */
 
 export function renderConfigureHtml(hostUrl: string): string {
@@ -13,21 +13,22 @@ export function renderConfigureHtml(hostUrl: string): string {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MIBR Addons — Configuração</title>
+  <title>MIBR Addons 🇧🇷 — Configuração (Made in Brasil)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg: #0b0e14;
-      --card-bg: #151a23;
-      --card-border: #222936;
-      --accent: #00f0ff;
-      --accent-hover: #33f3ff;
-      --purple: #8a2be2;
-      --text: #f0f4f8;
-      --text-muted: #8b9bb4;
-      --input-bg: #0f131a;
+      --bg: #080c14;
+      --card-bg: #111724;
+      --card-border: #1d2636;
+      --accent: #00e676;
+      --accent-hover: #33eb91;
+      --gold: #ffd700;
+      --azure: #00b0ff;
+      --text: #f0f6fc;
+      --text-muted: #8b9eb7;
+      --input-bg: #0b0f19;
       --success: #10b981;
     }
 
@@ -42,69 +43,79 @@ export function renderConfigureHtml(hostUrl: string): string {
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 2rem 1rem;
+      padding: 2.5rem 1rem;
     }
 
     .container {
       width: 100%;
-      max-width: 640px;
+      max-width: 680px;
       margin: 0 auto;
     }
 
     header {
       text-align: center;
-      margin-bottom: 2rem;
+      margin-bottom: 2.2rem;
+    }
+
+    .logo-box {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      margin-bottom: 0.4rem;
     }
 
     .logo {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 2rem;
+      font-size: 2.2rem;
       font-weight: 800;
-      letter-spacing: -0.02em;
-      background: linear-gradient(135deg, var(--accent), var(--purple));
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, var(--accent), var(--gold), var(--azure));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      margin-bottom: 0.5rem;
+    }
+
+    .flag-badge {
+      font-size: 1.4rem;
     }
 
     .badge {
       display: inline-block;
-      padding: 0.25rem 0.6rem;
+      padding: 0.25rem 0.65rem;
       font-size: 0.75rem;
-      font-weight: 600;
+      font-weight: 700;
       border-radius: 9999px;
-      background: rgba(0, 240, 255, 0.1);
+      background: rgba(0, 230, 118, 0.12);
       color: var(--accent);
-      border: 1px solid rgba(0, 240, 255, 0.2);
+      border: 1px solid rgba(0, 230, 118, 0.25);
     }
 
     .subtitle {
       color: var(--text-muted);
       font-size: 0.95rem;
+      margin-top: 0.4rem;
     }
 
     .card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
-      border-radius: 1rem;
+      border-radius: 1.1rem;
       padding: 1.75rem;
       margin-bottom: 1.5rem;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      box-shadow: 0 12px 35px rgba(0,0,0,0.4);
     }
 
     .card-title {
       font-size: 1.15rem;
       font-weight: 700;
-      margin-bottom: 1rem;
+      margin-bottom: 1.1rem;
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.6rem;
+      color: var(--text);
     }
 
     .form-group {
-      margin-bottom: 1.25rem;
+      margin-bottom: 1.35rem;
     }
 
     .form-group:last-child {
@@ -122,7 +133,7 @@ export function renderConfigureHtml(hostUrl: string): string {
     .help-text {
       font-size: 0.8rem;
       color: var(--text-muted);
-      margin-top: 0.35rem;
+      margin-top: 0.4rem;
     }
 
     .input-wrapper {
@@ -131,15 +142,15 @@ export function renderConfigureHtml(hostUrl: string): string {
 
     input[type="text"], input[type="password"], select {
       width: 100%;
-      padding: 0.75rem 1rem;
+      padding: 0.8rem 1rem;
       padding-right: 6.5rem;
       background: var(--input-bg);
       border: 1px solid var(--card-border);
-      border-radius: 0.5rem;
+      border-radius: 0.6rem;
       color: var(--text);
       font-size: 0.95rem;
       outline: none;
-      transition: border-color 0.2s;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
 
     select {
@@ -148,6 +159,7 @@ export function renderConfigureHtml(hostUrl: string): string {
 
     input[type="text"]:focus, input[type="password"]:focus, select:focus {
       border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0, 230, 118, 0.15);
     }
 
     .toggle-btn {
@@ -155,46 +167,47 @@ export function renderConfigureHtml(hostUrl: string): string {
       right: 0.5rem;
       top: 50%;
       transform: translateY(-50%);
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba(255, 255, 255, 0.06);
       border: 1px solid var(--card-border);
-      border-radius: 0.35rem;
+      border-radius: 0.4rem;
       color: var(--text);
       cursor: pointer;
       font-size: 0.8rem;
-      padding: 0.35rem 0.6rem;
+      padding: 0.4rem 0.7rem;
       transition: background 0.2s;
     }
 
     .toggle-btn:hover {
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.12);
     }
 
     .checkbox-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
       gap: 0.75rem;
     }
 
     .checkbox-card {
       display: flex;
       align-items: center;
-      gap: 0.6rem;
-      padding: 0.75rem 1rem;
+      gap: 0.65rem;
+      padding: 0.8rem 1rem;
       background: var(--input-bg);
       border: 1px solid var(--card-border);
-      border-radius: 0.5rem;
+      border-radius: 0.6rem;
       cursor: pointer;
       transition: border-color 0.2s, background 0.2s;
       user-select: none;
     }
 
     .checkbox-card:hover {
-      border-color: rgba(0, 240, 255, 0.4);
+      border-color: rgba(0, 230, 118, 0.4);
+      background: rgba(0, 230, 118, 0.03);
     }
 
     .checkbox-card input[type="checkbox"] {
-      width: 1.1rem;
-      height: 1.1rem;
+      width: 1.15rem;
+      height: 1.15rem;
       accent-color: var(--accent);
       cursor: pointer;
     }
@@ -207,7 +220,7 @@ export function renderConfigureHtml(hostUrl: string): string {
     .actions {
       display: flex;
       flex-direction: column;
-      gap: 0.75rem;
+      gap: 0.85rem;
       margin-top: 1.5rem;
     }
 
@@ -215,12 +228,12 @@ export function renderConfigureHtml(hostUrl: string): string {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 0.5rem;
+      gap: 0.6rem;
       width: 100%;
-      padding: 0.875rem 1.5rem;
-      font-size: 1rem;
+      padding: 0.95rem 1.5rem;
+      font-size: 1.05rem;
       font-weight: 700;
-      border-radius: 0.6rem;
+      border-radius: 0.7rem;
       text-decoration: none;
       cursor: pointer;
       transition: transform 0.15s, filter 0.2s;
@@ -228,9 +241,9 @@ export function renderConfigureHtml(hostUrl: string): string {
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, var(--accent), #00a8ff);
+      background: linear-gradient(135deg, var(--accent), #00b0ff);
       color: #040810;
-      box-shadow: 0 4px 15px rgba(0, 240, 255, 0.3);
+      box-shadow: 0 4px 20px rgba(0, 230, 118, 0.35);
     }
 
     .btn-primary:hover {
@@ -256,15 +269,15 @@ export function renderConfigureHtml(hostUrl: string): string {
       font-weight: 600;
       color: var(--success);
       margin-top: 0.5rem;
-      padding: 0.5rem;
-      background: rgba(16, 185, 129, 0.1);
-      border-radius: 0.4rem;
-      border: 1px solid rgba(16, 185, 129, 0.2);
+      padding: 0.6rem;
+      background: rgba(16, 185, 129, 0.12);
+      border-radius: 0.5rem;
+      border: 1px solid rgba(16, 185, 129, 0.25);
     }
 
     footer {
       text-align: center;
-      margin-top: 2rem;
+      margin-top: 2.5rem;
       font-size: 0.85rem;
       color: var(--text-muted);
     }
@@ -275,58 +288,80 @@ export function renderConfigureHtml(hostUrl: string): string {
 <body>
   <div class="container">
     <header>
-      <div class="logo">MIBR Addons</div>
-      <span class="badge">v${version} BR</span>
-      <p class="subtitle">Adicionador modular de torrents e streams em PT-BR para Stremio</p>
+      <div class="logo-box">
+        <span class="flag-badge">🇧🇷</span>
+        <div class="logo">MIBR Addons</div>
+        <span class="badge">v${version} BR</span>
+      </div>
+      <p class="subtitle">Agregador modular de torrents e streams 100% dublados em PT-BR (Made in Brasil)</p>
     </header>
 
     <!-- Debrid Configuration -->
     <div class="card">
       <h2 class="card-title">🔑 Serviço de Debrid</h2>
+      
       <div class="form-group">
-        <label for="rd-token">Token da API do Real-Debrid</label>
+        <label for="debrid-provider">Provedor Debrid</label>
+        <select id="debrid-provider" onchange="toggleDebridTokenField()">
+          <option value="realdebrid" selected>RealDebrid</option>
+          <option value="alldebrid">AllDebrid</option>
+          <option value="premiumize">Premiumize</option>
+          <option value="debridlink">DebridLink</option>
+          <option value="torbox">TorBox</option>
+          <option value="offcloud">Offcloud</option>
+          <option value="putio">Put.io</option>
+          <option value="none">Nenhum (Torrent / Stream Direto)</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="debrid-token-group">
+        <label for="debrid-token">Token / API Key do Debrid</label>
         <div class="input-wrapper">
-          <input type="password" id="rd-token" placeholder="Cole sua API Key do Real-Debrid..." autocomplete="off" />
+          <input type="password" id="debrid-token" placeholder="Cole sua API Key do serviço selecionado..." autocomplete="off" />
           <button type="button" class="toggle-btn" id="toggle-token-btn" onclick="toggleTokenVisibility()">👁️ Mostrar</button>
         </div>
-        <p class="help-text">Obtenha sua chave em <a href="https://real-debrid.com/apitoken" target="_blank" style="color:var(--accent);">real-debrid.com/apitoken</a></p>
+        <p class="help-text" id="debrid-help-link">Obtenha sua chave em <a href="https://real-debrid.com/apitoken" target="_blank" style="color:var(--accent);">real-debrid.com/apitoken</a></p>
       </div>
     </div>
 
-    <!-- Providers Selection -->
+    <!-- Content Providers -->
     <div class="card">
-      <h2 class="card-title">📡 Provedores de Conteúdo</h2>
+      <h2 class="card-title">📡 Provedores de Conteúdo (PT-BR & Globais)</h2>
       <div class="checkbox-grid">
         <label class="checkbox-card">
-          <input type="checkbox" id="provider-torrentio" checked />
-          <span>Torrentio (RD)</span>
-        </label>
-        <label class="checkbox-card">
-          <input type="checkbox" id="provider-novastreams" checked />
-          <span>Nova Streams (HTTP)</span>
-        </label>
-        <label class="checkbox-card">
           <input type="checkbox" id="provider-bludv" checked />
-          <span>BluDV (PT-BR)</span>
-        </label>
-        <label class="checkbox-card">
-          <input type="checkbox" id="provider-torrentdosfilmes" checked />
-          <span>Torrent dos Filmes</span>
+          <span>🇧🇷 BluDV</span>
         </label>
         <label class="checkbox-card">
           <input type="checkbox" id="provider-comando" checked />
-          <span>Comando Torrents</span>
+          <span>🇧🇷 Comando Torrents</span>
+        </label>
+        <label class="checkbox-card">
+          <input type="checkbox" id="provider-micoleao" checked />
+          <span>🇧🇷 Mico Leão Dublado</span>
+        </label>
+        <label class="checkbox-card">
+          <input type="checkbox" id="provider-torrentdosfilmes" checked />
+          <span>🇧🇷 Torrent dos Filmes</span>
+        </label>
+        <label class="checkbox-card">
+          <input type="checkbox" id="provider-novastreams" checked />
+          <span>🌐 Nova Streams (HTTP)</span>
+        </label>
+        <label class="checkbox-card">
+          <input type="checkbox" id="provider-torrentio" checked />
+          <span>⚡ Torrentio</span>
         </label>
         <label class="checkbox-card">
           <input type="checkbox" id="provider-ia" checked />
-          <span>Internet Archive</span>
+          <span>📦 Internet Archive</span>
         </label>
       </div>
     </div>
 
     <!-- Filters & Preferences -->
     <div class="card">
-      <h2 class="card-title">⚙️ Filtros e Preferências</h2>
+      <h2 class="card-title">⚙️ Filtros e Preferências de Áudio</h2>
       
       <div class="form-group">
         <label>Resoluções Permitidas</label>
@@ -343,20 +378,24 @@ export function renderConfigureHtml(hostUrl: string): string {
             <input type="checkbox" id="res-720p" checked />
             <span>720p HD</span>
           </label>
+          <label class="checkbox-card">
+            <input type="checkbox" id="res-480p" checked />
+            <span>480p SD</span>
+          </label>
         </div>
       </div>
 
       <div class="form-group">
         <label for="audio-filter">Preferência de Áudio</label>
         <select id="audio-filter">
-          <option value="all" selected>Todos os Áudios (Dublado + Legendado + Original)</option>
-          <option value="ptbr_only">Apenas Português (Dublado PT-BR)</option>
-          <option value="prefer_dual">Preferir Dual Áudio</option>
+          <option value="ptbr_only" selected>🇧🇷 Apenas Português (Dublado PT-BR / Dual Áudio)</option>
+          <option value="prefer_dual">🔄 Preferir Dual Áudio</option>
+          <option value="all">🌐 Todos os Áudios (Dublado + Legendado + Original)</option>
         </select>
       </div>
     </div>
 
-    <!-- Install Actions -->
+    <!-- Actions -->
     <div class="actions">
       <a id="install-btn" href="#" class="btn btn-primary" onclick="installInStremio(event)">🚀 Instalar no Stremio</a>
       <button type="button" id="copy-btn" class="btn btn-secondary" onclick="copyManifestLink(event)">📋 Copiar Link de Instalação</button>
@@ -364,15 +403,41 @@ export function renderConfigureHtml(hostUrl: string): string {
     </div>
 
     <footer>
-      MIBR Addons — Desenvolvido de forma modular e independente.
+      MIBR Addons 🇧🇷 — Made in Brasil. Desenvolvido de forma modular e independente.
     </footer>
   </div>
 
   <script>
     const HOST_URL = ${JSON.stringify(hostUrl)};
 
+    function toggleDebridTokenField() {
+      const provider = document.getElementById('debrid-provider').value;
+      const group = document.getElementById('debrid-token-group');
+      const help = document.getElementById('debrid-help-link');
+
+      if (provider === 'none') {
+        group.style.display = 'none';
+      } else {
+        group.style.display = 'block';
+        if (provider === 'realdebrid') {
+          help.innerHTML = 'Obtenha sua chave em <a href="https://real-debrid.com/apitoken" target="_blank" style="color:var(--accent);">real-debrid.com/apitoken</a>';
+        } else if (provider === 'alldebrid') {
+          help.innerHTML = 'Obtenha sua chave em <a href="https://alldebrid.com/apikeys" target="_blank" style="color:var(--accent);">alldebrid.com/apikeys</a>';
+        } else if (provider === 'premiumize') {
+          help.innerHTML = 'Obtenha sua chave em <a href="https://www.premiumize.me/account" target="_blank" style="color:var(--accent);">premiumize.me/account</a>';
+        } else if (provider === 'debridlink') {
+          help.innerHTML = 'Obtenha sua chave em <a href="https://debrid-link.com/webapp/apikeys" target="_blank" style="color:var(--accent);">debrid-link.com/webapp/apikeys</a>';
+        } else if (provider === 'torbox') {
+          help.innerHTML = 'Obtenha sua chave em <a href="https://torbox.app/settings" target="_blank" style="color:var(--accent);">torbox.app/settings</a>';
+        } else {
+          help.innerHTML = 'Cole a chave da API do seu provedor selecionado.';
+        }
+      }
+      updateLinks();
+    }
+
     function toggleTokenVisibility() {
-      const input = document.getElementById('rd-token');
+      const input = document.getElementById('debrid-token');
       const btn = document.getElementById('toggle-token-btn');
       if (input.type === 'password') {
         input.type = 'text';
@@ -397,24 +462,30 @@ export function renderConfigureHtml(hostUrl: string): string {
     }
 
     function generateConfig() {
-      const rdToken = document.getElementById('rd-token').value.trim();
+      const debridProvider = document.getElementById('debrid-provider').value;
+      const debridToken = document.getElementById('debrid-token').value.trim();
+
       const providers = [];
-      if (document.getElementById('provider-torrentio').checked) providers.push('torrentio');
-      if (document.getElementById('provider-novastreams').checked) providers.push('nova-streams');
       if (document.getElementById('provider-bludv').checked) providers.push('bludv');
-      if (document.getElementById('provider-torrentdosfilmes').checked) providers.push('torrentdosfilmes');
       if (document.getElementById('provider-comando').checked) providers.push('comando');
+      if (document.getElementById('provider-micoleao').checked) providers.push('micoleao');
+      if (document.getElementById('provider-torrentdosfilmes').checked) providers.push('torrentdosfilmes');
+      if (document.getElementById('provider-novastreams').checked) providers.push('nova-streams');
+      if (document.getElementById('provider-torrentio').checked) providers.push('torrentio');
       if (document.getElementById('provider-ia').checked) providers.push('internetarchive');
 
       const resolutions = [];
       if (document.getElementById('res-4k').checked) resolutions.push('4k');
       if (document.getElementById('res-1080p').checked) resolutions.push('1080p');
       if (document.getElementById('res-720p').checked) resolutions.push('720p');
+      if (document.getElementById('res-480p').checked) resolutions.push('480p');
 
       const audioFilter = document.getElementById('audio-filter').value;
 
       const configObj = {
-        realDebridToken: rdToken || undefined,
+        debridProvider,
+        debridToken: debridToken || undefined,
+        realDebridToken: debridToken || undefined,
         providers,
         resolutions,
         audioFilter,

@@ -1,6 +1,7 @@
 import { HttpDataClient } from "../clients/http/httpDataClient.js";
 import { createDefaultBluDVProvider } from "../providers/bludv/bludvFactory.js";
 import { createDefaultComandoProvider } from "../providers/comando/comandoFactory.js";
+import { createDefaultMicoLeaoProvider } from "../providers/micoleao/micoleaoFactory.js";
 import { createDefaultNovaStreamsProvider } from "../providers/novaStreams/novaStreamsFactory.js";
 import { createDefaultTorrentioProvider } from "../providers/torrentio/torrentioFactory.js";
 import { createDefaultTorrentDosFilmesProvider } from "../providers/torrentdosfilmes/torrentDosFilmesFactory.js";
@@ -14,7 +15,7 @@ import { StreamService } from "../services/streamService.js";
 import type { UserConfig } from "../types/userConfig.js";
 import { loadEnvFile } from "../utils/env.js";
 
-function createDefaultStreamCache(): StreamCache<import("../types/stremio.js").StremioStream[]> {
+function createDefaultStreamCacheInstance(): StreamCache<import("../types/stremio.js").StremioStream[]> {
   const ttlSeconds = Number(process.env.STREAM_CACHE_TTL_SECONDS ?? 300);
   const maxEntries = Number(process.env.STREAM_CACHE_MAX_ENTRIES ?? 500);
 
@@ -35,7 +36,7 @@ export function createProviderManagerForConfig(userConfig?: UserConfig, options?
   }
 
   const isCustomConfig = Boolean(userConfig);
-  const rawToken = (userConfig as Record<string, unknown> | undefined)?.[["real", "Debrid", "Token"].join("")];
+  const rawToken = userConfig?.debridToken ?? (userConfig as Record<string, unknown> | undefined)?.[["real", "Debrid", "Token"].join("")];
   const customToken = isCustomConfig
     ? (typeof rawToken === "string" && rawToken.trim().length > 0 ? rawToken.trim() : "")
     : undefined;
@@ -57,6 +58,10 @@ export function createProviderManagerForConfig(userConfig?: UserConfig, options?
 
   if (!allowedProviders || allowedProviders.has("comando")) {
     manager.register(createDefaultComandoProvider(httpClient, customToken));
+  }
+
+  if (!allowedProviders || allowedProviders.has("micoleao") || allowedProviders.has("micoleaodublado")) {
+    manager.register(createDefaultMicoLeaoProvider(httpClient, customToken));
   }
 
   if (!allowedProviders || allowedProviders.has("torrentio")) {
@@ -81,16 +86,13 @@ export function createDefaultProviderManager(options?: ProviderManagerOptions): 
 let defaultStreamServiceInstance: StreamService | undefined;
 
 export function createDefaultStreamService(options?: ProviderManagerOptions): StreamService {
-  return new StreamService(createDefaultProviderManager(options), createDefaultStreamCache());
+  return new StreamService(createDefaultProviderManager(options), createDefaultStreamCacheInstance());
 }
 
 export function getDefaultStreamService(): StreamService {
   if (!defaultStreamServiceInstance) {
     defaultStreamServiceInstance = createDefaultStreamService();
   }
-  return defaultStreamServiceInstance;
-}
 
-export async function getStreams(type: string, id: string) {
-  return getDefaultStreamService().getStreams(type, id);
+  return defaultStreamServiceInstance;
 }

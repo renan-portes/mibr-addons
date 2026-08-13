@@ -19,6 +19,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { SimpleCache } from "./cache.js";
 import { scrapeBluDV } from "./indexers/bludv.js";
 import { scrapeComando } from "./indexers/comando.js";
+import { scrapeMicoLeao } from "./indexers/micoleao.js";
 import { scrapeTorrentDosFilmes } from "./indexers/torrentdosfilmes.js";
 import type { IndexerRequest, IndexerResponse } from "./types.js";
 
@@ -66,6 +67,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
   const ROUTES: Record<string, (req: IndexerRequest, signal: AbortSignal) => Promise<IndexerResponse>> = {
     "/indexers/bludv": scrapeBluDV,
     "/indexers/comando": scrapeComando,
+    "/indexers/micoleao": scrapeMicoLeao,
     "/indexers/torrentdosfilmes": scrapeTorrentDosFilmes,
   };
 

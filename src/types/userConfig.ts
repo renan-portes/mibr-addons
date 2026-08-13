@@ -1,7 +1,18 @@
 export type AudioFilterMode = "all" | "ptbr_only" | "prefer_dual";
 
+export type DebridProviderType =
+  | "realdebrid"
+  | "alldebrid"
+  | "premiumize"
+  | "debridlink"
+  | "torbox"
+  | "offcloud"
+  | "putio"
+  | "none";
+
 export interface UserConfig {
-  debridService?: "realdebrid" | "none";
+  debridProvider?: DebridProviderType;
+  debridToken?: string;
   realDebridToken?: string;
   providers?: string[];
   resolutions?: string[];

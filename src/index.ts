@@ -7,7 +7,6 @@ export {
   createDefaultProviderManager,
   createDefaultStreamService,
   getDefaultStreamService,
-  getStreams,
 } from "./app/bootstrap.js";
 export { MockProvider } from "./providers/mockProvider.js";
 export { ProviderManager } from "./services/providerManager.js";
