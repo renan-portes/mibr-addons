@@ -13,6 +13,8 @@ export { MockProvider } from "./providers/mockProvider.js";
 export { ProviderManager } from "./services/providerManager.js";
 export type { ProviderManagerOptions } from "./services/providerManager.js";
 export { StreamService } from "./services/streamService.js";
+export { StreamCache } from "./services/streamCache.js";
+export type { StreamCacheOptions } from "./services/streamCache.js";
 export { createAddonServer, getServerAddress, startAddonServer } from "./server/httpServer.js";
 export { routeRequest } from "./server/router.js";
 export { getPort } from "./utils/env.js";
