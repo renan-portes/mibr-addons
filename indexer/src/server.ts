@@ -15,6 +15,7 @@
 
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { scrapeBluDV } from "./indexers/bludv.js";
+import { scrapeComando } from "./indexers/comando.js";
 import { scrapeTorrentDosFilmes } from "./indexers/torrentdosfilmes.js";
 import type { IndexerRequest, IndexerResponse } from "./types.js";
 
@@ -58,6 +59,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
   // Indexer routes
   const ROUTES: Record<string, (req: IndexerRequest, signal: AbortSignal) => Promise<IndexerResponse>> = {
     "/indexers/bludv": scrapeBluDV,
+    "/indexers/comando": scrapeComando,
     "/indexers/torrentdosfilmes": scrapeTorrentDosFilmes,
   };
 

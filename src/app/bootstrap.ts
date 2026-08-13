@@ -11,6 +11,7 @@ import { StreamCache } from "../services/streamCache.js";
 import { StreamService } from "../services/streamService.js";
 import { loadEnvFile } from "../utils/env.js";
 
+import { createDefaultComandoProvider } from "../providers/comando/comandoFactory.js";
 import { createDefaultNovaStreamsProvider } from "../providers/novaStreams/novaStreamsFactory.js";
 
 function createDefaultStreamCache(): StreamCache<import("../types/stremio.js").StremioStream[]> {
@@ -37,6 +38,7 @@ export function createDefaultProviderManager(options?: ProviderManagerOptions): 
   manager.register(new InternetArchiveProvider(iaClient, iaParser));
 
   manager.register(createDefaultBluDVProvider(httpClient));
+  manager.register(createDefaultComandoProvider(httpClient));
   manager.register(createDefaultTorrentioProvider(httpClient));
   manager.register(createDefaultTorrentDosFilmesProvider(httpClient));
   manager.register(createDefaultNovaStreamsProvider(httpClient));
