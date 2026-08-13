@@ -1,0 +1,23 @@
+{
+  "streams": [
+    {
+      "name": "Torrentio\n1080p",
+      "title": "The.Godfather.1972.1080p.BluRay.x264\n👥 850 💾 2.8 GB",
+      "infoHash": "0123456789abcdef0123456789abcdef01234567",
+      "fileIdx": 0,
+      "behaviorHints": {
+        "bencodeUrl": "https://torrentio.strem.fun/bencode/123",
+        "bingeGroup": "torrentio|1080p",
+        "filename": "Godfather.1972.1080p.mkv"
+      }
+    },
+    {
+      "name": "Torrentio\n4K",
+      "title": "The.Godfather.1972.2160p.UHD.BluRay\n👥 420 💾 14.5 GB",
+      "url": "https://vjs.zencdn.net/v/oceans.mp4",
+      "behaviorHints": {
+        "filename": "Godfather.1972.2160p.mkv"
+      }
+    }
+  ]
+}
