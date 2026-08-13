@@ -33,6 +33,12 @@ export { TorrentioParser } from "./providers/torrentio/torrentioParser.js";
 export { TorrentioProvider } from "./providers/torrentio/torrentioProvider.js";
 export { createRealDebridTorrentioProvider } from "./providers/torrentio/realDebridTorrentioWiring.js";
 export type { TorrentioBehaviorHints, TorrentioStreamItem, TorrentioRawResponse, TorrentioRequest, TorrentioResponse } from "./providers/torrentio/torrentioTypes.js";
+export { TorrentDosFilmesClient } from "./providers/torrentdosfilmes/torrentDosFilmesClient.js";
+export { createDefaultTorrentDosFilmesProvider } from "./providers/torrentdosfilmes/torrentDosFilmesFactory.js";
+export { TorrentDosFilmesParser } from "./providers/torrentdosfilmes/torrentDosFilmesParser.js";
+export { TorrentDosFilmesProvider } from "./providers/torrentdosfilmes/torrentDosFilmesProvider.js";
+export { createRealDebridTorrentDosFilmesProvider } from "./providers/torrentdosfilmes/realDebridTorrentDosFilmesWiring.js";
+export type { TorrentDosFilmesItem, TorrentDosFilmesRawResponse, TorrentDosFilmesRequest, TorrentDosFilmesResponse } from "./providers/torrentdosfilmes/torrentDosFilmesTypes.js";
 
 export function main(): void {
   loadEnvFile();

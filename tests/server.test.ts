@@ -7,6 +7,8 @@ import { routeRequest } from "../src/server/router.js";
 import { ProviderManager } from "../src/services/providerManager.js";
 import { StreamService } from "../src/services/streamService.js";
 
+process.env.TORRENTIO_BASE_URL = "mock";
+
 describe("router", () => {
   it("serves manifest.json", async () => {
     const result = await routeRequest("GET", "/manifest.json");
@@ -19,7 +21,7 @@ describe("router", () => {
     const result = await routeRequest("GET", "/stream/movie/tt0111161.json");
 
     assert.equal(result.status, 200);
-    assert.equal(result.body && "streams" in result.body ? result.body.streams.length : 0, 4);
+    assert.equal(result.body && "streams" in result.body ? result.body.streams.length : 0, 5);
   });
 
   it("returns 404 for unknown routes", async () => {
@@ -97,6 +99,6 @@ describe("http server", () => {
     assert.equal(streamResponse.status, 200);
 
     const streams = (await streamResponse.json()) as { streams: unknown[] };
-    assert.equal(streams.streams.length, 4);
+    assert.equal(streams.streams.length, 5);
   });
 });
