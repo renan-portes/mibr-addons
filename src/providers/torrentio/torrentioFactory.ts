@@ -4,11 +4,11 @@ import { TorrentioClient } from "./torrentioClient.js";
 import { TorrentioParser } from "./torrentioParser.js";
 import { TorrentioProvider } from "./torrentioProvider.js";
 
-export function createDefaultTorrentioProvider(httpClient: HttpDataClient): TorrentioProvider {
+export function createDefaultTorrentioProvider(httpClient: HttpDataClient, overrideToken?: string): TorrentioProvider {
   const torrentioBaseUrl = process.env.TORRENTIO_BASE_URL || "https://torrentio.strem.fun";
   const client = new TorrentioClient(httpClient, { baseUrl: torrentioBaseUrl });
   const parser = new TorrentioParser();
-  const token = process.env.REALDEBRID_TOKEN || process.env.REAL_DEBRID_TOKEN;
+  const token = overrideToken ?? process.env.REALDEBRID_TOKEN ?? process.env.REAL_DEBRID_TOKEN;
 
   if (token && token.trim().length > 0) {
     return createRealDebridTorrentioProvider(client, parser, {

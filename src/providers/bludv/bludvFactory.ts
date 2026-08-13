@@ -4,11 +4,11 @@ import { BluDVParser } from "./bludvParser.js";
 import { BluDVProvider } from "./bludvProvider.js";
 import { createRealDebridBluDVProvider } from "./realDebridBluDVWiring.js";
 
-export function createDefaultBluDVProvider(httpClient: HttpDataClient): BluDVProvider {
+export function createDefaultBluDVProvider(httpClient: HttpDataClient, overrideToken?: string): BluDVProvider {
   const bludvBaseUrl = process.env.BLUDV_BASE_URL || "http://mibr-indexer:7001";
   const bludvClient = new BluDVClient(httpClient, { baseUrl: bludvBaseUrl });
   const bludvParser = new BluDVParser();
-  const token = process.env.REALDEBRID_TOKEN || process.env.REAL_DEBRID_TOKEN;
+  const token = overrideToken ?? process.env.REALDEBRID_TOKEN ?? process.env.REAL_DEBRID_TOKEN;
 
   if (token && token.trim().length > 0) {
     return createRealDebridBluDVProvider(bludvClient, bludvParser, {

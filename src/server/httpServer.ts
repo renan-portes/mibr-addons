@@ -16,6 +16,18 @@ function sendJson(
   response.end(JSON.stringify(body));
 }
 
+function sendHtml(
+  response: import("node:http").ServerResponse,
+  status: number,
+  html: string,
+): void {
+  response.writeHead(status, {
+    "Content-Type": "text/html; charset=utf-8",
+    "Access-Control-Allow-Origin": "*",
+  });
+  response.end(html);
+}
+
 export function createAddonServer(): Server {
   return createServer((request, response) => {
     void (async () => {
@@ -32,10 +44,15 @@ export function createAddonServer(): Server {
           return;
         }
 
+        const host = request.headers.host ? `http://${request.headers.host}` : "http://127.0.0.1:7000";
         const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
-        const result = await routeRequest(method, pathname);
+        const result = await routeRequest(method, pathname, undefined, host);
 
-        sendJson(response, result.status, result.body);
+        if ("html" in result) {
+          sendHtml(response, result.status, result.html);
+        } else {
+          sendJson(response, result.status, result.body);
+        }
       } catch {
         sendJson(response, 500, { error: "Internal server error" });
       }
@@ -58,9 +75,9 @@ export function startAddonServer(port: number): Promise<Server> {
 export function getServerAddress(server: Server): AddressInfo {
   const address = server.address();
 
-  if (!address || typeof address === "string") {
-    throw new Error("Unable to determine server address");
+  if (typeof address === "object" && address !== null) {
+    return address;
   }
 
-  return address;
+  throw new Error("Server is not bound to a port");
 }

@@ -4,11 +4,11 @@ import { TorrentDosFilmesClient } from "./torrentDosFilmesClient.js";
 import { TorrentDosFilmesParser } from "./torrentDosFilmesParser.js";
 import { TorrentDosFilmesProvider } from "./torrentDosFilmesProvider.js";
 
-export function createDefaultTorrentDosFilmesProvider(httpClient: HttpDataClient): TorrentDosFilmesProvider {
+export function createDefaultTorrentDosFilmesProvider(httpClient: HttpDataClient, overrideToken?: string): TorrentDosFilmesProvider {
   const baseUrl = process.env.TORRENTDOSFILMES_BASE_URL || "http://mibr-indexer:7001";
   const client = new TorrentDosFilmesClient(httpClient, { baseUrl });
   const parser = new TorrentDosFilmesParser();
-  const token = process.env.REALDEBRID_TOKEN || process.env.REAL_DEBRID_TOKEN;
+  const token = overrideToken ?? process.env.REALDEBRID_TOKEN ?? process.env.REAL_DEBRID_TOKEN;
 
   if (token && token.trim().length > 0) {
     return createRealDebridTorrentDosFilmesProvider(client, parser, {
