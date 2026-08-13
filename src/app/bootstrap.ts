@@ -23,7 +23,8 @@ function createDefaultStreamCache(): StreamCache<import("../types/stremio.js").S
 
 export function createDefaultProviderManager(options?: ProviderManagerOptions): ProviderManager {
   loadEnvFile();
-  const manager = new ProviderManager(options);
+  const timeoutMs = options?.timeoutMs ?? Number(process.env.PROVIDER_TIMEOUT_MS ?? 25_000);
+  const manager = new ProviderManager({ timeoutMs });
   if (process.env.DISABLE_MOCK_PROVIDER !== "true") {
     manager.register(new MockProvider());
   }

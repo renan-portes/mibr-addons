@@ -46,7 +46,7 @@ function selectAuthorizedFile(files: readonly RealDebridFile[], authorized: Torr
   if (authorized.length === 0) return null;
   const exactPath = files.filter((file) => authorized.some((entry) => entry.path === file.path));
   if (exactPath.length === 0) throw new RealDebridResolverError("authorized_file_not_found");
-  const exact = exactPath.filter((file) => authorized.some((entry) => entry.path === file.path && entry.sizeBytes === file.bytes));
+  const exact = exactPath.filter((file) => authorized.some((entry) => entry.path === file.path && (entry.sizeBytes === undefined || entry.sizeBytes === file.bytes)));
   if (exact.length === 0) throw new RealDebridResolverError("authorized_file_size_mismatch");
   if (exact.length !== 1) throw new RealDebridResolverError("ambiguous_authorized_file");
   return exact[0]!;

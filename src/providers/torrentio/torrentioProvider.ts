@@ -37,7 +37,7 @@ export class TorrentioProvider implements StreamProvider {
 
     const results: StreamResult[] = [];
 
-    for (const item of parsed.streams) {
+    for (const item of parsed.streams.slice(0, 10)) {
       let playbackUrl = item.url;
       const infoHash = item.infoHash;
 
