@@ -81,7 +81,7 @@ export async function scrapeMicoLeao(req: IndexerRequest, signal: AbortSignal): 
     const searchUrl = buildSearchUrl(MICOLEAO_SITE_URL, query);
     try {
       const { html } = await flareGet(searchUrl, signal);
-      const postLinks = extractLinks(html, HOST_FRAGMENT, limit, MICOLEAO_SITE_URL);
+      const postLinks = extractLinks(html, HOST_FRAGMENT, limit);
       if (postLinks.length > 0) {
         const scrapedNested = await Promise.all(
           postLinks.map((url) => scrapePost(url, req.imdb, signal))

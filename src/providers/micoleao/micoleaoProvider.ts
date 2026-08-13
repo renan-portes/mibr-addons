@@ -55,7 +55,7 @@ export class MicoLeaoProvider implements StreamProvider {
       let playbackUrl = item.magnet ?? (infoHash ? `magnet:?xt=urn:btih:${infoHash}` : undefined);
 
       if (this.resolver && infoHash) {
-        const files: TorrentCandidateFile[] = (item.files ?? []).map((file) => ({
+        const files: TorrentCandidateFile[] = item.files.map((file) => ({
           path: file.path,
         }));
 
