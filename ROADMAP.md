@@ -46,9 +46,9 @@
 
 ## Recursos
 
-- [ ] Cache
+- [x] Cache (in-memory TTL via StreamCache — `STREAM_CACHE_TTL_SECONDS`, `STREAM_CACHE_MAX_ENTRIES`)
 - [ ] Configuração
-- [ ] Docker
+- [x] Docker (`Dockerfile` multistage + `docker-compose.yml`)
 - [ ] Logs estruturados
 - [ ] Healthcheck
 
