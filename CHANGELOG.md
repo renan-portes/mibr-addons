@@ -20,6 +20,8 @@
 
 ### Added
 
+- Microserviço `mibr-indexer` (`indexer/`) com scrapers dedicados para BluDV e Torrent dos Filmes, integrado com `FlareSolverr` para contorno de proteção Cloudflare.
+- Suporte no `docker-compose.yml` para a pilha completa `mibr-addons` + `mibr-indexer` + `flaresolverr`.
 - Sistema de cache de streams in-memory (`StreamCache`) com TTL configurável, evicao FIFO por limite de entradas e bypass total via `STREAM_CACHE_TTL_SECONDS=0`.
 - Suporte a Docker: `Dockerfile` multistage (`node:24-alpine`), `docker-compose.yml` com `restart: unless-stopped` e healthcheck, e `.dockerignore` para build context otimizado.
 - Novo provider nacional Torrent dos Filmes (`TorrentDosFilmesProvider`, `TorrentDosFilmesClient`, `TorrentDosFilmesParser`) focado em conteúdo PT-BR dublado/dual áudio com fiação opt-in ao `RealDebridCandidateResolver`.

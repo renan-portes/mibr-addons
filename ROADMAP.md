@@ -38,19 +38,19 @@
 - [x] Transporte HTTPS Real-Debrid offline com fetch/DNS injetados (base fixa, sem redirects ou retries, limites e validação DNS pré-conexão; ainda sem configuração/runtime real)
 - [x] Laboratório autenticado descartável do Real-Debrid preparado para execução manual (`account` primeiro; `candidate` separado; sem token ou chamada real no desenvolvimento)
 - [x] Wiring interno opt-in do resolver Real-Debrid para o `TorrentIndexerProvider` (sem bootstrap ou configuração operacional; desativado por padrão)
-- [x] BluDV
+- [x] BluDV (com `mibr-indexer` + `FlareSolverr`)
 - [x] Conexão do `BluDVProvider` com o `RealDebridCandidateResolver`
-- [x] Torrentio
-- [x] Torrent dos Filmes (PT-BR Dublado)
+- [x] Torrentio (API pública em tempo real)
+- [x] Torrent dos Filmes (PT-BR Dublado, com `mibr-indexer` + `FlareSolverr`)
 - [ ] Outros providers externos
 
 ## Recursos
 
 - [x] Cache (in-memory TTL via StreamCache — `STREAM_CACHE_TTL_SECONDS`, `STREAM_CACHE_MAX_ENTRIES`)
 - [ ] Configuração
-- [x] Docker (`Dockerfile` multistage + `docker-compose.yml`)
+- [x] Docker (`Dockerfile` multistage + `docker-compose.yml` com `mibr-addons` + `mibr-indexer` + `flaresolverr`)
 - [ ] Logs estruturados
-- [ ] Healthcheck
+- [x] Healthcheck
 
 ## Releases
 
