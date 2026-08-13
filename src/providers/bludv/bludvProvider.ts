@@ -71,8 +71,9 @@ export class BluDVProvider implements StreamProvider {
           if (resolved?.url) {
             playbackUrl = resolved.url;
           }
-        } catch {
-          // Failure isolation: keep fallback magnet if resolver fails
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(`[bludv] Real-Debrid resolver failed: ${msg}`);
         }
       }
 

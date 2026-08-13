@@ -66,8 +66,9 @@ export class TorrentDosFilmesProvider implements StreamProvider {
           if (resolved?.url) {
             playbackUrl = resolved.url;
           }
-        } catch {
-          // Failure isolation: keep fallback magnet if resolver fails
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(`[torrentdosfilmes] Real-Debrid resolver failed: ${msg}`);
         }
       }
 
