@@ -1,0 +1,21 @@
+{
+  "name": "mibr-indexer",
+  "version": "0.1.0",
+  "description": "Self-hosted torrent indexer for Brazilian sites (BluDV, TorrentDosFilmes)",
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "tsx watch src/server.ts"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2"
+  }
+}
