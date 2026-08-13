@@ -147,7 +147,9 @@ describe("BluDV Provider", () => {
       const service = new StreamService(manager);
       const streams = await service.getStreams("movie", "tt0068646");
 
-      assert.equal(streams.length, 0);
+      assert.equal(streams.length, 1);
+      assert.equal(streams[0]?.infoHash, "0123456789abcdef0123456789abcdef01234567");
+      assert.equal(streams[0]?.url, undefined);
     });
 
     it("resolves BluDV torrent candidates via Real-Debrid resolver and delivers playable HTTP stream to StreamService", async () => {

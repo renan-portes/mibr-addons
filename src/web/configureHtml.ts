@@ -354,13 +354,6 @@ export function renderConfigureHtml(hostUrl: string): string {
           <option value="prefer_dual">Preferir Dual Áudio</option>
         </select>
       </div>
-
-      <div class="form-group">
-        <label class="checkbox-card" style="background:none; border:none; padding:0;">
-          <input type="checkbox" id="disable-mocks" checked />
-          <span>Desativar links de teste (Mocks)</span>
-        </label>
-      </div>
     </div>
 
     <!-- Install Actions -->
@@ -419,14 +412,13 @@ export function renderConfigureHtml(hostUrl: string): string {
       if (document.getElementById('res-720p').checked) resolutions.push('720p');
 
       const audioFilter = document.getElementById('audio-filter').value;
-      const disableMocks = document.getElementById('disable-mocks').checked;
 
       const configObj = {
         realDebridToken: rdToken || undefined,
         providers,
         resolutions,
         audioFilter,
-        disableMocks
+        disableMocks: true
       };
 
       return toBase64Url(JSON.stringify(configObj));

@@ -20,18 +20,36 @@ export function isValidStreamResult(value: unknown): value is StreamResult {
     return false;
   }
 
+  if (candidate.url.startsWith("magnet:?")) {
+    return true;
+  }
+
   try {
     const url = new URL(candidate.url);
-    return url.protocol === "http:" || url.protocol === "https:";
+    return url.protocol === "http:" || url.protocol === "https:" || url.protocol === "magnet:";
   } catch {
     return false;
   }
 }
 
 export function toStremioStreams(results: readonly unknown[]): StremioStream[] {
-  return results.filter(isValidStreamResult).map((result) => ({
-    name: result.name,
-    title: result.title,
-    url: result.url,
-  }));
+  return results.filter(isValidStreamResult).map((result) => {
+    const stream: StremioStream = {
+      name: result.name,
+      title: result.title,
+    };
+
+    if (result.url.startsWith("magnet:?")) {
+      const match = /btih:([a-fA-F0-9]{40})/i.exec(result.url);
+      if (match && match[1]) {
+        stream.infoHash = match[1].toLowerCase();
+      } else {
+        stream.url = result.url;
+      }
+    } else {
+      stream.url = result.url;
+    }
+
+    return stream;
+  });
 }

@@ -15,7 +15,9 @@ export interface StremioManifest {
 export interface StremioStream {
   name: string;
   title: string;
-  url: string;
+  url?: string;
+  infoHash?: string;
+  fileIdx?: number;
 }
 
 export interface StremioStreamResponse {
