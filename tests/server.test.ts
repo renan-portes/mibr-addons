@@ -8,7 +8,8 @@ import { ProviderManager } from "../src/services/providerManager.js";
 import { StreamService } from "../src/services/streamService.js";
 
 process.env.TORRENTIO_BASE_URL = "mock";
-process.env.ENABLE_MOCK_PROVIDER = "true";
+process.env.BLUDV_BASE_URL = "mock";
+process.env.TORRENTDOSFILMES_BASE_URL = "mock";
 
 describe("router", () => {
   it("serves manifest.json", async () => {
