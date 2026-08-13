@@ -54,7 +54,7 @@
 - [ ] Configuração operacional isolada e teste do addon com autorização explícita
 - [x] BluDV
 - [x] Conexão do `BluDVProvider` com o `RealDebridCandidateResolver`
-- [ ] Torrentio
+- [x] Torrentio
 - [ ] Outros providers externos
 
 ## Recursos
