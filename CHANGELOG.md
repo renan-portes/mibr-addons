@@ -20,6 +20,7 @@
 
 ### Added
 
+- Novo provider nacional Torrent dos Filmes (`TorrentDosFilmesProvider`, `TorrentDosFilmesClient`, `TorrentDosFilmesParser`) focado em conteúdo PT-BR dublado/dual áudio com fiação opt-in ao `RealDebridCandidateResolver`.
 - Novo provider e parser Torrentio (`TorrentioProvider`, `TorrentioClient`, `TorrentioParser`) com suporte ao modo mock e fiação opt-in ao `RealDebridCandidateResolver`.
 - Integração do `BluDVProvider` com o `RealDebridCandidateResolver` (`realDebridBluDVWiring.ts`) para resolução de streams debrid.
 - Provider e parser BluDV (`BluDVProvider`, `BluDVClient`, `BluDVParser`) com fixtures sintéticas e suíte de testes isolados.
