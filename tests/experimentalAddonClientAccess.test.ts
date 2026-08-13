@@ -19,9 +19,11 @@ describe("experimental addon client access launcher", () => {
     assert.notDeepEqual(manifest, getManifest());
     assert.deepEqual(getManifest(), {
       id: "community.mibr.addons",
-      name: "MIBR Addons",
+      name: "MIBR Addons 🇧🇷",
       version: "0.2.0",
-      description: "Modular media addon with independent providers.",
+      description: "Filmes e séries dublados em Português (PT-BR) — Made in Brasil.",
+      icon: "https://mibr.servidor.xyz.br/mibr-logo.png",
+      logo: "https://mibr.servidor.xyz.br/mibr-logo.png",
       resources: ["stream"],
       types: ["movie", "series"],
       idPrefixes: ["tt"],

@@ -63,7 +63,8 @@ function filterStreamsByConfig(streams: StremioStream[], config: UserConfig): St
       if (allowedRes.has("4k") && (text.includes("4k") || text.includes("2160p") || text.includes("uhd"))) return true;
       if (allowedRes.has("1080p") && text.includes("1080p")) return true;
       if (allowedRes.has("720p") && text.includes("720p")) return true;
-      if (!text.includes("1080p") && !text.includes("720p") && !text.includes("4k") && !text.includes("2160p")) return true;
+      if (allowedRes.has("480p") && (text.includes("480p") || text.includes("sd"))) return true;
+      if (!text.includes("1080p") && !text.includes("720p") && !text.includes("4k") && !text.includes("2160p") && !text.includes("480p")) return true;
 
       return false;
     });
@@ -71,8 +72,21 @@ function filterStreamsByConfig(streams: StremioStream[], config: UserConfig): St
 
   if (config.audioFilter === "ptbr_only") {
     filtered = filtered.filter((stream) => {
-      const text = `${stream.name ?? ""} ${stream.title ?? ""}`.toLowerCase();
-      return text.includes("dublado") || text.includes("português") || text.includes("dual") || text.includes("pt-br") || text.includes("ptbr");
+      const nameLower = (stream.name ?? "").toLowerCase();
+      const text = `${nameLower} ${stream.title ?? ""}`.toLowerCase();
+      const isNationalProvider = /bludv|comando|mico|torrent dos filmes|tdf/i.test(nameLower);
+      if (isNationalProvider) return true;
+
+      return (
+        text.includes("dublado") ||
+        text.includes("português") ||
+        text.includes("portugues") ||
+        text.includes("dual") ||
+        text.includes("pt-br") ||
+        text.includes("ptbr") ||
+        text.includes("🇧🇷") ||
+        text.includes("pt")
+      );
     });
   } else if (config.audioFilter === "prefer_dual") {
     filtered.sort((a, b) => {
@@ -109,7 +123,7 @@ export async function routeRequest(
   }
 
   if (parsed.type === "manifest") {
-    return { status: 200, contentType: "application/json", body: getManifest() };
+    return { status: 200, contentType: "application/json", body: getManifest(hostUrl) };
   }
 
   if (parsed.type === "stream") {

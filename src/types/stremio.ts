@@ -7,6 +7,8 @@ export interface StremioManifest {
   version: string;
   name: string;
   description?: string;
+  icon?: string;
+  logo?: string;
   resources: StremioResource[];
   types: StremioType[];
   idPrefixes: string[];

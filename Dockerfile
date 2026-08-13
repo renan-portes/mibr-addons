@@ -28,6 +28,7 @@ COPY package*.json ./
 RUN (npm ci --omit=dev --ignore-scripts || npm install --omit=dev --ignore-scripts) && npm cache clean --force
 
 COPY --from=builder /app/dist ./dist
+COPY mibr-logo*.png ./
 
 # Runtime configuration defaults (override via env or .env file)
 ENV PORT=7000 \

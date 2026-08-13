@@ -1,4 +1,6 @@
 import { createServer, type Server } from "node:http";
+import { createReadStream, existsSync } from "node:fs";
+import { join } from "node:path";
 import type { AddressInfo } from "node:net";
 import { routeRequest } from "./router.js";
 
@@ -47,6 +49,20 @@ export function createAddonServer(): Server {
         const proto = (request.headers["x-forwarded-proto"] as string) ?? "http";
         const host = request.headers.host ? `${proto}://${request.headers.host}` : "http://127.0.0.1:7000";
         const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
+
+        if (pathname === "/mibr-logo.png" || pathname.endsWith("/mibr-logo.png")) {
+          const logoPath = join(process.cwd(), "mibr-logo.png");
+          if (existsSync(logoPath)) {
+            response.writeHead(200, {
+              "Content-Type": "image/png",
+              "Access-Control-Allow-Origin": "*",
+              "Cache-Control": "public, max-age=86400",
+            });
+            createReadStream(logoPath).pipe(response);
+            return;
+          }
+        }
+
         const result = await routeRequest(method, pathname, undefined, host);
 
         if ("html" in result) {
