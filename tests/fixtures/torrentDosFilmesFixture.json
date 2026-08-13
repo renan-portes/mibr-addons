@@ -1,0 +1,24 @@
+{
+  "results": [
+    {
+      "title": "Torrent dos Filmes | A Origem (Inception) 1080p Dual Áudio PT-BR",
+      "imdb": "tt1375666",
+      "audio": ["Português (Dublado)", "Inglês"],
+      "quality": "1080p",
+      "magnet": "magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567&dn=Inception.PTBR",
+      "info_hash": "0123456789abcdef0123456789abcdef01234567",
+      "size": "2.8 GB",
+      "seeders": 320
+    },
+    {
+      "title": "Torrent dos Filmes | O Poderoso Chefão 4K Dual Áudio PT-BR",
+      "imdb": "tt0068646",
+      "audio": ["Português (Dublado)", "Inglês"],
+      "quality": "4K",
+      "magnet": "magnet:?xt=urn:btih:abcdef0123456789abcdef0123456789abcdef01&dn=Godfather.4K",
+      "info_hash": "abcdef0123456789abcdef0123456789abcdef01",
+      "size": "12.5 GB",
+      "seeders": 150
+    }
+  ]
+}
