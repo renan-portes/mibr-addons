@@ -24,7 +24,9 @@ function createDefaultStreamCache(): StreamCache<import("../types/stremio.js").S
 export function createDefaultProviderManager(options?: ProviderManagerOptions): ProviderManager {
   loadEnvFile();
   const manager = new ProviderManager(options);
-  manager.register(new MockProvider());
+  if (process.env.ENABLE_MOCK_PROVIDER === "true") {
+    manager.register(new MockProvider());
+  }
 
   const httpClient = new HttpDataClient();
   const iaClient = new InternetArchiveDataClient(httpClient);

@@ -8,6 +8,7 @@ import { ProviderManager } from "../src/services/providerManager.js";
 import { StreamService } from "../src/services/streamService.js";
 
 process.env.TORRENTIO_BASE_URL = "mock";
+process.env.ENABLE_MOCK_PROVIDER = "true";
 
 describe("router", () => {
   it("serves manifest.json", async () => {

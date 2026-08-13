@@ -3,15 +3,17 @@
  * for Brazilian dubbed/dual-audio torrents by IMDb ID or title query.
  *
  * Strategy:
- * 1. GET the search results page via FlareSolverr
- * 2. Extract individual movie post URLs from results
- * 3. For each post URL, GET the page and extract magnet links + metadata
- * 4. Return structured results
+ * 1. Try search by IMDb ID (e.g. tt1375666) or resolved title (via Cinemeta)
+ * 2. GET search results page via FlareSolverr
+ * 3. Extract individual movie post URLs from results
+ * 4. For each post URL, GET the page and extract magnet links + metadata
+ * 5. Return structured results
  *
  * ENV:
  *   BLUDV_SITE_URL  — base URL of the BluDV site (default: https://bludvfilmes.xyz)
  */
 
+import { resolveImdbTitle } from "../cinemeta.js";
 import { flareGet } from "../flaresolverr.js";
 import {
   buildSearchUrl,
@@ -28,7 +30,6 @@ import type { IndexerRequest, IndexerResponse, TorrentResult } from "../types.js
 const BLUDV_SITE_URL = (process.env.BLUDV_SITE_URL ?? "https://bludvfilmes.xyz").replace(/\/$/, "");
 const HOST_FRAGMENT = new URL(BLUDV_SITE_URL).hostname;
 
-/** Scrape a single movie post page and return a TorrentResult (or null on failure). */
 async function scrapePost(postUrl: string, imdb: string | undefined, signal: AbortSignal): Promise<TorrentResult | null> {
   try {
     const { html } = await flareGet(postUrl, signal);
@@ -50,7 +51,6 @@ async function scrapePost(postUrl: string, imdb: string | undefined, signal: Abo
       size: size ?? undefined,
     }));
 
-    // Return the best result (prefer 1080p, then 720p, then any)
     return (
       results.find((r) => r.quality === "1080p") ??
       results.find((r) => r.quality === "720p") ??
@@ -63,34 +63,38 @@ async function scrapePost(postUrl: string, imdb: string | undefined, signal: Abo
 }
 
 export async function scrapeBluDV(req: IndexerRequest, signal: AbortSignal): Promise<IndexerResponse> {
-  const query = req.imdb ?? req.q;
-  if (!query) return { results: [], count: 0 };
+  const searchQueries: string[] = [];
+  if (req.imdb) {
+    searchQueries.push(req.imdb);
+    const meta = await resolveImdbTitle(req.imdb, signal);
+    if (meta?.title) searchQueries.push(meta.title);
+  } else if (req.q) {
+    searchQueries.push(req.q);
+  }
+
+  if (searchQueries.length === 0) return { results: [], count: 0 };
 
   const limit = req.limit ?? 5;
-  const searchUrl = buildSearchUrl(BLUDV_SITE_URL, query);
 
-  let searchHtml: string;
-  try {
-    const res = await flareGet(searchUrl, signal);
-    searchHtml = res.html;
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[bludv] FlareSolverr failed for search: ${msg}`);
-    return { results: [], count: 0 };
+  for (const query of searchQueries) {
+    const searchUrl = buildSearchUrl(BLUDV_SITE_URL, query);
+    try {
+      const { html } = await flareGet(searchUrl, signal);
+      const postLinks = extractLinks(html, HOST_FRAGMENT, limit * 2);
+      if (postLinks.length > 0) {
+        const scraped = await Promise.all(
+          postLinks.slice(0, limit).map((url) => scrapePost(url, req.imdb, signal))
+        );
+        const results = scraped.filter((r): r is TorrentResult => r !== null);
+        if (results.length > 0) {
+          return { results, count: results.length };
+        }
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[bludv] FlareSolverr search failed for "${query}": ${msg}`);
+    }
   }
 
-  // Extract post page links from search results
-  const postLinks = extractLinks(searchHtml, HOST_FRAGMENT, limit * 2);
-  if (postLinks.length === 0) {
-    console.warn(`[bludv] No post links found for query: ${query}`);
-    return { results: [], count: 0 };
-  }
-
-  // Scrape each post (cap to limit)
-  const scraped = await Promise.all(
-    postLinks.slice(0, limit).map((url) => scrapePost(url, req.imdb, signal))
-  );
-
-  const results = scraped.filter((r): r is TorrentResult => r !== null);
-  return { results, count: results.length };
+  return { results: [], count: 0 };
 }

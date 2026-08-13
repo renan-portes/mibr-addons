@@ -5,7 +5,7 @@ import { TorrentioParser } from "./torrentioParser.js";
 import { TorrentioProvider } from "./torrentioProvider.js";
 
 export function createDefaultTorrentioProvider(httpClient: HttpDataClient): TorrentioProvider {
-  const torrentioBaseUrl = process.env.TORRENTIO_BASE_URL || "mock";
+  const torrentioBaseUrl = process.env.TORRENTIO_BASE_URL || "https://torrentio.strem.fun";
   const client = new TorrentioClient(httpClient, { baseUrl: torrentioBaseUrl });
   const parser = new TorrentioParser();
   const token = process.env.REALDEBRID_TOKEN || process.env.REAL_DEBRID_TOKEN;
