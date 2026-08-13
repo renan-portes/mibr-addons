@@ -1,9 +1,13 @@
+import { manifest } from "../addon/manifest.js";
+
 /**
  * Configurator HTML page renderer.
  * Serves an interactive web configuration UI for MIBR Addons.
  */
 
 export function renderConfigureHtml(hostUrl: string): string {
+  const version = manifest.version;
+
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -128,6 +132,7 @@ export function renderConfigureHtml(hostUrl: string): string {
     input[type="text"], input[type="password"], select {
       width: 100%;
       padding: 0.75rem 1rem;
+      padding-right: 6.5rem;
       background: var(--input-bg);
       border: 1px solid var(--card-border);
       border-radius: 0.5rem;
@@ -137,20 +142,31 @@ export function renderConfigureHtml(hostUrl: string): string {
       transition: border-color 0.2s;
     }
 
+    select {
+      padding-right: 1rem;
+    }
+
     input[type="text"]:focus, input[type="password"]:focus, select:focus {
       border-color: var(--accent);
     }
 
     .toggle-btn {
       position: absolute;
-      right: 0.75rem;
+      right: 0.5rem;
       top: 50%;
       transform: translateY(-50%);
-      background: none;
-      border: none;
-      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      border-radius: 0.35rem;
+      color: var(--text);
       cursor: pointer;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
+      padding: 0.35rem 0.6rem;
+      transition: background 0.2s;
+    }
+
+    .toggle-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
     }
 
     .checkbox-grid {
@@ -237,8 +253,13 @@ export function renderConfigureHtml(hostUrl: string): string {
       display: none;
       text-align: center;
       font-size: 0.85rem;
+      font-weight: 600;
       color: var(--success);
       margin-top: 0.5rem;
+      padding: 0.5rem;
+      background: rgba(16, 185, 129, 0.1);
+      border-radius: 0.4rem;
+      border: 1px solid rgba(16, 185, 129, 0.2);
     }
 
     footer {
@@ -255,7 +276,7 @@ export function renderConfigureHtml(hostUrl: string): string {
   <div class="container">
     <header>
       <div class="logo">MIBR Addons</div>
-      <span class="badge">v0.2.0 BR</span>
+      <span class="badge">v${version} BR</span>
       <p class="subtitle">Adicionador modular de torrents e streams em PT-BR para Stremio</p>
     </header>
 
@@ -266,7 +287,7 @@ export function renderConfigureHtml(hostUrl: string): string {
         <label for="rd-token">Token da API do Real-Debrid</label>
         <div class="input-wrapper">
           <input type="password" id="rd-token" placeholder="Cole sua API Key do Real-Debrid..." autocomplete="off" />
-          <button type="button" class="toggle-btn" onclick="toggleTokenVisibility()">👁️ Mostrar</button>
+          <button type="button" class="toggle-btn" id="toggle-token-btn" onclick="toggleTokenVisibility()">👁️ Mostrar</button>
         </div>
         <p class="help-text">Obtenha sua chave em <a href="https://real-debrid.com/apitoken" target="_blank" style="color:var(--accent);">real-debrid.com/apitoken</a></p>
       </div>
@@ -344,8 +365,8 @@ export function renderConfigureHtml(hostUrl: string): string {
 
     <!-- Install Actions -->
     <div class="actions">
-      <a id="install-btn" href="#" class="btn btn-primary">🚀 Instalar no Stremio</a>
-      <button id="copy-btn" class="btn btn-secondary" onclick="copyManifestLink()">📋 Copiar Link de Instalação</button>
+      <a id="install-btn" href="#" class="btn btn-primary" onclick="installInStremio(event)">🚀 Instalar no Stremio</a>
+      <button type="button" id="copy-btn" class="btn btn-secondary" onclick="copyManifestLink(event)">📋 Copiar Link de Instalação</button>
       <div id="copy-toast" class="copy-toast">✓ Link copiado para a área de transferência!</div>
     </div>
 
@@ -359,13 +380,26 @@ export function renderConfigureHtml(hostUrl: string): string {
 
     function toggleTokenVisibility() {
       const input = document.getElementById('rd-token');
-      const btn = event.target;
+      const btn = document.getElementById('toggle-token-btn');
       if (input.type === 'password') {
         input.type = 'text';
         btn.textContent = '🙈 Ocultar';
       } else {
         input.type = 'password';
         btn.textContent = '👁️ Mostrar';
+      }
+    }
+
+    function toBase64Url(str) {
+      try {
+        const bytes = new TextEncoder().encode(str);
+        let bin = '';
+        for (let i = 0; i < bytes.length; i++) {
+          bin += String.fromCharCode(bytes[i]);
+        }
+        return btoa(bin).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');
+      } catch (e) {
+        return '';
       }
     }
 
@@ -395,31 +429,60 @@ export function renderConfigureHtml(hostUrl: string): string {
         disableMocks
       };
 
-      const jsonStr = JSON.stringify(configObj);
-      // Base64 URL safe
-      const b64 = btoa(jsonStr).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');
-      return b64;
+      return toBase64Url(JSON.stringify(configObj));
     }
 
     function updateLinks() {
       const b64 = generateConfig();
       const origin = (window.location.origin && window.location.origin !== 'null')
         ? window.location.origin
-        : HOST_URL.replace(/\/$/, '');
+        : HOST_URL.replace(/\\/$/, '');
       const manifestHttpUrl = origin + '/' + b64 + '/manifest.json';
-      const stremioUrl = manifestHttpUrl.replace(/^https?:\/\//, 'stremio://');
+      const stremioUrl = manifestHttpUrl.replace(/^https?:\\/\\//, 'stremio://');
 
       document.getElementById('install-btn').href = stremioUrl;
       window.currentManifestUrl = manifestHttpUrl;
     }
 
-    function copyManifestLink() {
-      if (window.currentManifestUrl) {
-        navigator.clipboard.writeText(window.currentManifestUrl).then(() => {
-          const toast = document.getElementById('copy-toast');
-          toast.style.display = 'block';
-          setTimeout(() => { toast.style.display = 'none'; }, 2500);
-        });
+    function installInStremio(evt) {
+      updateLinks();
+      const installBtn = document.getElementById('install-btn');
+      if (installBtn.href && installBtn.href !== '#') {
+        window.location.href = installBtn.href;
+      }
+      if (evt) evt.preventDefault();
+    }
+
+    function copyManifestLink(evt) {
+      if (evt) evt.preventDefault();
+      updateLinks();
+      const url = window.currentManifestUrl || '';
+      if (!url) return;
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(showToast).catch(fallbackCopy);
+      } else {
+        fallbackCopy();
+      }
+
+      function fallbackCopy() {
+        const tempInput = document.createElement('input');
+        tempInput.value = url;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        try {
+          document.execCommand('copy');
+          showToast();
+        } catch (e) {
+          alert('Link de instalação: ' + url);
+        }
+        document.body.removeChild(tempInput);
+      }
+
+      function showToast() {
+        const toast = document.getElementById('copy-toast');
+        toast.style.display = 'block';
+        setTimeout(() => { toast.style.display = 'none'; }, 2500);
       }
     }
 
