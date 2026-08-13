@@ -76,6 +76,10 @@ export class BluDVProvider implements StreamProvider {
         }
       }
 
+      if (item.isMock && (!playbackUrl || playbackUrl.startsWith("magnet:"))) {
+        playbackUrl = "https://vjs.zencdn.net/v/oceans.mp4";
+      }
+
       if (!playbackUrl) continue;
 
       const details = [

@@ -20,6 +20,7 @@ export interface BluDVItem {
   readonly size?: string;
   readonly files?: readonly BluDVFile[];
   readonly peers?: BluDVPeerCounts;
+  readonly isMock?: boolean;
 }
 
 export interface BluDVResponse {

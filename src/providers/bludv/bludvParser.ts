@@ -81,6 +81,7 @@ function parseItem(raw: unknown): BluDVItem | undefined {
       ...(seeders !== undefined ? { seeders } : {}),
       ...(leechers !== undefined ? { leechers } : {}),
     },
+    ...(record.isMock === true ? { isMock: true } : {}),
   };
 }
 

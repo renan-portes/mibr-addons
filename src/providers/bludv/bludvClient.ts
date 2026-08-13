@@ -59,6 +59,7 @@ export class BluDVClient implements DataClient<BluDVRequest, BluDVRawResponse> {
             size: "2.5 GB",
             files: [{ path: "Godfather.1972.1080p.mkv", size: "2.5 GB" }],
             peers: { seeders: 150, leechers: 10 },
+            isMock: true,
           },
         ],
         count: 1,
