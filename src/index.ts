@@ -27,6 +27,12 @@ export { BluDVParser } from "./providers/bludv/bludvParser.js";
 export { BluDVProvider } from "./providers/bludv/bludvProvider.js";
 export { createRealDebridBluDVProvider } from "./providers/bludv/realDebridBluDVWiring.js";
 export type { BluDVItem, BluDVRawResponse, BluDVRequest, BluDVResponse } from "./providers/bludv/bludvTypes.js";
+export { TorrentioClient } from "./providers/torrentio/torrentioClient.js";
+export { createDefaultTorrentioProvider } from "./providers/torrentio/torrentioFactory.js";
+export { TorrentioParser } from "./providers/torrentio/torrentioParser.js";
+export { TorrentioProvider } from "./providers/torrentio/torrentioProvider.js";
+export { createRealDebridTorrentioProvider } from "./providers/torrentio/realDebridTorrentioWiring.js";
+export type { TorrentioBehaviorHints, TorrentioStreamItem, TorrentioRawResponse, TorrentioRequest, TorrentioResponse } from "./providers/torrentio/torrentioTypes.js";
 
 export function main(): void {
   loadEnvFile();

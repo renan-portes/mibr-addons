@@ -1,5 +1,6 @@
 import { HttpDataClient } from "../clients/http/httpDataClient.js";
 import { createDefaultBluDVProvider } from "../providers/bludv/bludvFactory.js";
+import { createDefaultTorrentioProvider } from "../providers/torrentio/torrentioFactory.js";
 import { InternetArchiveDataClient } from "../providers/internetArchive/internetArchiveDataClient.js";
 import { InternetArchiveParser } from "../providers/internetArchive/internetArchiveParser.js";
 import { InternetArchiveProvider } from "../providers/internetArchive/internetArchiveProvider.js";
@@ -19,6 +20,7 @@ export function createDefaultProviderManager(options?: ProviderManagerOptions): 
   manager.register(new InternetArchiveProvider(iaClient, iaParser));
 
   manager.register(createDefaultBluDVProvider(httpClient));
+  manager.register(createDefaultTorrentioProvider(httpClient));
 
   return manager;
 }
