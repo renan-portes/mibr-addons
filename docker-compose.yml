@@ -16,6 +16,7 @@ services:
     build:
       context: ./indexer
       dockerfile: Dockerfile
+    pull_policy: build
     container_name: mibr-indexer
     restart: unless-stopped
     ports:
@@ -40,6 +41,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    pull_policy: build
     container_name: mibr-addons
     restart: unless-stopped
     ports:
@@ -56,8 +58,8 @@ services:
       TORRENTDOSFILMES_BASE_URL: http://mibr-indexer:7001
       # TORRENTIO_BASE_URL: by default omitted so it hits https://torrentio.strem.fun
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:7000/manifest.json"]
-      interval: 30s
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:7000/manifest.json"]
+      interval: 10s
       timeout: 5s
-      start_period: 10s
+      start_period: 5s
       retries: 3
