@@ -11,6 +11,8 @@ import { StreamCache } from "../services/streamCache.js";
 import { StreamService } from "../services/streamService.js";
 import { loadEnvFile } from "../utils/env.js";
 
+import { createDefaultNovaStreamsProvider } from "../providers/novaStreams/novaStreamsFactory.js";
+
 function createDefaultStreamCache(): StreamCache<import("../types/stremio.js").StremioStream[]> {
   const ttlSeconds = Number(process.env.STREAM_CACHE_TTL_SECONDS ?? 300);
   const maxEntries = Number(process.env.STREAM_CACHE_MAX_ENTRIES ?? 500);
@@ -29,7 +31,7 @@ export function createDefaultProviderManager(options?: ProviderManagerOptions): 
     manager.register(new MockProvider());
   }
 
-  const httpClient = new HttpDataClient();
+  const httpClient = new HttpDataClient({ timeoutMs: Number(process.env.HTTP_TIMEOUT_MS ?? 25_000) });
   const iaClient = new InternetArchiveDataClient(httpClient);
   const iaParser = new InternetArchiveParser();
   manager.register(new InternetArchiveProvider(iaClient, iaParser));
@@ -37,6 +39,7 @@ export function createDefaultProviderManager(options?: ProviderManagerOptions): 
   manager.register(createDefaultBluDVProvider(httpClient));
   manager.register(createDefaultTorrentioProvider(httpClient));
   manager.register(createDefaultTorrentDosFilmesProvider(httpClient));
+  manager.register(createDefaultNovaStreamsProvider(httpClient));
 
   return manager;
 }
