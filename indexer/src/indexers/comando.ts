@@ -1,11 +1,10 @@
 /**
- * Comando Torrents scraper — searches comandotorrents.to for Brazilian PT-BR dubbed torrents.
+ * Comando Indexer — Scrapes comandotorrents.to
  */
 
-import { resolveImdbTitle } from "../cinemeta.js";
 import { flareGet } from "../flaresolverr.js";
+import { resolveImdbTitle } from "../cinemeta.js";
 import {
-  buildSearchUrl,
   extractAudio,
   extractInfoHash,
   extractLinks,
@@ -16,14 +15,17 @@ import {
 } from "../parsers.js";
 import type { IndexerRequest, IndexerResponse, TorrentResult } from "../types.js";
 
-const COMANDO_SITE_URL = (process.env.COMANDO_SITE_URL ?? "https://comandotorrents.to").replace(/\/$/, "");
-const HOST_FRAGMENT = new URL(COMANDO_SITE_URL).hostname;
+const COMANDO_SITE_URL = process.env.COMANDO_SITE_URL || process.env.INDEXER_SITE_URL || "https://comandotorrents.to";
+const HOST_FRAGMENT = "comandotorrents.to";
 
-const REDIRECT_LINK_PATTERN = /href=["'](https?:\/\/(?:systemads1|videosad|reidelink|go\.php)[^"']+)["']/gi;
+const REDIRECT_LINK_PATTERN = /https?:\/\/(?:systemads1\.com|videosad\.net)\/[^\s"']+/gi;
 
-/**
- * If a link points to a shortener / redirect protector, fetch it to extract the final magnet URI.
- */
+function buildSearchUrl(siteUrl: string, query: string): string {
+  const url = new URL(siteUrl);
+  url.searchParams.set("s", query);
+  return url.toString();
+}
+
 async function resolveRedirectMagnet(url: string, signal: AbortSignal): Promise<string[]> {
   try {
     const { html } = await flareGet(url, signal);
@@ -38,7 +40,6 @@ async function scrapePost(postUrl: string, imdb: string | undefined, signal: Abo
     const { html } = await flareGet(postUrl, signal);
     let magnets = extractMagnets(html);
 
-    // If no direct magnet found, resolve ad-protector links (systemads1 / videosad)
     if (magnets.length === 0) {
       const redirectLinks: string[] = [];
       for (const match of html.matchAll(REDIRECT_LINK_PATTERN)) {
@@ -85,8 +86,13 @@ export async function scrapeComando(req: IndexerRequest, signal: AbortSignal): P
     const meta = await resolveImdbTitle(req.imdb, signal);
     if (meta?.title) {
       searchQueries.push(meta.title);
-      const cleanTitle = meta.title.replace(/^(the|a|an)\s+/i, "");
+      const cleanTitle = meta.title.replace(/^(the|a|an|o|a|os|as)\s+/i, "");
       if (cleanTitle !== meta.title) searchQueries.push(cleanTitle);
+    }
+    if (meta?.originalTitle && meta.originalTitle !== meta.title) {
+      searchQueries.push(meta.originalTitle);
+      const cleanOriginal = meta.originalTitle.replace(/^(the|a|an)\s+/i, "");
+      if (cleanOriginal !== meta.originalTitle) searchQueries.push(cleanOriginal);
     }
     searchQueries.push(req.imdb);
   } else if (req.q) {
@@ -110,7 +116,7 @@ export async function scrapeComando(req: IndexerRequest, signal: AbortSignal): P
         const results = scrapedNested.flat();
         if (results.length > 0) {
           allResults.push(...results);
-          break; // Stop after first successful query match
+          break;
         }
       }
     } catch (err) {
@@ -119,7 +125,6 @@ export async function scrapeComando(req: IndexerRequest, signal: AbortSignal): P
     }
   }
 
-  // Deduplicate by info_hash
   const seenHashes = new Set<string>();
   const deduplicated = allResults.filter((r) => {
     if (r.info_hash && seenHashes.has(r.info_hash)) return false;

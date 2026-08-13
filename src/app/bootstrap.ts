@@ -34,10 +34,13 @@ export function createProviderManagerForConfig(userConfig?: UserConfig, options?
     manager.register(new MockProvider());
   }
 
-  const httpClient = new HttpDataClient({ timeoutMs: Number(process.env.HTTP_TIMEOUT_MS ?? 25_000) });
+  const isCustomConfig = Boolean(userConfig);
   const rawToken = (userConfig as Record<string, unknown> | undefined)?.[["real", "Debrid", "Token"].join("")];
-  const customToken = typeof rawToken === "string" ? rawToken : undefined;
+  const customToken = isCustomConfig
+    ? (typeof rawToken === "string" && rawToken.trim().length > 0 ? rawToken.trim() : "")
+    : undefined;
 
+  const httpClient = new HttpDataClient({ timeoutMs: Number(process.env.HTTP_TIMEOUT_MS ?? 25_000) });
   const allowedProviders = userConfig?.providers && userConfig.providers.length > 0
     ? new Set(userConfig.providers)
     : null;

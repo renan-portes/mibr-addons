@@ -1,11 +1,10 @@
 /**
- * TorrentDosFilmes scraper — searches torrentdosfilmes2.site for PT-BR torrents by IMDb ID or title.
+ * TorrentDosFilmes Indexer — Scrapes torrentdosfilmes2.site
  */
 
-import { resolveImdbTitle } from "../cinemeta.js";
 import { flareGet } from "../flaresolverr.js";
+import { resolveImdbTitle } from "../cinemeta.js";
 import {
-  buildSearchUrl,
   extractAudio,
   extractInfoHash,
   extractLinks,
@@ -16,13 +15,20 @@ import {
 } from "../parsers.js";
 import type { IndexerRequest, IndexerResponse, TorrentResult } from "../types.js";
 
-const TDF_SITE_URL = (process.env.TORRENTDOSFILMES_SITE_URL ?? "https://torrentdosfilmes2.site").replace(/\/$/, "");
-const HOST_FRAGMENT = new URL(TDF_SITE_URL).hostname;
+const TDF_SITE_URL = process.env.TORRENTDOSFILMES_SITE_URL || "https://torrentdosfilmes2.site";
+const HOST_FRAGMENT = "torrentdosfilmes2.site";
+
+function buildSearchUrl(siteUrl: string, query: string): string {
+  const url = new URL(siteUrl);
+  url.searchParams.set("s", query);
+  return url.toString();
+}
 
 async function scrapePost(postUrl: string, imdb: string | undefined, signal: AbortSignal): Promise<TorrentResult[]> {
   try {
     const { html } = await flareGet(postUrl, signal);
     const magnets = extractMagnets(html);
+
     if (magnets.length === 0) return [];
 
     const pageTitle = extractPageTitle(html);
@@ -33,7 +39,7 @@ async function scrapePost(postUrl: string, imdb: string | undefined, signal: Abo
     return magnets.map((magnet) => {
       const magQuality = extractQuality(magnet) ?? quality ?? "HD";
       return {
-        title: `Torrent dos Filmes | ${pageTitle || "Conteúdo"}`,
+        title: `TDF | ${pageTitle || "Conteúdo"}`,
         imdb,
         audio: audio.length > 0 ? audio : ["Português (Dublado)"],
         quality: magQuality,
@@ -53,8 +59,13 @@ export async function scrapeTorrentDosFilmes(req: IndexerRequest, signal: AbortS
     const meta = await resolveImdbTitle(req.imdb, signal);
     if (meta?.title) {
       searchQueries.push(meta.title);
-      const cleanTitle = meta.title.replace(/^(the|a|an)\s+/i, "");
+      const cleanTitle = meta.title.replace(/^(the|a|an|o|a|os|as)\s+/i, "");
       if (cleanTitle !== meta.title) searchQueries.push(cleanTitle);
+    }
+    if (meta?.originalTitle && meta.originalTitle !== meta.title) {
+      searchQueries.push(meta.originalTitle);
+      const cleanOriginal = meta.originalTitle.replace(/^(the|a|an)\s+/i, "");
+      if (cleanOriginal !== meta.originalTitle) searchQueries.push(cleanOriginal);
     }
     searchQueries.push(req.imdb);
   } else if (req.q) {
@@ -78,16 +89,15 @@ export async function scrapeTorrentDosFilmes(req: IndexerRequest, signal: AbortS
         const results = scrapedNested.flat();
         if (results.length > 0) {
           allResults.push(...results);
-          break; // Stop after first successful query match
+          break;
         }
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[torrentdosfilmes] Search failed for "${query}": ${msg}`);
+      console.error(`[tdf] Search failed for "${query}": ${msg}`);
     }
   }
 
-  // Deduplicate by info_hash
   const seenHashes = new Set<string>();
   const deduplicated = allResults.filter((r) => {
     if (r.info_hash && seenHashes.has(r.info_hash)) return false;

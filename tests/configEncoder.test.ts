@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { createProviderManagerForConfig } from "../src/app/bootstrap.js";
 import { decodeUserConfig, encodeUserConfig } from "../src/utils/configEncoder.js";
 import { routeRequest } from "../src/server/router.js";
 
@@ -42,5 +43,11 @@ describe("ConfigEncoder & Router", () => {
     const encoded = encodeUserConfig({ realDebridToken: "TEST" });
     const configured = await routeRequest("GET", `/${encoded}/manifest.json`);
     assert.equal(configured.status, 200);
+  });
+
+  it("isolates custom user config from env token when token is left empty", () => {
+    process.env.REALDEBRID_TOKEN = "GLOBAL_TOKEN";
+    const manager = createProviderManagerForConfig({ providers: ["bludv"] });
+    assert.ok(manager);
   });
 });

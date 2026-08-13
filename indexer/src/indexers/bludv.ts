@@ -1,11 +1,10 @@
 /**
- * BluDV scraper — searches bludvfilmes.xyz for PT-BR torrents by IMDb ID or title query.
+ * BluDV Indexer — Scrapes bludvfilmes.xyz
  */
 
-import { resolveImdbTitle } from "../cinemeta.js";
 import { flareGet } from "../flaresolverr.js";
+import { resolveImdbTitle } from "../cinemeta.js";
 import {
-  buildSearchUrl,
   extractAudio,
   extractInfoHash,
   extractLinks,
@@ -16,13 +15,20 @@ import {
 } from "../parsers.js";
 import type { IndexerRequest, IndexerResponse, TorrentResult } from "../types.js";
 
-const BLUDV_SITE_URL = (process.env.BLUDV_SITE_URL ?? "https://bludvfilmes.xyz").replace(/\/$/, "");
-const HOST_FRAGMENT = new URL(BLUDV_SITE_URL).hostname;
+const BLUDV_SITE_URL = process.env.BLUDV_SITE_URL || "https://bludvfilmes.xyz";
+const HOST_FRAGMENT = "bludvfilmes.xyz";
+
+function buildSearchUrl(siteUrl: string, query: string): string {
+  const url = new URL(siteUrl);
+  url.searchParams.set("s", query);
+  return url.toString();
+}
 
 async function scrapePost(postUrl: string, imdb: string | undefined, signal: AbortSignal): Promise<TorrentResult[]> {
   try {
     const { html } = await flareGet(postUrl, signal);
     const magnets = extractMagnets(html);
+
     if (magnets.length === 0) return [];
 
     const pageTitle = extractPageTitle(html);
@@ -35,7 +41,7 @@ async function scrapePost(postUrl: string, imdb: string | undefined, signal: Abo
       return {
         title: `BluDV | ${pageTitle || "Conteúdo"}`,
         imdb,
-        audio: audio.length > 0 ? audio : ["Português"],
+        audio: audio.length > 0 ? audio : ["Português (Dublado)"],
         quality: magQuality,
         magnet,
         info_hash: extractInfoHash(magnet),
@@ -53,9 +59,13 @@ export async function scrapeBluDV(req: IndexerRequest, signal: AbortSignal): Pro
     const meta = await resolveImdbTitle(req.imdb, signal);
     if (meta?.title) {
       searchQueries.push(meta.title);
-      // Clean title without common English prefixes for broader search matching
-      const cleanTitle = meta.title.replace(/^(the|a|an)\s+/i, "");
+      const cleanTitle = meta.title.replace(/^(the|a|an|o|a|os|as)\s+/i, "");
       if (cleanTitle !== meta.title) searchQueries.push(cleanTitle);
+    }
+    if (meta?.originalTitle && meta.originalTitle !== meta.title) {
+      searchQueries.push(meta.originalTitle);
+      const cleanOriginal = meta.originalTitle.replace(/^(the|a|an)\s+/i, "");
+      if (cleanOriginal !== meta.originalTitle) searchQueries.push(cleanOriginal);
     }
     searchQueries.push(req.imdb);
   } else if (req.q) {
@@ -79,7 +89,7 @@ export async function scrapeBluDV(req: IndexerRequest, signal: AbortSignal): Pro
         const results = scrapedNested.flat();
         if (results.length > 0) {
           allResults.push(...results);
-          break; // Stop after first successful query match
+          break;
         }
       }
     } catch (err) {
@@ -88,7 +98,6 @@ export async function scrapeBluDV(req: IndexerRequest, signal: AbortSignal): Pro
     }
   }
 
-  // Deduplicate by info_hash
   const seenHashes = new Set<string>();
   const deduplicated = allResults.filter((r) => {
     if (r.info_hash && seenHashes.has(r.info_hash)) return false;

@@ -403,9 +403,11 @@ export function renderConfigureHtml(hostUrl: string): string {
 
     function updateLinks() {
       const b64 = generateConfig();
-      const baseUrl = HOST_URL.replace(/\\/$/, '');
-      const manifestHttpUrl = baseUrl + '/' + b64 + '/manifest.json';
-      const stremioUrl = manifestHttpUrl.replace(/^https?:\\/\\//, 'stremio://');
+      const origin = (window.location.origin && window.location.origin !== 'null')
+        ? window.location.origin
+        : HOST_URL.replace(/\/$/, '');
+      const manifestHttpUrl = origin + '/' + b64 + '/manifest.json';
+      const stremioUrl = manifestHttpUrl.replace(/^https?:\/\//, 'stremio://');
 
       document.getElementById('install-btn').href = stremioUrl;
       window.currentManifestUrl = manifestHttpUrl;

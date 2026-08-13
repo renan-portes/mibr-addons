@@ -44,7 +44,8 @@ export function createAddonServer(): Server {
           return;
         }
 
-        const host = request.headers.host ? `http://${request.headers.host}` : "http://127.0.0.1:7000";
+        const proto = (request.headers["x-forwarded-proto"] as string) ?? "http";
+        const host = request.headers.host ? `${proto}://${request.headers.host}` : "http://127.0.0.1:7000";
         const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
         const result = await routeRequest(method, pathname, undefined, host);
 
