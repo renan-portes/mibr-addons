@@ -35,7 +35,7 @@ EXPOSE 7001
 
 USER indexer
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD wget -qO- http://localhost:7001/health || exit 1
+HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:7001/health || exit 1
 
 CMD ["node", "dist/server.js"]

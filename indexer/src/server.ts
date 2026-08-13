@@ -92,8 +92,8 @@ const server = createServer((req: IncomingMessage, res: ServerResponse) => {
   });
 });
 
-server.listen(PORT, "0.0.0.0", () => {
-  console.log(`MIBR Indexer listening on http://0.0.0.0:${PORT}`);
+server.listen(PORT, () => {
+  console.log(`MIBR Indexer listening on port ${PORT}`);
   console.log(`  FlareSolverr: ${process.env.FLARESOLVERR_URL ?? "http://flaresolverr:8191"}`);
   console.log(`  BluDV site:   ${process.env.BLUDV_SITE_URL ?? "https://bludvfilmes.xyz"}`);
   console.log(`  TDF site:     ${process.env.TORRENTDOSFILMES_SITE_URL ?? "https://torrentdosfilmes2.site"}`);
