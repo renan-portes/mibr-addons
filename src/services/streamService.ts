@@ -1,6 +1,7 @@
 import { getManifest } from "../addon/manifest.js";
 import { toStremioStreams } from "../adapters/stremioStreamAdapter.js";
 import { ProviderManager } from "./providerManager.js";
+import { StreamCache } from "./streamCache.js";
 import type { MediaType } from "../types/mediaType.js";
 import type { StreamQuery } from "../types/streamProvider.js";
 import type { StremioStream, StremioType } from "../types/stremio.js";
@@ -41,11 +42,28 @@ function toStreamQuery(type: string, id: string): StreamQuery {
 }
 
 export class StreamService {
-  constructor(private readonly providerManager: ProviderManager) {}
+  private readonly cache: StreamCache<StremioStream[]> | undefined;
+
+  constructor(
+    private readonly providerManager: ProviderManager,
+    cache?: StreamCache<StremioStream[]>,
+  ) {
+    this.cache = cache;
+  }
 
   async getStreams(type: string, id: string): Promise<StremioStream[]> {
     const query = toStreamQuery(type, id);
-    const results = await this.providerManager.getStreamsFromAll(query);
-    return toStremioStreams(results);
+    const key = `${query.type}:${query.id}`;
+
+    const load = async (): Promise<StremioStream[]> => {
+      const results = await this.providerManager.getStreamsFromAll(query);
+      return toStremioStreams(results);
+    };
+
+    if (this.cache?.isEnabled) {
+      return this.cache.getOrSet(key, () => load(), new AbortController().signal);
+    }
+
+    return load();
   }
 }

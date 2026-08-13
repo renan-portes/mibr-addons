@@ -1,0 +1,24 @@
+services:
+  mibr-addons:
+    image: mibr-addons:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mibr-addons
+    restart: unless-stopped
+    ports:
+      - "7000:7000"
+    env_file:
+      - .env
+    environment:
+      # These can also be set in .env file — values here are fallbacks
+      PORT: 7000
+      NODE_ENV: production
+      STREAM_CACHE_TTL_SECONDS: 300
+      STREAM_CACHE_MAX_ENTRIES: 500
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:7000/manifest.json"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3

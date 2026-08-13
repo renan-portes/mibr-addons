@@ -1,0 +1,37 @@
+# .dockerignore — exclude files not needed in the Docker image build context
+
+# Dependencies (installed inside Docker)
+node_modules/
+
+# TypeScript source (compiled to dist/ during build)
+# src/ is needed by the builder stage, but we list outputs to skip
+dist/
+
+# Development files
+.env
+.env.*
+!.env.example
+
+# Tests and development tools
+tests/
+*.test.ts
+*.spec.ts
+coverage/
+
+# Git and CI
+.git/
+.gitignore
+.github/
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Docs (not needed at runtime)
+*.md
+CHANGELOG.md
+ROADMAP.md
