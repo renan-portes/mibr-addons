@@ -12,13 +12,12 @@ import {
   extractPageTitle,
   extractQuality,
   extractSize,
+  resolveProtectorMagnets,
 } from "../parsers.js";
 import type { IndexerRequest, IndexerResponse, TorrentResult } from "../types.js";
 
 const COMANDO_SITE_URL = process.env.COMANDO_SITE_URL || process.env.INDEXER_SITE_URL || "https://comandotorrents.to";
 const HOST_FRAGMENT = "comandotorrents.to";
-
-const REDIRECT_LINK_PATTERN = /https?:\/\/(?:systemads1\.com|videosad\.net)\/[^\s"']+/gi;
 
 function buildSearchUrl(siteUrl: string, query: string): string {
   const url = new URL(siteUrl);
@@ -26,35 +25,10 @@ function buildSearchUrl(siteUrl: string, query: string): string {
   return url.toString();
 }
 
-async function resolveRedirectMagnet(url: string, signal: AbortSignal): Promise<string[]> {
-  try {
-    const { html } = await flareGet(url, signal);
-    return extractMagnets(html);
-  } catch {
-    return [];
-  }
-}
-
 async function scrapePost(postUrl: string, imdb: string | undefined, signal: AbortSignal): Promise<TorrentResult[]> {
   try {
     const { html } = await flareGet(postUrl, signal);
-    let magnets = extractMagnets(html);
-
-    if (magnets.length === 0) {
-      const redirectLinks: string[] = [];
-      for (const match of html.matchAll(REDIRECT_LINK_PATTERN)) {
-        if (match[1] && !redirectLinks.includes(match[1])) {
-          redirectLinks.push(match[1]);
-        }
-      }
-
-      if (redirectLinks.length > 0) {
-        const resolved = await Promise.all(
-          redirectLinks.slice(0, 5).map((link) => resolveRedirectMagnet(link, signal))
-        );
-        magnets = resolved.flat();
-      }
-    }
+    const magnets = await resolveProtectorMagnets(html, signal);
 
     if (magnets.length === 0) return [];
 

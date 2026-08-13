@@ -12,6 +12,7 @@ import {
   extractPageTitle,
   extractQuality,
   extractSize,
+  resolveProtectorMagnets,
 } from "../parsers.js";
 import type { IndexerRequest, IndexerResponse, TorrentResult } from "../types.js";
 
@@ -27,7 +28,7 @@ function buildSearchUrl(siteUrl: string, query: string): string {
 async function scrapePost(postUrl: string, imdb: string | undefined, signal: AbortSignal): Promise<TorrentResult[]> {
   try {
     const { html } = await flareGet(postUrl, signal);
-    const magnets = extractMagnets(html);
+    const magnets = await resolveProtectorMagnets(html, signal);
 
     if (magnets.length === 0) return [];
 

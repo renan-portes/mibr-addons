@@ -19,6 +19,49 @@ export function extractMagnets(html: string): string[] {
   return results;
 }
 
+/** Resolve magnet links by following protector/ad-redirect links if direct magnets are missing */
+export async function resolveProtectorMagnets(html: string, signal: AbortSignal, maxLinks = 4): Promise<string[]> {
+  const direct = extractMagnets(html);
+  if (direct.length > 0) return direct;
+
+  const hrefMatches = [...html.matchAll(/href=["']([^"']+)["']/gi)].map((m) => m[1]);
+  const candidateLinks = hrefMatches.filter((h) =>
+    h.includes("go.php") ||
+    h.includes("links.php") ||
+    h.includes("systemads") ||
+    h.includes("videosad") ||
+    h.includes("protet") ||
+    h.includes("link=") ||
+    h.includes("relink")
+  ).filter((h) => !h.endsWith(".css") && !h.endsWith(".js"));
+
+  const magnets: string[] = [];
+  const seen = new Set<string>();
+
+  for (const pUrl of candidateLinks.slice(0, maxLinks)) {
+    if (signal.aborted) break;
+    try {
+      const pRes = await fetch(pUrl, {
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
+        redirect: "follow",
+        signal,
+      });
+      const pHtml = await pRes.text();
+      const pMagnets = extractMagnets(pHtml);
+      for (const mag of pMagnets) {
+        if (!seen.has(mag)) {
+          seen.add(mag);
+          magnets.push(mag);
+        }
+      }
+    } catch {
+      // Ignore individual protector failure
+    }
+  }
+
+  return magnets;
+}
+
 /** Extract the info hash (hex, lowercase) from a magnet URI */
 export function extractInfoHash(magnet: string): string | undefined {
   // SHA-1 hex (40 chars)
@@ -64,7 +107,6 @@ export function extractSize(text: string): string | undefined {
 
 /** Extract seeders count from text */
 export function extractSeeders(text: string): number | undefined {
-  // Common patterns: "1200 seeders", "👥 1.2K", "Seeds: 450"
   const patterns = [
     /(\d[\d,.]*)\s*seed(?:ers?)?/i,
     /seed(?:ers?)?\s*[:\-]?\s*(\d[\d,.]*)/i,
@@ -83,21 +125,33 @@ export function extractSeeders(text: string): number | undefined {
 
 /**
  * Extract absolute href links from HTML <a> tags matching a host pattern.
+ * Excludes navigation menus, categories, CSS/JS/images and home pages.
  * Returns a deduplicated list, limited to maxLinks.
  */
 export function extractLinks(html: string, hostContains: string, maxLinks = 8): string[] {
   const seen = new Set<string>();
   const results: string[] = [];
   const re = /href=["']([^"']+)["']/gi;
-  const IGNORE_PATTERNS = /\/(category|page|tag|feed|wp-content|wp-includes|comments)\/|\?(s|feed)=|\/(contato|dmca|pedidos|termos|privacidade|politica-de-privacidade)\/?$/i;
+  const IGNORE_PATTERNS = /\.(css|js|png|jpg|jpeg|gif|svg|ico|xml|rss)(\?.*)?$/i;
+  const IGNORE_KEYWORDS = /(wp-json|xmlrpc|feed|comments|category|generos|resolucao|lancamento|tag|page|contato|dmca|pedidos|termos|privacidade|sitemap|\/core\/|\/filmes\/?$|\/series\/?$|\/anime\/?$)/i;
+
   for (const match of html.matchAll(re)) {
     let href = match[1];
     if (href.startsWith("/")) {
       href = `https://${hostContains}${href}`;
     }
-    if (href.includes(hostContains) && !IGNORE_PATTERNS.test(href) && !seen.has(href)) {
-      seen.add(href);
-      results.push(href);
+    const cleanUrl = href.split("#")[0]!;
+    if (
+      cleanUrl.includes(hostContains) &&
+      cleanUrl !== `https://${hostContains}` &&
+      cleanUrl !== `https://${hostContains}/` &&
+      !IGNORE_PATTERNS.test(cleanUrl) &&
+      !IGNORE_KEYWORDS.test(cleanUrl) &&
+      !cleanUrl.includes("?s=") &&
+      !seen.has(cleanUrl)
+    ) {
+      seen.add(cleanUrl);
+      results.push(cleanUrl);
       if (results.length >= maxLinks) break;
     }
   }

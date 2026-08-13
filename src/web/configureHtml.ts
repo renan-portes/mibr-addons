@@ -275,6 +275,13 @@ export function renderConfigureHtml(hostUrl: string): string {
       border: 1px solid rgba(16, 185, 129, 0.25);
     }
 
+    .brand-logo {
+      max-width: 160px;
+      height: auto;
+      margin-bottom: 0.75rem;
+      filter: drop-shadow(0 6px 20px rgba(0, 230, 118, 0.25));
+    }
+
     footer {
       text-align: center;
       margin-top: 2.5rem;
@@ -288,10 +295,10 @@ export function renderConfigureHtml(hostUrl: string): string {
 <body>
   <div class="container">
     <header>
+      <img src="/mibr-logo.png" alt="MIBR Addons 🇧🇷" class="brand-logo" />
       <div class="logo-box">
-        <span class="flag-badge">🇧🇷</span>
         <div class="logo">MIBR Addons</div>
-        <span class="badge">v${version} BR</span>
+        <span class="badge">v${version} BR 🇧🇷</span>
       </div>
       <p class="subtitle">Agregador modular de torrents e streams 100% dublados em PT-BR (Made in Brasil)</p>
     </header>
