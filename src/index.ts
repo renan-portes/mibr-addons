@@ -22,6 +22,7 @@ export type { StreamResult } from "./types/streamResult.js";
 export type { DataClient } from "./types/dataClient.js";
 export type { Parser } from "./types/parser.js";
 export { BluDVClient } from "./providers/bludv/bludvClient.js";
+export { createDefaultBluDVProvider } from "./providers/bludv/bludvFactory.js";
 export { BluDVParser } from "./providers/bludv/bludvParser.js";
 export { BluDVProvider } from "./providers/bludv/bludvProvider.js";
 export { createRealDebridBluDVProvider } from "./providers/bludv/realDebridBluDVWiring.js";
