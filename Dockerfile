@@ -5,7 +5,7 @@ WORKDIR /app
 
 # Install dependencies first (layer cache friendly)
 COPY package*.json ./
-RUN npm ci --ignore-scripts
+RUN npm ci --ignore-scripts || npm install --ignore-scripts
 
 # Copy source and compile TypeScript
 COPY tsconfig*.json ./
@@ -25,7 +25,7 @@ WORKDIR /app
 
 # Copy only production dependencies + compiled output
 COPY package*.json ./
-RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
+RUN (npm ci --omit=dev --ignore-scripts || npm install --omit=dev --ignore-scripts) && npm cache clean --force
 
 COPY --from=builder /app/dist ./dist
 

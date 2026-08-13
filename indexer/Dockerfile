@@ -4,7 +4,7 @@ FROM node:24-alpine AS builder
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci --ignore-scripts
+RUN npm ci --ignore-scripts || npm install --ignore-scripts
 
 COPY tsconfig.json ./
 COPY src/ ./src/
@@ -21,7 +21,7 @@ RUN addgroup -S indexer && adduser -S indexer -G indexer
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
+RUN (npm ci --omit=dev --ignore-scripts || npm install --omit=dev --ignore-scripts) && npm cache clean --force
 
 COPY --from=builder /app/dist ./dist
 
