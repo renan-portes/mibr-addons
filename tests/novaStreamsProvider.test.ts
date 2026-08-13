@@ -19,7 +19,7 @@ describe("NovaStreams Provider", () => {
     });
 
     assert.equal(result.length, 1);
-    assert.equal(result[0].quality, "1080p");
+    assert.equal(result[0].name, "Nova Streams [Original Audio]");
     assert.equal(result[0].url, "https://hcdn.hakunaymatata.com/test.mp4");
   });
 

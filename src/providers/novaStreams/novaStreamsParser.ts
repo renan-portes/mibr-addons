@@ -19,10 +19,9 @@ export class NovaStreamsParser {
       const displayTitle = [nameStr, titleStr].filter(Boolean).join(" ");
 
       results.push({
-        title: displayTitle || "Nova Stream HTTP",
+        name: `Nova Streams${nameStr ? ` ${nameStr}` : ""}`,
+        title: titleStr || "Nova Stream HTTP",
         url: item.url,
-        quality: titleStr.includes("1080p") ? "1080p" : titleStr.includes("720p") ? "720p" : titleStr.includes("4K") ? "4K" : "HD",
-        provider: "nova-streams",
       });
     }
 

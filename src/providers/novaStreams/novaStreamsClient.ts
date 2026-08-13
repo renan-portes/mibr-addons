@@ -21,6 +21,6 @@ export class NovaStreamsClient implements DataClient<StreamQuery, NovaStreamsRaw
 
   async fetch(query: StreamQuery, signal: AbortSignal): Promise<NovaStreamsRawResponse> {
     const url = `${this.baseUrl}/stream/${encodeURIComponent(query.type)}/${encodeURIComponent(query.id)}.json`;
-    return this.httpClient.getJson<NovaStreamsRawResponse>(url, { signal });
+    return (await this.httpClient.getJson(url, { signal })) as NovaStreamsRawResponse;
   }
 }
