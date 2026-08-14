@@ -336,8 +336,24 @@ export function renderConfigureHtml(hostUrl: string): string {
       <h2 class="card-title">📡 Provedores de Conteúdo (PT-BR & Globais)</h2>
       <div class="checkbox-grid">
         <label class="checkbox-card">
+          <input type="checkbox" id="provider-froststream" checked />
+          <span>⚡ FrostStream (HTTP PT-BR)</span>
+        </label>
+        <label class="checkbox-card">
+          <input type="checkbox" id="provider-fenixflix" checked />
+          <span>🐦‍🔥 FenixFlix (HTTP PT-BR)</span>
+        </label>
+        <label class="checkbox-card">
+          <input type="checkbox" id="provider-kingvod" checked />
+          <span>👑 King VOD (HLS PT-BR)</span>
+        </label>
+        <label class="checkbox-card">
+          <input type="checkbox" id="provider-vidking" checked />
+          <span>🎬 VidKing (Player Web)</span>
+        </label>
+        <label class="checkbox-card">
           <input type="checkbox" id="provider-bludv" checked />
-          <span>🇧🇷 BluDV</span>
+          <span>🇧🇷 BluDV (Torrent)</span>
         </label>
         <label class="checkbox-card">
           <input type="checkbox" id="provider-comando" checked />
@@ -473,6 +489,10 @@ export function renderConfigureHtml(hostUrl: string): string {
       const debridToken = document.getElementById('debrid-token').value.trim();
 
       const providers = [];
+      if (document.getElementById('provider-froststream').checked) providers.push('froststream');
+      if (document.getElementById('provider-fenixflix').checked) providers.push('fenixflix');
+      if (document.getElementById('provider-kingvod').checked) providers.push('kingvod');
+      if (document.getElementById('provider-vidking').checked) providers.push('vidking');
       if (document.getElementById('provider-bludv').checked) providers.push('bludv');
       if (document.getElementById('provider-comando').checked) providers.push('comando');
       if (document.getElementById('provider-micoleao').checked) providers.push('micoleao');

@@ -18,6 +18,7 @@ export interface StremioStream {
   name: string;
   title: string;
   url?: string;
+  externalUrl?: string;
   infoHash?: string;
   fileIdx?: number;
 }

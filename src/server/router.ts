@@ -74,7 +74,7 @@ function filterStreamsByConfig(streams: StremioStream[], config: UserConfig): St
     filtered = filtered.filter((stream) => {
       const nameLower = (stream.name ?? "").toLowerCase();
       const text = `${nameLower} ${stream.title ?? ""}`.toLowerCase();
-      const isNationalProvider = /bludv|comando|mico|torrent dos filmes|tdf/i.test(nameLower);
+      const isNationalProvider = /bludv|comando|mico|torrent dos filmes|tdf|frost|fenix|king/i.test(nameLower);
       if (isNationalProvider) return true;
 
       return (

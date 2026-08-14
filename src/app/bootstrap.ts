@@ -5,6 +5,10 @@ import { createDefaultMicoLeaoProvider } from "../providers/micoleao/micoleaoFac
 import { createDefaultNovaStreamsProvider } from "../providers/novaStreams/novaStreamsFactory.js";
 import { createDefaultTorrentioProvider } from "../providers/torrentio/torrentioFactory.js";
 import { createDefaultTorrentDosFilmesProvider } from "../providers/torrentdosfilmes/torrentDosFilmesFactory.js";
+import { createDefaultFrostStreamProvider } from "../providers/froststream/frostStreamFactory.js";
+import { createDefaultFenixFlixProvider } from "../providers/fenixflix/fenixFlixFactory.js";
+import { createDefaultKingVodProvider } from "../providers/kingvod/kingVodFactory.js";
+import { VidKingProvider } from "../providers/vidking/vidKingProvider.js";
 import { InternetArchiveDataClient } from "../providers/internetArchive/internetArchiveDataClient.js";
 import { InternetArchiveParser } from "../providers/internetArchive/internetArchiveParser.js";
 import { InternetArchiveProvider } from "../providers/internetArchive/internetArchiveProvider.js";
@@ -46,10 +50,20 @@ export function createProviderManagerForConfig(userConfig?: UserConfig, options?
     ? new Set(userConfig.providers)
     : null;
 
-  if (!allowedProviders || allowedProviders.has("internetarchive") || allowedProviders.has("ia")) {
-    const iaClient = new InternetArchiveDataClient(httpClient);
-    const iaParser = new InternetArchiveParser();
-    manager.register(new InternetArchiveProvider(iaClient, iaParser));
+  if (!allowedProviders || allowedProviders.has("froststream")) {
+    manager.register(createDefaultFrostStreamProvider(httpClient));
+  }
+
+  if (!allowedProviders || allowedProviders.has("fenixflix")) {
+    manager.register(createDefaultFenixFlixProvider(httpClient));
+  }
+
+  if (!allowedProviders || allowedProviders.has("kingvod")) {
+    manager.register(createDefaultKingVodProvider(httpClient));
+  }
+
+  if (!allowedProviders || allowedProviders.has("vidking")) {
+    manager.register(new VidKingProvider());
   }
 
   if (!allowedProviders || allowedProviders.has("bludv")) {
@@ -64,16 +78,22 @@ export function createProviderManagerForConfig(userConfig?: UserConfig, options?
     manager.register(createDefaultMicoLeaoProvider(httpClient, customToken));
   }
 
-  if (!allowedProviders || allowedProviders.has("torrentio")) {
-    manager.register(createDefaultTorrentioProvider(httpClient, customToken));
-  }
-
   if (!allowedProviders || allowedProviders.has("torrentdosfilmes") || allowedProviders.has("tdf")) {
     manager.register(createDefaultTorrentDosFilmesProvider(httpClient, customToken));
   }
 
+  if (!allowedProviders || allowedProviders.has("torrentio")) {
+    manager.register(createDefaultTorrentioProvider(httpClient, customToken));
+  }
+
   if (!allowedProviders || allowedProviders.has("nova-streams") || allowedProviders.has("novastreams")) {
     manager.register(createDefaultNovaStreamsProvider(httpClient));
+  }
+
+  if (!allowedProviders || allowedProviders.has("internetarchive") || allowedProviders.has("ia")) {
+    const iaClient = new InternetArchiveDataClient(httpClient);
+    const iaParser = new InternetArchiveParser();
+    manager.register(new InternetArchiveProvider(iaClient, iaParser));
   }
 
   return manager;
