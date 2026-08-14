@@ -9,6 +9,9 @@ import { createDefaultFrostStreamProvider } from "../providers/froststream/frost
 import { createDefaultFenixFlixProvider } from "../providers/fenixflix/fenixFlixFactory.js";
 import { createDefaultKingVodProvider } from "../providers/kingvod/kingVodFactory.js";
 import { VidKingProvider } from "../providers/vidking/vidKingProvider.js";
+import { createDefaultBrazucaProvider } from "../providers/brazuca/brazucaFactory.js";
+import { createDefaultCometProvider } from "../providers/comet/cometFactory.js";
+import { createDefaultStremThruProvider } from "../providers/stremthru/stremThruFactory.js";
 import { InternetArchiveDataClient } from "../providers/internetArchive/internetArchiveDataClient.js";
 import { InternetArchiveParser } from "../providers/internetArchive/internetArchiveParser.js";
 import { InternetArchiveProvider } from "../providers/internetArchive/internetArchiveProvider.js";
@@ -64,6 +67,18 @@ export function createProviderManagerForConfig(userConfig?: UserConfig, options?
 
   if (!allowedProviders || allowedProviders.has("vidking")) {
     manager.register(new VidKingProvider());
+  }
+
+  if (!allowedProviders || allowedProviders.has("brazuca") || allowedProviders.has("brazucatorrents")) {
+    manager.register(createDefaultBrazucaProvider(httpClient));
+  }
+
+  if (!allowedProviders || allowedProviders.has("comet")) {
+    manager.register(createDefaultCometProvider(httpClient));
+  }
+
+  if (!allowedProviders || allowedProviders.has("stremthru")) {
+    manager.register(createDefaultStremThruProvider(httpClient));
   }
 
   if (!allowedProviders || allowedProviders.has("bludv")) {

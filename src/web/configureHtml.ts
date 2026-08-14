@@ -331,9 +331,9 @@ export function renderConfigureHtml(hostUrl: string): string {
       </div>
     </div>
 
-    <!-- Content Providers -->
+    <!-- Content Providers PT-BR -->
     <div class="card">
-      <h2 class="card-title">📡 Provedores de Conteúdo (PT-BR & Globais)</h2>
+      <h2 class="card-title">🇧🇷 Provedores Nacionais (100% PT-BR / Dublado)</h2>
       <div class="checkbox-grid">
         <label class="checkbox-card">
           <input type="checkbox" id="provider-froststream" checked />
@@ -352,6 +352,10 @@ export function renderConfigureHtml(hostUrl: string): string {
           <span>🎬 VidKing (Player Web)</span>
         </label>
         <label class="checkbox-card">
+          <input type="checkbox" id="provider-brazuca" checked />
+          <span>🇧🇷 Brazuca Torrents</span>
+        </label>
+        <label class="checkbox-card">
           <input type="checkbox" id="provider-bludv" checked />
           <span>🇧🇷 BluDV (Torrent)</span>
         </label>
@@ -366,6 +370,22 @@ export function renderConfigureHtml(hostUrl: string): string {
         <label class="checkbox-card">
           <input type="checkbox" id="provider-torrentdosfilmes" checked />
           <span>🇧🇷 Torrent dos Filmes</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Global / Fallback Providers -->
+    <div class="card">
+      <h2 class="card-title">🌍 Provedores Globais & Fallback (Original / Multi-Áudio / P2P)</h2>
+      <p class="subtitle" style="font-size:0.85rem; margin-bottom:1rem;">Úteis para filmes/séries antigos ou quando não houver versão dublada disponível.</p>
+      <div class="checkbox-grid">
+        <label class="checkbox-card">
+          <input type="checkbox" id="provider-comet" checked />
+          <span>☄️ Comet (Global P2P/Debrid)</span>
+        </label>
+        <label class="checkbox-card">
+          <input type="checkbox" id="provider-stremthru" checked />
+          <span>⚡ StremThru Torz</span>
         </label>
         <label class="checkbox-card">
           <input type="checkbox" id="provider-novastreams" checked />
@@ -493,10 +513,13 @@ export function renderConfigureHtml(hostUrl: string): string {
       if (document.getElementById('provider-fenixflix').checked) providers.push('fenixflix');
       if (document.getElementById('provider-kingvod').checked) providers.push('kingvod');
       if (document.getElementById('provider-vidking').checked) providers.push('vidking');
+      if (document.getElementById('provider-brazuca').checked) providers.push('brazuca');
       if (document.getElementById('provider-bludv').checked) providers.push('bludv');
       if (document.getElementById('provider-comando').checked) providers.push('comando');
       if (document.getElementById('provider-micoleao').checked) providers.push('micoleao');
       if (document.getElementById('provider-torrentdosfilmes').checked) providers.push('torrentdosfilmes');
+      if (document.getElementById('provider-comet').checked) providers.push('comet');
+      if (document.getElementById('provider-stremthru').checked) providers.push('stremthru');
       if (document.getElementById('provider-novastreams').checked) providers.push('nova-streams');
       if (document.getElementById('provider-torrentio').checked) providers.push('torrentio');
       if (document.getElementById('provider-ia').checked) providers.push('internetarchive');
