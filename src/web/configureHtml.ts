@@ -352,6 +352,10 @@ export function renderConfigureHtml(hostUrl: string): string {
           <span>🎬 VidKing (Player Web)</span>
         </label>
         <label class="checkbox-card">
+          <input type="checkbox" id="provider-betterflix" checked />
+          <span>🍿 BetterFlix (Player Web)</span>
+        </label>
+        <label class="checkbox-card">
           <input type="checkbox" id="provider-brazuca" checked />
           <span>🇧🇷 Brazuca Torrents</span>
         </label>
@@ -513,6 +517,7 @@ export function renderConfigureHtml(hostUrl: string): string {
       if (document.getElementById('provider-fenixflix').checked) providers.push('fenixflix');
       if (document.getElementById('provider-kingvod').checked) providers.push('kingvod');
       if (document.getElementById('provider-vidking').checked) providers.push('vidking');
+      if (document.getElementById('provider-betterflix').checked) providers.push('betterflix');
       if (document.getElementById('provider-brazuca').checked) providers.push('brazuca');
       if (document.getElementById('provider-bludv').checked) providers.push('bludv');
       if (document.getElementById('provider-comando').checked) providers.push('comando');

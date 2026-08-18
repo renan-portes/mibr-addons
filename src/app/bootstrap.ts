@@ -9,6 +9,7 @@ import { createDefaultFrostStreamProvider } from "../providers/froststream/frost
 import { createDefaultFenixFlixProvider } from "../providers/fenixflix/fenixFlixFactory.js";
 import { createDefaultKingVodProvider } from "../providers/kingvod/kingVodFactory.js";
 import { VidKingProvider } from "../providers/vidking/vidKingProvider.js";
+import { BetterFlixProvider } from "../providers/betterflix/betterFlixProvider.js";
 import { createDefaultBrazucaProvider } from "../providers/brazuca/brazucaFactory.js";
 import { createDefaultCometProvider } from "../providers/comet/cometFactory.js";
 import { createDefaultStremThruProvider } from "../providers/stremthru/stremThruFactory.js";
@@ -67,6 +68,10 @@ export function createProviderManagerForConfig(userConfig?: UserConfig, options?
 
   if (!allowedProviders || allowedProviders.has("vidking")) {
     manager.register(new VidKingProvider());
+  }
+
+  if (!allowedProviders || allowedProviders.has("betterflix")) {
+    manager.register(new BetterFlixProvider());
   }
 
   if (!allowedProviders || allowedProviders.has("brazuca") || allowedProviders.has("brazucatorrents")) {
