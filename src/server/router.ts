@@ -1,5 +1,7 @@
 import { getManifest } from "../addon/manifest.js";
 import { createProviderManagerForConfig, getDefaultStreamService } from "../app/bootstrap.js";
+import { FrostViewClient } from "../providers/frostview/frostViewClient.js";
+import { HttpDataClient } from "../clients/http/httpDataClient.js";
 import { StreamService, StreamRequestError } from "../services/streamService.js";
 import type { ErrorResponse, StremioStreamResponse, StremioStream } from "../types/stremio.js";
 import type { UserConfig } from "../types/userConfig.js";
@@ -7,7 +9,7 @@ import { decodeUserConfig } from "../utils/configEncoder.js";
 import { renderConfigureHtml } from "../web/configureHtml.js";
 
 export type RouteResult =
-  | { status: 200; contentType?: "application/json"; body: ReturnType<typeof getManifest> | StremioStreamResponse }
+  | { status: 200; contentType?: "application/json"; body: any }
   | { status: 200; contentType: "text/html"; html: string }
   | { status: 400; body: ErrorResponse }
   | { status: 404; body: ErrorResponse }
@@ -17,13 +19,37 @@ const STREAM_PATH_PATTERN = /^\/stream\/([^/]+)\/([^/]+)\.json$/;
 const CONFIG_MANIFEST_PATTERN = /^\/([^/]+)\/manifest\.json$/;
 const CONFIG_STREAM_PATTERN = /^\/([^/]+)\/stream\/([^/]+)\/([^/]+)\.json$/;
 
+const CATALOG_PATH_PATTERN = /^\/(?:([^/]+)\/)?catalog\/([^/]+)\/([^/]+?)(?:\/(.+))?\.json$/;
+const META_PATH_PATTERN = /^\/(?:([^/]+)\/)?meta\/([^/]+)\/([^/]+)\.json$/;
+
 interface StreamPathParams {
   configStr?: string;
   type: string;
   id: string;
 }
 
-function parsePath(pathname: string): { type: "configure" } | { type: "manifest"; configStr?: string } | { type: "stream"; params: StreamPathParams } | null {
+interface CatalogPathParams {
+  configStr?: string;
+  type: string;
+  id: string;
+  extra?: string;
+}
+
+interface MetaPathParams {
+  configStr?: string;
+  type: string;
+  id: string;
+}
+
+function parsePath(
+  pathname: string,
+):
+  | { type: "configure" }
+  | { type: "manifest"; configStr?: string }
+  | { type: "stream"; params: StreamPathParams }
+  | { type: "catalog"; params: CatalogPathParams }
+  | { type: "meta"; params: MetaPathParams }
+  | null {
   if (pathname === "/" || pathname === "/configure") {
     return { type: "configure" };
   }
@@ -33,7 +59,7 @@ function parsePath(pathname: string): { type: "configure" } | { type: "manifest"
   }
 
   const configManifestMatch = CONFIG_MANIFEST_PATTERN.exec(pathname);
-  if (configManifestMatch && configManifestMatch[1] && configManifestMatch[1] !== "stream") {
+  if (configManifestMatch && configManifestMatch[1] && configManifestMatch[1] !== "stream" && configManifestMatch[1] !== "catalog" && configManifestMatch[1] !== "meta") {
     return { type: "manifest", configStr: configManifestMatch[1] };
   }
 
@@ -45,6 +71,31 @@ function parsePath(pathname: string): { type: "configure" } | { type: "manifest"
   const configStreamMatch = CONFIG_STREAM_PATTERN.exec(pathname);
   if (configStreamMatch && configStreamMatch[1] && configStreamMatch[2] && configStreamMatch[3]) {
     return { type: "stream", params: { configStr: configStreamMatch[1], type: configStreamMatch[2], id: configStreamMatch[3] } };
+  }
+
+  const catalogMatch = CATALOG_PATH_PATTERN.exec(pathname);
+  if (catalogMatch && catalogMatch[2] && catalogMatch[3]) {
+    return {
+      type: "catalog",
+      params: {
+        configStr: catalogMatch[1],
+        type: catalogMatch[2],
+        id: catalogMatch[3],
+        extra: catalogMatch[4],
+      },
+    };
+  }
+
+  const metaMatch = META_PATH_PATTERN.exec(pathname);
+  if (metaMatch && metaMatch[2] && metaMatch[3]) {
+    return {
+      type: "meta",
+      params: {
+        configStr: metaMatch[1],
+        type: metaMatch[2],
+        id: metaMatch[3],
+      },
+    };
   }
 
   return null;
@@ -60,7 +111,7 @@ function filterStreamsByConfig(streams: StremioStream[], config: UserConfig): St
       const nameLower = (stream.name ?? "").toLowerCase();
       const text = `${nameLower} ${titleLower}`;
 
-      if (allowedRes.has("4k") && (text.includes("4k") || text.includes("2160p") || text.includes("uhd"))) return true;
+      if (allowedRes.has("4k") && (text.includes("4k") || text.includes("2160p"))) return true;
       if (allowedRes.has("1080p") && text.includes("1080p")) return true;
       if (allowedRes.has("720p") && text.includes("720p")) return true;
       if (allowedRes.has("480p") && (text.includes("480p") || text.includes("sd"))) return true;
@@ -99,6 +150,9 @@ function filterStreamsByConfig(streams: StremioStream[], config: UserConfig): St
   return filtered;
 }
 
+const sharedHttpClient = new HttpDataClient({ timeoutMs: 15_000 });
+const frostViewClient = new FrostViewClient(sharedHttpClient);
+
 export async function routeRequest(
   method: string,
   pathname: string,
@@ -124,6 +178,32 @@ export async function routeRequest(
 
   if (parsed.type === "manifest") {
     return { status: 200, contentType: "application/json", body: getManifest(hostUrl) };
+  }
+
+  if (parsed.type === "catalog") {
+    const { extra } = parsed.params;
+    let genre: string | undefined;
+    let search: string | undefined;
+    let skip: number | undefined;
+
+    if (extra) {
+      const extraParts = extra.split("&");
+      for (const part of extraParts) {
+        const [k, v] = part.split("=");
+        if (k === "genre" && v) genre = decodeURIComponent(v);
+        if (k === "search" && v) search = decodeURIComponent(v);
+        if (k === "skip" && v) skip = Number(v);
+      }
+    }
+
+    const catalogData = await frostViewClient.fetchCatalog(genre, search, skip);
+    return { status: 200, contentType: "application/json", body: catalogData };
+  }
+
+  if (parsed.type === "meta") {
+    const { id } = parsed.params;
+    const metaData = await frostViewClient.fetchMeta(id);
+    return { status: 200, contentType: "application/json", body: metaData };
   }
 
   if (parsed.type === "stream") {

@@ -3,7 +3,7 @@ import type { DataClient } from "../../types/dataClient.js";
 import type { StreamQuery } from "../../types/streamProvider.js";
 import type { NovaStreamsRawResponse } from "./novaStreamsTypes.js";
 
-const DEFAULT_BASE_URL = "https://nova-streamz.vercel.app";
+const DEFAULT_BASE_URL = "https://novastream.sudolocal.qzz.io";
 
 export interface NovaStreamsClientOptions {
   baseUrl?: string;

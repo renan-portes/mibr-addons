@@ -6,6 +6,7 @@ import { createDefaultNovaStreamsProvider } from "../providers/novaStreams/novaS
 import { createDefaultTorrentioProvider } from "../providers/torrentio/torrentioFactory.js";
 import { createDefaultTorrentDosFilmesProvider } from "../providers/torrentdosfilmes/torrentDosFilmesFactory.js";
 import { createDefaultFrostStreamProvider } from "../providers/froststream/frostStreamFactory.js";
+import { createDefaultFrostViewProvider } from "../providers/frostview/frostViewFactory.js";
 import { createDefaultFenixFlixProvider } from "../providers/fenixflix/fenixFlixFactory.js";
 import { createDefaultKingVodProvider } from "../providers/kingvod/kingVodFactory.js";
 import { VidKingProvider } from "../providers/vidking/vidKingProvider.js";
@@ -57,6 +58,10 @@ export function createProviderManagerForConfig(userConfig?: UserConfig, options?
 
   if (!allowedProviders || allowedProviders.has("froststream")) {
     manager.register(createDefaultFrostStreamProvider(httpClient));
+  }
+
+  if (!allowedProviders || allowedProviders.has("frostview") || allowedProviders.has("frostviewtv")) {
+    manager.register(createDefaultFrostViewProvider(httpClient));
   }
 
   if (!allowedProviders || allowedProviders.has("fenixflix")) {

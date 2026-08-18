@@ -340,6 +340,10 @@ export function renderConfigureHtml(hostUrl: string): string {
           <span>⚡ FrostStream (HTTP PT-BR)</span>
         </label>
         <label class="checkbox-card">
+          <input type="checkbox" id="provider-frostview" checked />
+          <span>📺 FrostView TV (Canais ao Vivo PT-BR)</span>
+        </label>
+        <label class="checkbox-card">
           <input type="checkbox" id="provider-fenixflix" checked />
           <span>🐦‍🔥 FenixFlix (HTTP PT-BR)</span>
         </label>
@@ -518,6 +522,7 @@ export function renderConfigureHtml(hostUrl: string): string {
 
       const providers = [];
       if (document.getElementById('provider-froststream').checked) providers.push('froststream');
+      if (document.getElementById('provider-frostview').checked) providers.push('frostview');
       if (document.getElementById('provider-fenixflix').checked) providers.push('fenixflix');
       if (document.getElementById('provider-kingvod').checked) providers.push('kingvod');
       if (document.getElementById('provider-vidking').checked) providers.push('vidking');

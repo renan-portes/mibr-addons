@@ -1,6 +1,19 @@
-export type StremioResource = "stream";
+export type StremioResource = "stream" | "catalog" | "meta";
 
-export type StremioType = "movie" | "series";
+export type StremioType = "movie" | "series" | "channel";
+
+export interface StremioCatalogExtra {
+  name: string;
+  isRequired?: boolean;
+  options?: string[];
+}
+
+export interface StremioCatalog {
+  id: string;
+  type: StremioType;
+  name: string;
+  extra?: StremioCatalogExtra[];
+}
 
 export interface StremioManifest {
   id: string;
@@ -11,6 +24,7 @@ export interface StremioManifest {
   logo?: string;
   resources: StremioResource[];
   types: StremioType[];
+  catalogs?: StremioCatalog[];
   idPrefixes: string[];
 }
 
