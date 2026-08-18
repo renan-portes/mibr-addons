@@ -392,6 +392,10 @@ export function renderConfigureHtml(hostUrl: string): string {
           <span>⚡ StremThru Torz</span>
         </label>
         <label class="checkbox-card">
+          <input type="checkbox" id="provider-torrin" checked />
+          <span>⚡ Torrin (Debrid & P2P)</span>
+        </label>
+        <label class="checkbox-card">
           <input type="checkbox" id="provider-novastreams" checked />
           <span>🌐 Nova Streams (HTTP)</span>
         </label>
@@ -525,6 +529,7 @@ export function renderConfigureHtml(hostUrl: string): string {
       if (document.getElementById('provider-torrentdosfilmes').checked) providers.push('torrentdosfilmes');
       if (document.getElementById('provider-comet').checked) providers.push('comet');
       if (document.getElementById('provider-stremthru').checked) providers.push('stremthru');
+      if (document.getElementById('provider-torrin').checked) providers.push('torrin');
       if (document.getElementById('provider-novastreams').checked) providers.push('nova-streams');
       if (document.getElementById('provider-torrentio').checked) providers.push('torrentio');
       if (document.getElementById('provider-ia').checked) providers.push('internetarchive');

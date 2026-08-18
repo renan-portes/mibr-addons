@@ -62,6 +62,43 @@ export async function resolveProtectorMagnets(html: string, signal: AbortSignal,
   return magnets;
 }
 
+/** Verify if a post title matches the target movie/series title and year */
+export function isMatchingTitle(
+  postTitle: string,
+  targetTitle?: string,
+  targetOriginal?: string,
+  targetYear?: number,
+): boolean {
+  if (!targetTitle && !targetOriginal) return true;
+
+  const normPost = postTitle.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  if (targetYear) {
+    const yearMatches = postTitle.match(/\b(19\d\d|20\d\d)\b/g);
+    if (yearMatches && yearMatches.length > 0) {
+      const hasMatchingYear = yearMatches.some((y) => Number(y) === targetYear);
+      if (!hasMatchingYear) {
+        return false;
+      }
+    }
+  }
+
+  const normTarget = targetTitle ? targetTitle.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
+  const normOrig = targetOriginal ? targetOriginal.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
+
+  const cleanTargetWords = normTarget ? normTarget.replace(/[^\w\s]/g, "").split(/\s+/).filter((w) => w.length > 2) : [];
+  const cleanOrigWords = normOrig ? normOrig.replace(/[^\w\s]/g, "").split(/\s+/).filter((w) => w.length > 2) : [];
+
+  if (cleanTargetWords.length === 0 && cleanOrigWords.length === 0) return true;
+
+  const postWords = new Set(normPost.replace(/[^\w\s]/g, "").split(/\s+/));
+
+  const targetMatch = cleanTargetWords.length > 0 && cleanTargetWords.every((w) => postWords.has(w));
+  const origMatch = cleanOrigWords.length > 0 && cleanOrigWords.every((w) => postWords.has(w));
+
+  return targetMatch || origMatch;
+}
+
 /** Extract the info hash (hex, lowercase) from a magnet URI */
 export function extractInfoHash(magnet: string): string | undefined {
   // SHA-1 hex (40 chars)

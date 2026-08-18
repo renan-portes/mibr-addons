@@ -13,6 +13,7 @@ import { BetterFlixProvider } from "../providers/betterflix/betterFlixProvider.j
 import { createDefaultBrazucaProvider } from "../providers/brazuca/brazucaFactory.js";
 import { createDefaultCometProvider } from "../providers/comet/cometFactory.js";
 import { createDefaultStremThruProvider } from "../providers/stremthru/stremThruFactory.js";
+import { createDefaultTorrinProvider } from "../providers/torrin/torrinFactory.js";
 import { InternetArchiveDataClient } from "../providers/internetArchive/internetArchiveDataClient.js";
 import { InternetArchiveParser } from "../providers/internetArchive/internetArchiveParser.js";
 import { InternetArchiveProvider } from "../providers/internetArchive/internetArchiveProvider.js";
@@ -84,6 +85,10 @@ export function createProviderManagerForConfig(userConfig?: UserConfig, options?
 
   if (!allowedProviders || allowedProviders.has("stremthru")) {
     manager.register(createDefaultStremThruProvider(httpClient));
+  }
+
+  if (!allowedProviders || allowedProviders.has("torrin")) {
+    manager.register(createDefaultTorrinProvider(httpClient));
   }
 
   if (!allowedProviders || allowedProviders.has("bludv")) {

@@ -12,6 +12,7 @@ import {
   extractPageTitle,
   extractQuality,
   extractSize,
+  isMatchingTitle,
   resolveProtectorMagnets,
 } from "../parsers.js";
 import type { IndexerRequest, IndexerResponse, TorrentResult } from "../types.js";
@@ -25,14 +26,29 @@ function buildSearchUrl(siteUrl: string, query: string): string {
   return url.toString();
 }
 
-async function scrapePost(postUrl: string, imdb: string | undefined, signal: AbortSignal): Promise<TorrentResult[]> {
+interface TargetMeta {
+  title: string;
+  originalTitle?: string;
+  year?: number;
+}
+
+async function scrapePost(
+  postUrl: string,
+  imdb: string | undefined,
+  targetMeta: TargetMeta | undefined,
+  signal: AbortSignal,
+): Promise<TorrentResult[]> {
   try {
     const { html } = await flareGet(postUrl, signal);
-    const magnets = await resolveProtectorMagnets(html, signal);
+    const pageTitle = extractPageTitle(html);
 
+    if (targetMeta && !isMatchingTitle(pageTitle, targetMeta.title, targetMeta.originalTitle, targetMeta.year)) {
+      return [];
+    }
+
+    const magnets = await resolveProtectorMagnets(html, signal);
     if (magnets.length === 0) return [];
 
-    const pageTitle = extractPageTitle(html);
     const quality = extractQuality(pageTitle) ?? extractQuality(html);
     const audio = extractAudio(pageTitle).length > 0 ? extractAudio(pageTitle) : extractAudio(html);
     const size = extractSize(html);
@@ -56,9 +72,12 @@ async function scrapePost(postUrl: string, imdb: string | undefined, signal: Abo
 
 export async function scrapeBluDV(req: IndexerRequest, signal: AbortSignal): Promise<IndexerResponse> {
   const searchQueries: string[] = [];
+  let targetMeta: TargetMeta | undefined;
+
   if (req.imdb) {
     const meta = await resolveImdbTitle(req.imdb, signal);
     if (meta?.title) {
+      targetMeta = { title: meta.title, originalTitle: meta.originalTitle, year: meta.year };
       searchQueries.push(meta.title);
       const cleanTitle = meta.title.replace(/^(the|a|an|o|a|os|as)\s+/i, "");
       if (cleanTitle !== meta.title) searchQueries.push(cleanTitle);
@@ -71,6 +90,7 @@ export async function scrapeBluDV(req: IndexerRequest, signal: AbortSignal): Pro
     searchQueries.push(req.imdb);
   } else if (req.q) {
     searchQueries.push(req.q);
+    targetMeta = { title: req.q };
   }
 
   if (searchQueries.length === 0) return { results: [], count: 0 };
@@ -85,7 +105,7 @@ export async function scrapeBluDV(req: IndexerRequest, signal: AbortSignal): Pro
       const postLinks = extractLinks(html, HOST_FRAGMENT, limit);
       if (postLinks.length > 0) {
         const scrapedNested = await Promise.all(
-          postLinks.map((url) => scrapePost(url, req.imdb, signal))
+          postLinks.map((url) => scrapePost(url, req.imdb, targetMeta, signal))
         );
         const results = scrapedNested.flat();
         if (results.length > 0) {
