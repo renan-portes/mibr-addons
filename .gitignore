@@ -24,9 +24,3 @@ Thumbs.db
 tmp/
 temp/
 *.tmp
-
-# Private TV Channels and Playlists (NEVER COMMIT)
-data/
-*.m3u
-*.m3u8
-channels.json

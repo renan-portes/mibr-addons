@@ -29,12 +29,14 @@ RUN (npm ci --omit=dev --ignore-scripts || npm install --omit=dev --ignore-scrip
 
 COPY --from=builder /app/dist ./dist
 COPY mibr-logo*.png ./
+COPY data/ ./data/
 
 # Runtime configuration defaults (override via env or .env file)
 ENV PORT=7000 \
     NODE_ENV=production \
-    STREAM_CACHE_TTL_SECONDS=300 \
-    STREAM_CACHE_MAX_ENTRIES=500
+    CHANNELS_M3U_PATH=./data/channels.m3u \
+    STREAM_CACHE_TTL_SECONDS=300
+
 
 EXPOSE 7000
 
