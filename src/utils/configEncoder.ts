@@ -39,24 +39,12 @@ export function decodeUserConfig(encoded: string): UserConfig | null {
     const obj = parsed as Record<string, unknown>;
     const config: UserConfig = {};
 
-    if (typeof obj.realDebridToken === "string" && obj.realDebridToken.trim().length > 0) {
-      config.realDebridToken = obj.realDebridToken.trim();
+    if (typeof obj.m3uUrl === "string" && obj.m3uUrl.trim().length > 0) {
+      config.m3uUrl = obj.m3uUrl.trim();
     }
 
-    if (Array.isArray(obj.providers)) {
-      config.providers = obj.providers.filter((p): p is string => typeof p === "string");
-    }
-
-    if (Array.isArray(obj.resolutions)) {
-      config.resolutions = obj.resolutions.filter((r): r is string => typeof r === "string");
-    }
-
-    if (obj.audioFilter === "all" || obj.audioFilter === "ptbr_only" || obj.audioFilter === "prefer_dual") {
-      config.audioFilter = obj.audioFilter;
-    }
-
-    if (typeof obj.disableMocks === "boolean") {
-      config.disableMocks = obj.disableMocks;
+    if (Array.isArray(obj.categories)) {
+      config.categories = obj.categories.filter((c): c is string => typeof c === "string");
     }
 
     return config;

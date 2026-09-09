@@ -1,187 +1,81 @@
 import { getManifest } from "../addon/manifest.js";
-import { createProviderManagerForConfig, getDefaultStreamService } from "../app/bootstrap.js";
-import { FrostViewClient } from "../providers/frostview/frostViewClient.js";
-import { HttpDataClient } from "../clients/http/httpDataClient.js";
-import { StreamService, StreamRequestError } from "../services/streamService.js";
-import type { ErrorResponse, StremioStreamResponse, StremioStream } from "../types/stremio.js";
-import type { UserConfig } from "../types/userConfig.js";
-import { decodeUserConfig } from "../utils/configEncoder.js";
+import { ChannelStore, getDefaultChannelStore } from "../tv/channelStore.js";
+import { StreamProxy } from "../tv/streamProxy.js";
+import type {
+  ErrorResponse,
+  StremioCatalogResponse,
+  StremioMeta,
+  StremioMetaResponse,
+  StremioStreamResponse,
+} from "../types/stremio.js";
 import { renderConfigureHtml } from "../web/configureHtml.js";
 
 export type RouteResult =
   | { status: 200; contentType?: "application/json"; body: any }
   | { status: 200; contentType: "text/html"; html: string }
-  | { status: 400; body: ErrorResponse }
-  | { status: 404; body: ErrorResponse }
-  | { status: 500; body: ErrorResponse };
+  | {
+      status: number;
+      contentType: string;
+      rawBody: string | Buffer | Uint8Array;
+      headers?: Record<string, string>;
+    }
+  | { status: 400 | 404 | 500 | 502; body: ErrorResponse };
 
-const STREAM_PATH_PATTERN = /^\/stream\/([^/]+)\/([^/]+)\.json$/;
+const STREAM_PATH_PATTERN = /^(?:\/([^/]+))?\/stream\/channel\/([^/]+)\.json$/;
 const CONFIG_MANIFEST_PATTERN = /^\/([^/]+)\/manifest\.json$/;
-const CONFIG_STREAM_PATTERN = /^\/([^/]+)\/stream\/([^/]+)\/([^/]+)\.json$/;
-
-const CATALOG_PATH_PATTERN = /^\/(?:([^/]+)\/)?catalog\/([^/]+)\/([^/]+?)(?:\/(.+))?\.json$/;
-const META_PATH_PATTERN = /^\/(?:([^/]+)\/)?meta\/([^/]+)\/([^/]+)\.json$/;
-
-interface StreamPathParams {
-  configStr?: string;
-  type: string;
-  id: string;
-}
-
-interface CatalogPathParams {
-  configStr?: string;
-  type: string;
-  id: string;
-  extra?: string;
-}
-
-interface MetaPathParams {
-  configStr?: string;
-  type: string;
-  id: string;
-}
-
-function parsePath(
-  pathname: string,
-):
-  | { type: "configure" }
-  | { type: "manifest"; configStr?: string }
-  | { type: "stream"; params: StreamPathParams }
-  | { type: "catalog"; params: CatalogPathParams }
-  | { type: "meta"; params: MetaPathParams }
-  | null {
-  if (pathname === "/" || pathname === "/configure") {
-    return { type: "configure" };
-  }
-
-  if (pathname === "/manifest.json") {
-    return { type: "manifest" };
-  }
-
-  const configManifestMatch = CONFIG_MANIFEST_PATTERN.exec(pathname);
-  if (configManifestMatch && configManifestMatch[1] && configManifestMatch[1] !== "stream" && configManifestMatch[1] !== "catalog" && configManifestMatch[1] !== "meta") {
-    return { type: "manifest", configStr: configManifestMatch[1] };
-  }
-
-  const defaultStreamMatch = STREAM_PATH_PATTERN.exec(pathname);
-  if (defaultStreamMatch && defaultStreamMatch[1] && defaultStreamMatch[2]) {
-    return { type: "stream", params: { type: defaultStreamMatch[1], id: defaultStreamMatch[2] } };
-  }
-
-  const configStreamMatch = CONFIG_STREAM_PATTERN.exec(pathname);
-  if (configStreamMatch && configStreamMatch[1] && configStreamMatch[2] && configStreamMatch[3]) {
-    return { type: "stream", params: { configStr: configStreamMatch[1], type: configStreamMatch[2], id: configStreamMatch[3] } };
-  }
-
-  const catalogMatch = CATALOG_PATH_PATTERN.exec(pathname);
-  if (catalogMatch && catalogMatch[2] && catalogMatch[3]) {
-    return {
-      type: "catalog",
-      params: {
-        configStr: catalogMatch[1],
-        type: catalogMatch[2],
-        id: catalogMatch[3],
-        extra: catalogMatch[4],
-      },
-    };
-  }
-
-  const metaMatch = META_PATH_PATTERN.exec(pathname);
-  if (metaMatch && metaMatch[2] && metaMatch[3]) {
-    return {
-      type: "meta",
-      params: {
-        configStr: metaMatch[1],
-        type: metaMatch[2],
-        id: metaMatch[3],
-      },
-    };
-  }
-
-  return null;
-}
-
-function filterStreamsByConfig(streams: StremioStream[], config: UserConfig): StremioStream[] {
-  let filtered = streams;
-
-  if (config.resolutions && config.resolutions.length > 0) {
-    const allowedRes = new Set(config.resolutions.map((r) => r.toLowerCase()));
-    filtered = filtered.filter((stream) => {
-      const titleLower = (stream.title ?? "").toLowerCase();
-      const nameLower = (stream.name ?? "").toLowerCase();
-      const text = `${nameLower} ${titleLower}`;
-
-      if (allowedRes.has("4k") && (text.includes("4k") || text.includes("2160p"))) return true;
-      if (allowedRes.has("1080p") && text.includes("1080p")) return true;
-      if (allowedRes.has("720p") && text.includes("720p")) return true;
-      if (allowedRes.has("480p") && (text.includes("480p") || text.includes("sd"))) return true;
-      if (!text.includes("1080p") && !text.includes("720p") && !text.includes("4k") && !text.includes("2160p") && !text.includes("480p")) return true;
-
-      return false;
-    });
-  }
-
-  if (config.audioFilter === "ptbr_only") {
-    filtered = filtered.filter((stream) => {
-      const nameLower = (stream.name ?? "").toLowerCase();
-      const text = `${nameLower} ${stream.title ?? ""}`.toLowerCase();
-      const isNationalProvider = /bludv|comando|mico|torrent dos filmes|tdf|frost|fenix|king|brazuca|betterflix/i.test(nameLower);
-      if (isNationalProvider) return true;
-
-      return (
-        text.includes("dublado") ||
-        text.includes("português") ||
-        text.includes("portugues") ||
-        text.includes("dual") ||
-        text.includes("pt-br") ||
-        text.includes("ptbr") ||
-        text.includes("🇧🇷") ||
-        text.includes("pt")
-      );
-    });
-  } else if (config.audioFilter === "prefer_dual") {
-    filtered.sort((a, b) => {
-      const aDual = `${a.name} ${a.title}`.toLowerCase().includes("dual") ? 1 : 0;
-      const bDual = `${b.name} ${b.title}`.toLowerCase().includes("dual") ? 1 : 0;
-      return bDual - aDual;
-    });
-  }
-
-  return filtered;
-}
-
-const sharedHttpClient = new HttpDataClient({ timeoutMs: 15_000 });
-const frostViewClient = new FrostViewClient(sharedHttpClient);
+const CATALOG_PATH_PATTERN = /^(?:\/([^/]+))?\/catalog\/channel\/([^/]+?)(?:\/(.+))?\.json$/;
+const META_PATH_PATTERN = /^(?:\/([^/]+))?\/meta\/channel\/([^/]+)\.json$/;
+const PROXY_STREAM_PATTERN = /^\/proxy\/stream\/([^/]+)\.m3u8$/;
 
 export async function routeRequest(
   method: string,
-  pathname: string,
-  streamService: StreamService = getDefaultStreamService(),
+  rawUrl: string,
   hostUrl = "http://127.0.0.1:7000",
+  channelStore: ChannelStore = getDefaultChannelStore(),
 ): Promise<RouteResult> {
   if (method !== "GET") {
     return { status: 404, body: { error: "Not found" } };
   }
 
-  const parsed = parsePath(pathname);
-  if (!parsed) {
-    return { status: 404, body: { error: "Not found" } };
-  }
+  const cleanHost = hostUrl.replace(/\/$/, "");
+  const parsedUrl = new URL(rawUrl, "http://localhost");
+  const pathname = parsedUrl.pathname;
 
-  if (parsed.type === "configure") {
+  // 1. Web Configuration UI
+  if (pathname === "/" || pathname === "/configure") {
     return {
       status: 200,
       contentType: "text/html",
-      html: renderConfigureHtml(hostUrl),
+      html: renderConfigureHtml(cleanHost, channelStore),
     };
   }
 
-  if (parsed.type === "manifest") {
-    return { status: 200, contentType: "application/json", body: getManifest(hostUrl) };
+  // 2. Manifest
+  if (pathname === "/manifest.json") {
+    return {
+      status: 200,
+      contentType: "application/json",
+      body: getManifest(cleanHost, channelStore.getGenres()),
+    };
   }
 
-  if (parsed.type === "catalog") {
-    const { extra } = parsed.params;
+  const configManifestMatch = CONFIG_MANIFEST_PATTERN.exec(pathname);
+  if (
+    configManifestMatch &&
+    configManifestMatch[1] &&
+    !["stream", "catalog", "meta", "proxy"].includes(configManifestMatch[1])
+  ) {
+    return {
+      status: 200,
+      contentType: "application/json",
+      body: getManifest(cleanHost, channelStore.getGenres()),
+    };
+  }
+
+  // 3. Catalog (/catalog/channel/:id.json or /catalog/channel/:id/:extra.json)
+  const catalogMatch = CATALOG_PATH_PATTERN.exec(pathname);
+  if (catalogMatch) {
+    const extra = catalogMatch[3];
     let genre: string | undefined;
     let search: string | undefined;
     let skip: number | undefined;
@@ -196,42 +90,112 @@ export async function routeRequest(
       }
     }
 
-    const catalogData = await frostViewClient.fetchCatalog(genre, search, skip);
-    return { status: 200, contentType: "application/json", body: catalogData };
+    const channels = channelStore.getChannels({ genre, search, skip });
+    const metas: StremioMeta[] = channels.map((ch) => ({
+      id: ch.id,
+      type: "channel",
+      name: ch.name,
+      poster: ch.logo || `${cleanHost}/mibr-logo.png`,
+      posterShape: "square",
+      banner: ch.logo,
+      logo: ch.logo,
+      background: ch.logo || `${cleanHost}/mibr-logo.png`,
+      description: `Transmissão Ao Vivo • ${ch.name} (${ch.group})`,
+      genres: [ch.group],
+    }));
+
+    const body: StremioCatalogResponse = { metas };
+    return { status: 200, contentType: "application/json", body };
   }
 
-  if (parsed.type === "meta") {
-    const { id } = parsed.params;
-    const metaData = await frostViewClient.fetchMeta(id);
-    return { status: 200, contentType: "application/json", body: metaData };
+  // 4. Meta (/meta/channel/:id.json)
+  const metaMatch = META_PATH_PATTERN.exec(pathname);
+  if (metaMatch && metaMatch[2]) {
+    const id = decodeURIComponent(metaMatch[2]);
+    const ch = channelStore.getChannelById(id);
+    if (!ch) {
+      return { status: 404, body: { error: "Channel not found" } };
+    }
+
+    const meta: StremioMeta = {
+      id: ch.id,
+      type: "channel",
+      name: ch.name,
+      poster: ch.logo || `${cleanHost}/mibr-logo.png`,
+      posterShape: "square",
+      banner: ch.logo,
+      logo: ch.logo,
+      background: ch.logo || `${cleanHost}/mibr-logo.png`,
+      description: `Transmissão Ao Vivo • ${ch.name} (${ch.group})`,
+      genres: [ch.group],
+    };
+
+    const body: StremioMetaResponse = { meta };
+    return { status: 200, contentType: "application/json", body };
   }
 
-  if (parsed.type === "stream") {
-    const { configStr, type, id } = parsed.params;
-    let activeStreamService = streamService;
-    let userConfig: UserConfig | null = null;
-
-    if (configStr) {
-      userConfig = decodeUserConfig(configStr);
-      if (userConfig) {
-        const providerManager = createProviderManagerForConfig(userConfig);
-        activeStreamService = new StreamService(providerManager);
-      }
+  // 5. Streams (/stream/channel/:id.json)
+  const streamMatch = STREAM_PATH_PATTERN.exec(pathname);
+  if (streamMatch && streamMatch[2]) {
+    const id = decodeURIComponent(streamMatch[2]);
+    const ch = channelStore.getChannelById(id);
+    if (!ch) {
+      const emptyResponse: StremioStreamResponse = { streams: [] };
+      return { status: 200, contentType: "application/json", body: emptyResponse };
     }
 
-    try {
-      let streams = await activeStreamService.getStreams(type, id);
-      if (userConfig) {
-        streams = filterStreamsByConfig(streams, userConfig);
-      }
-      return { status: 200, contentType: "application/json", body: { streams } };
-    } catch (error) {
-      if (error instanceof StreamRequestError) {
-        return { status: 400, body: { error: error.message } };
-      }
+    const proxyEnabled = process.env.STREAM_PROXY_ENABLED !== "false";
+    const playUrl = proxyEnabled
+      ? `${cleanHost}/proxy/stream/${encodeURIComponent(ch.id)}.m3u8`
+      : ch.streamUrl;
 
-      return { status: 500, body: { error: "Internal server error" } };
+    const body: StremioStreamResponse = {
+      streams: [
+        {
+          name: "MIBR TV 🇧🇷",
+          title: `${ch.name} • Ao Vivo HD`,
+          url: playUrl,
+          behaviorHints: {
+            notWebReady: true,
+          },
+        },
+      ],
+    };
+
+    return { status: 200, contentType: "application/json", body };
+  }
+
+  // 6. Proxy stream master playlist (/proxy/stream/:id.m3u8)
+  const proxyStreamMatch = PROXY_STREAM_PATTERN.exec(pathname);
+  if (proxyStreamMatch && proxyStreamMatch[1]) {
+    const channelId = decodeURIComponent(proxyStreamMatch[1]);
+    const proxy = new StreamProxy(channelStore);
+    const result = await proxy.handleStreamPlaylist(channelId, cleanHost);
+
+    return {
+      status: result.status,
+      contentType: result.contentType,
+      rawBody: result.body ?? "",
+      headers: result.headers,
+    };
+  }
+
+  // 7. Proxy segment/chunk (/proxy/segment?url=...)
+  if (pathname === "/proxy/segment") {
+    const targetUrl = parsedUrl.searchParams.get("url");
+    if (!targetUrl) {
+      return { status: 400, body: { error: "Missing segment url" } };
     }
+
+    const proxy = new StreamProxy(channelStore);
+    const result = await proxy.handleSegment(targetUrl);
+
+    return {
+      status: result.status,
+      contentType: result.contentType,
+      rawBody: result.body ?? "",
+      headers: result.headers,
+    };
   }
 
   return { status: 404, body: { error: "Not found" } };

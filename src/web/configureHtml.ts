@@ -1,34 +1,32 @@
 import { manifest } from "../addon/manifest.js";
+import type { ChannelStore } from "../tv/channelStore.js";
 
-/**
- * MIBR Addons (Made in Brasil) — Configurator HTML page renderer.
- * Serves an interactive web configuration UI focused on PT-BR dubbed content.
- */
-
-export function renderConfigureHtml(hostUrl: string): string {
+export function renderConfigureHtml(hostUrl: string, channelStore?: ChannelStore): string {
   const version = manifest.version;
+  const stats = channelStore?.getStats() ?? { totalChannels: 0, genres: {} };
+  const genresList = channelStore?.getGenres() ?? [];
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MIBR Addons 🇧🇷 — Configuração (Made in Brasil)</title>
+  <title>MIBR TV 🇧🇷 — Canais Ao Vivo no Stremio</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg: #080c14;
-      --card-bg: #111724;
-      --card-border: #1d2636;
+      --bg: #070a11;
+      --card-bg: #0f1422;
+      --card-border: #1a2235;
       --accent: #00e676;
-      --accent-hover: #33eb91;
+      --accent-glow: rgba(0, 230, 118, 0.25);
       --gold: #ffd700;
       --azure: #00b0ff;
       --text: #f0f6fc;
       --text-muted: #8b9eb7;
-      --input-bg: #0b0f19;
+      --input-bg: #090d17;
       --success: #10b981;
     }
 
@@ -43,18 +41,25 @@ export function renderConfigureHtml(hostUrl: string): string {
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 2.5rem 1rem;
+      padding: 3rem 1rem;
     }
 
     .container {
       width: 100%;
-      max-width: 680px;
+      max-width: 640px;
       margin: 0 auto;
     }
 
     header {
       text-align: center;
       margin-bottom: 2.2rem;
+    }
+
+    .brand-logo {
+      max-width: 150px;
+      height: auto;
+      margin-bottom: 1rem;
+      filter: drop-shadow(0 6px 20px var(--accent-glow));
     }
 
     .logo-box {
@@ -66,16 +71,12 @@ export function renderConfigureHtml(hostUrl: string): string {
     }
 
     .logo {
-      font-size: 2.2rem;
+      font-size: 2.4rem;
       font-weight: 800;
       letter-spacing: -0.03em;
       background: linear-gradient(135deg, var(--accent), var(--gold), var(--azure));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-    }
-
-    .flag-badge {
-      font-size: 1.4rem;
     }
 
     .badge {
@@ -86,7 +87,7 @@ export function renderConfigureHtml(hostUrl: string): string {
       border-radius: 9999px;
       background: rgba(0, 230, 118, 0.12);
       color: var(--accent);
-      border: 1px solid rgba(0, 230, 118, 0.25);
+      border: 1px solid rgba(0, 230, 118, 0.3);
     }
 
     .subtitle {
@@ -98,7 +99,7 @@ export function renderConfigureHtml(hostUrl: string): string {
     .card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
-      border-radius: 1.1rem;
+      border-radius: 1.2rem;
       padding: 1.75rem;
       margin-bottom: 1.5rem;
       box-shadow: 0 12px 35px rgba(0,0,0,0.4);
@@ -107,121 +108,76 @@ export function renderConfigureHtml(hostUrl: string): string {
     .card-title {
       font-size: 1.15rem;
       font-weight: 700;
-      margin-bottom: 1.1rem;
+      margin-bottom: 1rem;
       display: flex;
       align-items: center;
       gap: 0.6rem;
       color: var(--text);
     }
 
-    .form-group {
-      margin-bottom: 1.35rem;
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin-bottom: 1rem;
     }
 
-    .form-group:last-child {
-      margin-bottom: 0;
-    }
-
-    label {
-      display: block;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: 0.5rem;
-    }
-
-    .help-text {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      margin-top: 0.4rem;
-    }
-
-    .input-wrapper {
-      position: relative;
-    }
-
-    input[type="text"], input[type="password"], select {
-      width: 100%;
-      padding: 0.8rem 1rem;
-      padding-right: 6.5rem;
+    .stat-box {
       background: var(--input-bg);
       border: 1px solid var(--card-border);
-      border-radius: 0.6rem;
-      color: var(--text);
-      font-size: 0.95rem;
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
+      border-radius: 0.8rem;
+      padding: 1rem;
+      text-align: center;
     }
 
-    select {
-      padding-right: 1rem;
+    .stat-value {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--accent);
     }
 
-    input[type="text"]:focus, input[type="password"]:focus, select:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(0, 230, 118, 0.15);
-    }
-
-    .toggle-btn {
-      position: absolute;
-      right: 0.5rem;
-      top: 50%;
-      transform: translateY(-50%);
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid var(--card-border);
-      border-radius: 0.4rem;
-      color: var(--text);
-      cursor: pointer;
+    .stat-label {
       font-size: 0.8rem;
-      padding: 0.4rem 0.7rem;
-      transition: background 0.2s;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
 
-    .toggle-btn:hover {
-      background: rgba(255, 255, 255, 0.12);
+    .genre-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
     }
 
-    .checkbox-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-      gap: 0.75rem;
+    .genre-pill {
+      padding: 0.35rem 0.75rem;
+      background: var(--input-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-muted);
     }
 
-    .checkbox-card {
+    .security-badge {
       display: flex;
       align-items: center;
       gap: 0.65rem;
-      padding: 0.8rem 1rem;
-      background: var(--input-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 0.6rem;
-      cursor: pointer;
-      transition: border-color 0.2s, background 0.2s;
-      user-select: none;
-    }
-
-    .checkbox-card:hover {
-      border-color: rgba(0, 230, 118, 0.4);
-      background: rgba(0, 230, 118, 0.03);
-    }
-
-    .checkbox-card input[type="checkbox"] {
-      width: 1.15rem;
-      height: 1.15rem;
-      accent-color: var(--accent);
-      cursor: pointer;
-    }
-
-    .checkbox-card span {
-      font-size: 0.9rem;
-      font-weight: 500;
+      background: rgba(0, 176, 255, 0.08);
+      border: 1px solid rgba(0, 176, 255, 0.25);
+      border-radius: 0.75rem;
+      padding: 0.85rem 1rem;
+      font-size: 0.85rem;
+      color: #90caf9;
+      margin-bottom: 1.5rem;
     }
 
     .actions {
       display: flex;
       flex-direction: column;
       gap: 0.85rem;
-      margin-top: 1.5rem;
+      margin-top: 1rem;
     }
 
     .btn {
@@ -230,10 +186,10 @@ export function renderConfigureHtml(hostUrl: string): string {
       justify-content: center;
       gap: 0.6rem;
       width: 100%;
-      padding: 0.95rem 1.5rem;
+      padding: 1rem 1.5rem;
       font-size: 1.05rem;
       font-weight: 700;
-      border-radius: 0.7rem;
+      border-radius: 0.75rem;
       text-decoration: none;
       cursor: pointer;
       transition: transform 0.15s, filter 0.2s;
@@ -241,7 +197,7 @@ export function renderConfigureHtml(hostUrl: string): string {
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, var(--accent), #00b0ff);
+      background: linear-gradient(135deg, var(--accent), var(--azure));
       color: #040810;
       box-shadow: 0 4px 20px rgba(0, 230, 118, 0.35);
     }
@@ -275,336 +231,102 @@ export function renderConfigureHtml(hostUrl: string): string {
       border: 1px solid rgba(16, 185, 129, 0.25);
     }
 
-    .brand-logo {
-      max-width: 160px;
-      height: auto;
-      margin-bottom: 0.75rem;
-      filter: drop-shadow(0 6px 20px rgba(0, 230, 118, 0.25));
-    }
-
     footer {
       text-align: center;
       margin-top: 2.5rem;
       font-size: 0.85rem;
       color: var(--text-muted);
     }
-
-    footer a { color: var(--accent); text-decoration: none; }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
-      <img src="/mibr-logo.png" alt="MIBR Addons 🇧🇷" class="brand-logo" />
+      <img src="/mibr-logo.png" alt="MIBR TV 🇧🇷" class="brand-logo" />
       <div class="logo-box">
-        <div class="logo">MIBR Addons</div>
-        <span class="badge">v${version} BR 🇧🇷</span>
+        <div class="logo">MIBR TV</div>
+        <span class="badge">v${version} 🇧🇷</span>
       </div>
-      <p class="subtitle">Agregador modular de torrents e streams 100% dublados em PT-BR (Made in Brasil)</p>
+      <p class="subtitle">Transmissões de Canais de TV Ao Vivo em Alta Definição no Stremio</p>
     </header>
 
-    <!-- Debrid Configuration -->
-    <div class="card">
-      <h2 class="card-title">🔑 Serviço de Debrid</h2>
-      
-      <div class="form-group">
-        <label for="debrid-provider">Provedor Debrid</label>
-        <select id="debrid-provider" onchange="toggleDebridTokenField()">
-          <option value="realdebrid" selected>RealDebrid</option>
-          <option value="alldebrid">AllDebrid</option>
-          <option value="premiumize">Premiumize</option>
-          <option value="debridlink">DebridLink</option>
-          <option value="torbox">TorBox</option>
-          <option value="offcloud">Offcloud</option>
-          <option value="putio">Put.io</option>
-          <option value="none">Nenhum (Torrent / Stream Direto)</option>
-        </select>
+    <div class="security-badge">
+      <span>🛡️</span>
+      <div>
+        <strong>Stream Proxy Ativo:</strong> Seus links e servidores de IPTV são totalmente mascarados e protegidos contra vazamento de URL.
       </div>
+    </div>
 
-      <div class="form-group" id="debrid-token-group">
-        <label for="debrid-token">Token / API Key do Debrid</label>
-        <div class="input-wrapper">
-          <input type="password" id="debrid-token" placeholder="Cole sua API Key do serviço selecionado..." autocomplete="off" />
-          <button type="button" class="toggle-btn" id="toggle-token-btn" onclick="toggleTokenVisibility()">👁️ Mostrar</button>
+    <!-- Stats & Categories -->
+    <div class="card">
+      <h2 class="card-title">📺 Estado dos Canais</h2>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-value">${stats.totalChannels}</div>
+          <div class="stat-label">Canais Disponíveis</div>
         </div>
-        <p class="help-text" id="debrid-help-link">Obtenha sua chave em <a href="https://real-debrid.com/apitoken" target="_blank" style="color:var(--accent);">real-debrid.com/apitoken</a></p>
-      </div>
-    </div>
-
-    <!-- Content Providers PT-BR -->
-    <div class="card">
-      <h2 class="card-title">🇧🇷 Provedores Nacionais (100% PT-BR / Dublado)</h2>
-      <div class="checkbox-grid">
-        <label class="checkbox-card">
-          <input type="checkbox" id="provider-froststream" checked />
-          <span>⚡ FrostStream (HTTP PT-BR)</span>
-        </label>
-        <label class="checkbox-card">
-          <input type="checkbox" id="provider-frostview" checked />
-          <span>📺 FrostView TV (Canais ao Vivo PT-BR)</span>
-        </label>
-        <label class="checkbox-card">
-          <input type="checkbox" id="provider-fenixflix" checked />
-          <span>🐦‍🔥 FenixFlix (HTTP PT-BR)</span>
-        </label>
-        <label class="checkbox-card">
-          <input type="checkbox" id="provider-kingvod" checked />
-          <span>👑 King VOD (HLS PT-BR)</span>
-        </label>
-        <label class="checkbox-card">
-          <input type="checkbox" id="provider-vidking" checked />
-          <span>🎬 VidKing (Player Web)</span>
-        </label>
-        <label class="checkbox-card">
-          <input type="checkbox" id="provider-betterflix" checked />
-          <span>🍿 BetterFlix (Player Web)</span>
-        </label>
-        <label class="checkbox-card">
-          <input type="checkbox" id="provider-brazuca" checked />
-          <span>🇧🇷 Brazuca Torrents</span>
-        </label>
-        <label class="checkbox-card">
-          <input type="checkbox" id="provider-bludv" checked />
-          <span>🇧🇷 BluDV (Torrent)</span>
-        </label>
-        <label class="checkbox-card">
-          <input type="checkbox" id="provider-comando" checked />
-          <span>🇧🇷 Comando Torrents</span>
-        </label>
-        <label class="checkbox-card">
-          <input type="checkbox" id="provider-micoleao" checked />
-          <span>🇧🇷 Mico Leão Dublado</span>
-        </label>
-        <label class="checkbox-card">
-          <input type="checkbox" id="provider-torrentdosfilmes" checked />
-          <span>🇧🇷 Torrent dos Filmes</span>
-        </label>
-      </div>
-    </div>
-
-    <!-- Global / Fallback Providers -->
-    <div class="card">
-      <h2 class="card-title">🌍 Provedores Globais & Fallback (Original / Multi-Áudio / P2P)</h2>
-      <p class="subtitle" style="font-size:0.85rem; margin-bottom:1rem;">Úteis para filmes/séries antigos ou quando não houver versão dublada disponível.</p>
-      <div class="checkbox-grid">
-        <label class="checkbox-card">
-          <input type="checkbox" id="provider-comet" checked />
-          <span>☄️ Comet (Global P2P/Debrid)</span>
-        </label>
-        <label class="checkbox-card">
-          <input type="checkbox" id="provider-stremthru" checked />
-          <span>⚡ StremThru Torz</span>
-        </label>
-        <label class="checkbox-card">
-          <input type="checkbox" id="provider-torrin" checked />
-          <span>⚡ Torrin (Debrid & P2P)</span>
-        </label>
-        <label class="checkbox-card">
-          <input type="checkbox" id="provider-novastreams" checked />
-          <span>🌐 Nova Streams (HTTP)</span>
-        </label>
-        <label class="checkbox-card">
-          <input type="checkbox" id="provider-torrentio" checked />
-          <span>⚡ Torrentio</span>
-        </label>
-        <label class="checkbox-card">
-          <input type="checkbox" id="provider-ia" checked />
-          <span>📦 Internet Archive</span>
-        </label>
-      </div>
-    </div>
-
-    <!-- Filters & Preferences -->
-    <div class="card">
-      <h2 class="card-title">⚙️ Filtros e Preferências de Áudio</h2>
-      
-      <div class="form-group">
-        <label>Resoluções Permitidas</label>
-        <div class="checkbox-grid">
-          <label class="checkbox-card">
-            <input type="checkbox" id="res-4k" checked />
-            <span>4K / 2160p</span>
-          </label>
-          <label class="checkbox-card">
-            <input type="checkbox" id="res-1080p" checked />
-            <span>1080p Full HD</span>
-          </label>
-          <label class="checkbox-card">
-            <input type="checkbox" id="res-720p" checked />
-            <span>720p HD</span>
-          </label>
-          <label class="checkbox-card">
-            <input type="checkbox" id="res-480p" checked />
-            <span>480p SD</span>
-          </label>
+        <div class="stat-box">
+          <div class="stat-value">${genresList.length}</div>
+          <div class="stat-label">Categorias</div>
         </div>
       </div>
 
-      <div class="form-group">
-        <label for="audio-filter">Preferência de Áudio</label>
-        <select id="audio-filter">
-          <option value="ptbr_only" selected>🇧🇷 Apenas Português (Dublado PT-BR / Dual Áudio)</option>
-          <option value="prefer_dual">🔄 Preferir Dual Áudio</option>
-          <option value="all">🌐 Todos os Áudios (Dublado + Legendado + Original)</option>
-        </select>
+      <div class="genre-pills">
+        ${genresList.map(g => `<span class="genre-pill">${g} (${stats.genres[g] ?? 0})</span>`).join("")}
       </div>
     </div>
 
     <!-- Actions -->
     <div class="actions">
-      <a id="install-btn" href="#" class="btn btn-primary" onclick="installInStremio(event)">🚀 Instalar no Stremio</a>
+      <a id="install-btn" href="#" class="btn btn-primary" onclick="installInStremio(event)">🚀 Instalar MIBR TV no Stremio</a>
       <button type="button" id="copy-btn" class="btn btn-secondary" onclick="copyManifestLink(event)">📋 Copiar Link de Instalação</button>
       <div id="copy-toast" class="copy-toast">✓ Link copiado para a área de transferência!</div>
     </div>
 
     <footer>
-      MIBR Addons 🇧🇷 — Made in Brasil. Desenvolvido de forma modular e independente.
+      MIBR TV 🇧🇷 — Made in Brasil. Addon autossuficiente para Stremio.
     </footer>
   </div>
 
   <script>
     const HOST_URL = ${JSON.stringify(hostUrl)};
 
-    function toggleDebridTokenField() {
-      const provider = document.getElementById('debrid-provider').value;
-      const group = document.getElementById('debrid-token-group');
-      const help = document.getElementById('debrid-help-link');
-
-      if (provider === 'none') {
-        group.style.display = 'none';
-      } else {
-        group.style.display = 'block';
-        if (provider === 'realdebrid') {
-          help.innerHTML = 'Obtenha sua chave em <a href="https://real-debrid.com/apitoken" target="_blank" style="color:var(--accent);">real-debrid.com/apitoken</a>';
-        } else if (provider === 'alldebrid') {
-          help.innerHTML = 'Obtenha sua chave em <a href="https://alldebrid.com/apikeys" target="_blank" style="color:var(--accent);">alldebrid.com/apikeys</a>';
-        } else if (provider === 'premiumize') {
-          help.innerHTML = 'Obtenha sua chave em <a href="https://www.premiumize.me/account" target="_blank" style="color:var(--accent);">premiumize.me/account</a>';
-        } else if (provider === 'debridlink') {
-          help.innerHTML = 'Obtenha sua chave em <a href="https://debrid-link.com/webapp/apikeys" target="_blank" style="color:var(--accent);">debrid-link.com/webapp/apikeys</a>';
-        } else if (provider === 'torbox') {
-          help.innerHTML = 'Obtenha sua chave em <a href="https://torbox.app/settings" target="_blank" style="color:var(--accent);">torbox.app/settings</a>';
-        } else {
-          help.innerHTML = 'Cole a chave da API do seu provedor selecionado.';
-        }
-      }
-      updateLinks();
-    }
-
-    function toggleTokenVisibility() {
-      const input = document.getElementById('debrid-token');
-      const btn = document.getElementById('toggle-token-btn');
-      if (input.type === 'password') {
-        input.type = 'text';
-        btn.textContent = '🙈 Ocultar';
-      } else {
-        input.type = 'password';
-        btn.textContent = '👁️ Mostrar';
-      }
-    }
-
-    function toBase64Url(str) {
-      try {
-        const bytes = new TextEncoder().encode(str);
-        let bin = '';
-        for (let i = 0; i < bytes.length; i++) {
-          bin += String.fromCharCode(bytes[i]);
-        }
-        return btoa(bin).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');
-      } catch (e) {
-        return '';
-      }
-    }
-
-    function generateConfig() {
-      const debridProvider = document.getElementById('debrid-provider').value;
-      const debridToken = document.getElementById('debrid-token').value.trim();
-
-      const providers = [];
-      if (document.getElementById('provider-froststream').checked) providers.push('froststream');
-      if (document.getElementById('provider-frostview').checked) providers.push('frostview');
-      if (document.getElementById('provider-fenixflix').checked) providers.push('fenixflix');
-      if (document.getElementById('provider-kingvod').checked) providers.push('kingvod');
-      if (document.getElementById('provider-vidking').checked) providers.push('vidking');
-      if (document.getElementById('provider-betterflix').checked) providers.push('betterflix');
-      if (document.getElementById('provider-brazuca').checked) providers.push('brazuca');
-      if (document.getElementById('provider-bludv').checked) providers.push('bludv');
-      if (document.getElementById('provider-comando').checked) providers.push('comando');
-      if (document.getElementById('provider-micoleao').checked) providers.push('micoleao');
-      if (document.getElementById('provider-torrentdosfilmes').checked) providers.push('torrentdosfilmes');
-      if (document.getElementById('provider-comet').checked) providers.push('comet');
-      if (document.getElementById('provider-stremthru').checked) providers.push('stremthru');
-      if (document.getElementById('provider-torrin').checked) providers.push('torrin');
-      if (document.getElementById('provider-novastreams').checked) providers.push('nova-streams');
-      if (document.getElementById('provider-torrentio').checked) providers.push('torrentio');
-      if (document.getElementById('provider-ia').checked) providers.push('internetarchive');
-
-      const resolutions = [];
-      if (document.getElementById('res-4k').checked) resolutions.push('4k');
-      if (document.getElementById('res-1080p').checked) resolutions.push('1080p');
-      if (document.getElementById('res-720p').checked) resolutions.push('720p');
-      if (document.getElementById('res-480p').checked) resolutions.push('480p');
-
-      const audioFilter = document.getElementById('audio-filter').value;
-
-      const configObj = {
-        debridProvider,
-        debridToken: debridToken || undefined,
-        realDebridToken: debridToken || undefined,
-        providers,
-        resolutions,
-        audioFilter,
-        disableMocks: true
-      };
-
-      return toBase64Url(JSON.stringify(configObj));
-    }
-
-    function updateLinks() {
-      const b64 = generateConfig();
+    function getManifestUrl() {
       const origin = (window.location.origin && window.location.origin !== 'null')
         ? window.location.origin
         : HOST_URL.replace(/\\/$/, '');
-      const manifestHttpUrl = origin + '/' + b64 + '/manifest.json';
-      const stremioUrl = manifestHttpUrl.replace(/^https?:\\/\\//, 'stremio://');
-
-      document.getElementById('install-btn').href = stremioUrl;
-      window.currentManifestUrl = manifestHttpUrl;
+      return origin + '/manifest.json';
     }
 
     function installInStremio(evt) {
-      updateLinks();
-      const installBtn = document.getElementById('install-btn');
-      if (installBtn.href && installBtn.href !== '#') {
-        window.location.href = installBtn.href;
-      }
       if (evt) evt.preventDefault();
+      const manifestUrl = getManifestUrl();
+      const stremioUrl = manifestUrl.replace(/^https?:\\/\\//, 'stremio://');
+      window.location.href = stremioUrl;
     }
 
     function copyManifestLink(evt) {
       if (evt) evt.preventDefault();
-      updateLinks();
-      const url = window.currentManifestUrl || '';
-      if (!url) return;
+      const manifestUrl = getManifestUrl();
 
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(url).then(showToast).catch(fallbackCopy);
+        navigator.clipboard.writeText(manifestUrl).then(showToast).catch(fallback);
       } else {
-        fallbackCopy();
+        fallback();
       }
 
-      function fallbackCopy() {
-        const tempInput = document.createElement('input');
-        tempInput.value = url;
-        document.body.appendChild(tempInput);
-        tempInput.select();
+      function fallback() {
+        const input = document.createElement('input');
+        input.value = manifestUrl;
+        document.body.appendChild(input);
+        input.select();
         try {
           document.execCommand('copy');
           showToast();
-        } catch (e) {
-          alert('Link de instalação: ' + url);
+        } catch(e) {
+          alert('Link do manifest: ' + manifestUrl);
         }
-        document.body.removeChild(tempInput);
+        document.body.removeChild(input);
       }
 
       function showToast() {
@@ -614,14 +336,8 @@ export function renderConfigureHtml(hostUrl: string): string {
       }
     }
 
-    // Attach listeners for live update
-    document.querySelectorAll('input, select').forEach(el => {
-      el.addEventListener('input', updateLinks);
-      el.addEventListener('change', updateLinks);
-    });
-
-    // Initial update
-    updateLinks();
+    // Set install link href on load
+    document.getElementById('install-btn').href = getManifestUrl().replace(/^https?:\\/\\//, 'stremio://');
   </script>
 </body>
 </html>`;

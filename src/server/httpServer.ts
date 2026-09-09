@@ -63,9 +63,16 @@ export function createAddonServer(): Server {
           }
         }
 
-        const result = await routeRequest(method, pathname, undefined, host);
+        const result = await routeRequest(method, request.url ?? "/", host);
 
-        if ("html" in result) {
+        if ("rawBody" in result) {
+          response.writeHead(result.status, {
+            "Content-Type": result.contentType,
+            "Access-Control-Allow-Origin": "*",
+            ...(result.headers ?? {}),
+          });
+          response.end(result.rawBody);
+        } else if ("html" in result) {
           sendHtml(response, result.status, result.html);
         } else {
           sendJson(response, result.status, result.body);
