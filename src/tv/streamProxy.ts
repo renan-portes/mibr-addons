@@ -57,6 +57,14 @@ function resolveUrl(url: string, baseUrl: string): string {
   }
 }
 
+export function normalizeTargetUrl(url: string): string {
+  const override = process.env.UPSTREAM_HOST_OVERRIDE;
+  if (override) {
+    return url.replace("127.0.0.1:11470", override).replace("localhost:11470", override);
+  }
+  return url;
+}
+
 export class StreamProxy {
   constructor(private readonly channelStore: ChannelStore) {}
 
@@ -76,7 +84,8 @@ export class StreamProxy {
         ...(channel.httpHeaders ?? {}),
       };
 
-      const response = await fetch(channel.streamUrl, {
+      const targetUrl = normalizeTargetUrl(channel.streamUrl);
+      const response = await fetch(targetUrl, {
         method: "GET",
         headers,
         signal,
@@ -128,7 +137,8 @@ export class StreamProxy {
   ): Promise<ProxyStreamResult> {
     try {
       const decodedUrl = decodeURIComponent(targetUrl);
-      const response = await fetch(decodedUrl, {
+      const normalizedUrl = normalizeTargetUrl(decodedUrl);
+      const response = await fetch(normalizedUrl, {
         method: "GET",
         headers: {
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",

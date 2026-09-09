@@ -75,10 +75,17 @@ export async function routeRequest(
   // 3. Catalog (/catalog/channel/:id.json or /catalog/channel/:id/:extra.json)
   const catalogMatch = CATALOG_PATH_PATTERN.exec(pathname);
   if (catalogMatch) {
+    const catalogId = catalogMatch[2];
     const extra = catalogMatch[3];
     let genre: string | undefined;
     let search: string | undefined;
     let skip: number | undefined;
+
+    if (catalogId === "mibr-tv-abertos") genre = "Abertos";
+    else if (catalogId === "mibr-tv-esportes") genre = "Esportes";
+    else if (catalogId === "mibr-tv-filmes") genre = "Filmes & Séries";
+    else if (catalogId === "mibr-tv-noticias") genre = "Notícias";
+    else if (catalogId === "mibr-tv-infantil") genre = "Infantil";
 
     if (extra) {
       const extraParts = extra.split("&");

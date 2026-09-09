@@ -57,6 +57,18 @@ describe("TV Router", () => {
     assert.equal(resEsportes.body.metas.length, 1);
     assert.equal(resEsportes.body.metas[0].name, "SporTV HD");
 
+    // Dedicated category catalog
+    const resAbertos = await routeRequest(
+      "GET",
+      "/catalog/channel/mibr-tv-abertos.json",
+      hostUrl,
+      channelStore
+    );
+    assert.equal(resAbertos.status, 200);
+    assert.ok("body" in resAbertos);
+    assert.equal(resAbertos.body.metas.length, 1);
+    assert.equal(resAbertos.body.metas[0].name, "Globo SP");
+
     // Search
     const resSearch = await routeRequest(
       "GET",

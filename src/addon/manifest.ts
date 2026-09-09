@@ -1,4 +1,4 @@
-import type { StremioManifest } from "../types/stremio.js";
+import type { StremioCatalog, StremioManifest } from "../types/stremio.js";
 
 export const manifest: StremioManifest = {
   id: "community.mibr.tv",
@@ -27,27 +27,69 @@ export const manifest: StremioManifest = {
 
 export function getManifest(hostUrl?: string, genres?: string[]): StremioManifest {
   const cleanHost = hostUrl ? hostUrl.replace(/\/$/, "") : "";
-  const base = {
+  const catalogs: StremioCatalog[] = [
+    {
+      type: "channel",
+      id: "mibr-tv-canais",
+      name: "⭐ Todos os Canais",
+      extra: [
+        { name: "genre", options: genres && genres.length > 0 ? genres : undefined },
+        { name: "search" },
+        { name: "skip" },
+      ],
+    },
+  ];
+
+  if (genres?.includes("Abertos")) {
+    catalogs.push({
+      type: "channel",
+      id: "mibr-tv-abertos",
+      name: "🇧🇷 TV Aberta",
+      extra: [{ name: "search" }, { name: "skip" }],
+    });
+  }
+
+  if (genres?.includes("Esportes")) {
+    catalogs.push({
+      type: "channel",
+      id: "mibr-tv-esportes",
+      name: "⚽ Esportes & Futebol",
+      extra: [{ name: "search" }, { name: "skip" }],
+    });
+  }
+
+  if (genres?.includes("Filmes & Séries")) {
+    catalogs.push({
+      type: "channel",
+      id: "mibr-tv-filmes",
+      name: "🍿 Filmes & Séries",
+      extra: [{ name: "search" }, { name: "skip" }],
+    });
+  }
+
+  if (genres?.includes("Notícias")) {
+    catalogs.push({
+      type: "channel",
+      id: "mibr-tv-noticias",
+      name: "📰 Notícias",
+      extra: [{ name: "search" }, { name: "skip" }],
+    });
+  }
+
+  if (genres?.includes("Infantil")) {
+    catalogs.push({
+      type: "channel",
+      id: "mibr-tv-infantil",
+      name: "👶 Infantil",
+      extra: [{ name: "search" }, { name: "skip" }],
+    });
+  }
+
+  return {
     ...manifest,
     icon: cleanHost ? `${cleanHost}/mibr-logo.png` : manifest.icon,
     logo: cleanHost ? `${cleanHost}/mibr-logo.png` : manifest.logo,
     background: cleanHost ? `${cleanHost}/mibr-logo.png` : manifest.background,
+    catalogs,
   };
-
-  if (genres && genres.length > 0) {
-    base.catalogs = [
-      {
-        type: "channel",
-        id: "mibr-tv-canais",
-        name: "🇧🇷 Canais de TV Ao Vivo",
-        extra: [
-          { name: "genre", options: genres },
-          { name: "search" },
-          { name: "skip" },
-        ],
-      },
-    ];
-  }
-
-  return base;
 }
