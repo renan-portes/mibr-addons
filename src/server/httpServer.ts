@@ -63,6 +63,23 @@ export function createAddonServer(): Server {
           }
         }
 
+        if (pathname.startsWith("/logos/")) {
+          const filename = pathname.replace("/logos/", "");
+          // Allow only word characters and .png to prevent path traversal
+          if (/^[\w.-]+\.png$/.test(filename)) {
+            const logoPath = join(process.cwd(), "data", "logos", filename);
+            if (existsSync(logoPath)) {
+              response.writeHead(200, {
+                "Content-Type": "image/png",
+                "Access-Control-Allow-Origin": "*",
+                "Cache-Control": "public, max-age=86400",
+              });
+              createReadStream(logoPath).pipe(response);
+              return;
+            }
+          }
+        }
+
         const result = await routeRequest(method, request.url ?? "/", host);
 
         if ("rawBody" in result) {

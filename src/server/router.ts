@@ -27,6 +27,14 @@ const CATALOG_PATH_PATTERN = /^(?:\/([^/]+))?\/catalog\/(?:channel|tv)\/([^/]+?)
 const META_PATH_PATTERN = /^(?:\/([^/]+))?\/meta\/(?:channel|tv)\/([^/]+)\.json$/;
 const PROXY_STREAM_PATTERN = /^\/proxy\/stream\/([^/]+)\.m3u8$/;
 
+function getLocalLogo(channelId: string, cleanHost: string): string | undefined {
+  if (channelId.includes("globo")) return `${cleanHost}/logos/globo.png`;
+  if (channelId.includes("sbt")) return `${cleanHost}/logos/sbt.png`;
+  if (channelId.includes("band")) return `${cleanHost}/logos/band.png`;
+  if (channelId.includes("record")) return `${cleanHost}/logos/record.png`;
+  return undefined;
+}
+
 export async function routeRequest(
   method: string,
   rawUrl: string,
@@ -102,11 +110,11 @@ export async function routeRequest(
       id: ch.id,
       type: "tv",
       name: ch.name,
-      poster: ch.logo || `${cleanHost}/mibr-logo.png`,
+      poster: getLocalLogo(ch.id, cleanHost) || ch.logo || `${cleanHost}/mibr-logo.png`,
       posterShape: "square",
-      banner: ch.logo,
-      logo: ch.logo,
-      background: ch.logo || `${cleanHost}/mibr-logo.png`,
+      banner: getLocalLogo(ch.id, cleanHost) || ch.logo,
+      logo: getLocalLogo(ch.id, cleanHost) || ch.logo,
+      background: getLocalLogo(ch.id, cleanHost) || ch.logo || `${cleanHost}/mibr-logo.png`,
       description: `Transmissão Ao Vivo • ${ch.name} (${ch.group})`,
       genres: [ch.group],
     }));
@@ -128,11 +136,11 @@ export async function routeRequest(
       id: ch.id,
       type: "tv",
       name: ch.name,
-      poster: ch.logo || `${cleanHost}/mibr-logo.png`,
+      poster: getLocalLogo(ch.id, cleanHost) || ch.logo || `${cleanHost}/mibr-logo.png`,
       posterShape: "square",
-      banner: ch.logo,
-      logo: ch.logo,
-      background: ch.logo || `${cleanHost}/mibr-logo.png`,
+      banner: getLocalLogo(ch.id, cleanHost) || ch.logo,
+      logo: getLocalLogo(ch.id, cleanHost) || ch.logo,
+      background: getLocalLogo(ch.id, cleanHost) || ch.logo || `${cleanHost}/mibr-logo.png`,
       description: `Transmissão Ao Vivo • ${ch.name} (${ch.group})`,
       genres: [ch.group],
     };
