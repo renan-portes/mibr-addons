@@ -36,8 +36,8 @@ const CHANNEL_LOGOS: Record<string, string> = {
   sbt:        `${TV_LOGO_BASE}/sbt-br.png`,
   // Band
   band:       `${TV_LOGO_BASE}/band-br.png`,
-  // Record
-  record:     `${TV_LOGO_BASE}/record-br.png`,
+  // Record — rede-record-br is nearly square (512x514) so it fits the circular clip
+  record:     `${TV_LOGO_BASE}/rede-record-br.png`,
   // Sports
   sportv:     `${TV_LOGO_BASE}/sportv-br.png`,
   // News
@@ -72,20 +72,23 @@ const CHANNEL_LOGOS: Record<string, string> = {
   "tv-brasil": `${TV_LOGO_BASE}/tv-brasil-br.png`,
 };
 
-function getLocalLogo(channelId: string): string | undefined {
+function getLocalLogo(channelId: string, cleanHost: string): string | undefined {
   const id = channelId.replace(/^mibr:tv:/, "");
   // Exact match first
-  if (CHANNEL_LOGOS[id]) return CHANNEL_LOGOS[id];
+  let logoUrl = CHANNEL_LOGOS[id];
   // Prefix match: pick the longest matching key
-  let best: string | undefined;
-  let bestLen = 0;
-  for (const [key, url] of Object.entries(CHANNEL_LOGOS)) {
-    if (id.startsWith(key) && key.length > bestLen) {
-      best = url;
-      bestLen = key.length;
+  if (!logoUrl) {
+    let bestLen = 0;
+    for (const [key, url] of Object.entries(CHANNEL_LOGOS)) {
+      if (id.startsWith(key) && key.length > bestLen) {
+        logoUrl = url;
+        bestLen = key.length;
+      }
     }
   }
-  return best;
+  if (!logoUrl) return undefined;
+  // Serve via our proxy to add padding and prevent circular clip from cutting logo edges
+  return `${cleanHost}/logo-proxy/${encodeURIComponent(logoUrl)}`;
 }
 
 export async function routeRequest(
@@ -163,11 +166,11 @@ export async function routeRequest(
       id: ch.id,
       type: "tv",
       name: ch.name,
-      poster: getLocalLogo(ch.id) || ch.logo || `${cleanHost}/mibr-logo.png`,
+      poster: getLocalLogo(ch.id, cleanHost) || ch.logo || `${cleanHost}/mibr-logo.png`,
       posterShape: "square",
-      banner: getLocalLogo(ch.id) || ch.logo,
-      logo: getLocalLogo(ch.id) || ch.logo,
-      background: getLocalLogo(ch.id) || ch.logo || `${cleanHost}/mibr-logo.png`,
+      banner: getLocalLogo(ch.id, cleanHost) || ch.logo,
+      logo: getLocalLogo(ch.id, cleanHost) || ch.logo,
+      background: getLocalLogo(ch.id, cleanHost) || ch.logo || `${cleanHost}/mibr-logo.png`,
       description: `Transmissão Ao Vivo • ${ch.name} (${ch.group})`,
       genres: [ch.group],
     }));
@@ -189,11 +192,11 @@ export async function routeRequest(
       id: ch.id,
       type: "tv",
       name: ch.name,
-      poster: getLocalLogo(ch.id) || ch.logo || `${cleanHost}/mibr-logo.png`,
+      poster: getLocalLogo(ch.id, cleanHost) || ch.logo || `${cleanHost}/mibr-logo.png`,
       posterShape: "square",
-      banner: getLocalLogo(ch.id) || ch.logo,
-      logo: getLocalLogo(ch.id) || ch.logo,
-      background: getLocalLogo(ch.id) || ch.logo || `${cleanHost}/mibr-logo.png`,
+      banner: getLocalLogo(ch.id, cleanHost) || ch.logo,
+      logo: getLocalLogo(ch.id, cleanHost) || ch.logo,
+      background: getLocalLogo(ch.id, cleanHost) || ch.logo || `${cleanHost}/mibr-logo.png`,
       description: `Transmissão Ao Vivo • ${ch.name} (${ch.group})`,
       genres: [ch.group],
     };
