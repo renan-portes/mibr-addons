@@ -31,8 +31,10 @@ describe("TV Router", () => {
     assert.equal(res.status, 200);
     assert.ok("body" in res);
     assert.equal(res.body.id, "community.mibr.tv");
-    assert.deepEqual(res.body.types, ["tv", "channel"]);
+    assert.deepEqual(res.body.types, ["tv", "channel", "movie", "series"]);
     assert.deepEqual(res.body.resources, ["catalog", "meta", "stream"]);
+    assert.ok(res.body.idPrefixes.includes("tt"));
+    assert.ok(res.body.idPrefixes.includes("tmdb"));
     assert.ok(res.body.catalogs[0].extra[0].options.includes("Abertos"));
     assert.ok(res.body.catalogs[0].extra[0].options.includes("Esportes"));
   });
