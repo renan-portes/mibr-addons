@@ -40,28 +40,42 @@ export class FenixFlixClient {
     return this.upstreamUrl;
   }
 
-  getCatalogs(): StremioCatalog[] {
+  getCatalogs(activeCatalogIds?: string[]): StremioCatalog[] {
     if (!this.enabled) return [];
-    return [
-      { type: "movie", id: "populares_fenix", name: "Populares (Fenix)" },
-      { type: "movie", id: "recentes_servidor", name: "Recém Adicionado (Fenix)" },
-      { type: "series", id: "populares_fenix", name: "Populares (Fenix)" },
-      { type: "series", id: "recentes_servidor", name: "Recém Adicionado (Fenix)" },
+    const allCatalogs: { idKey: string; catalog: StremioCatalog }[] = [
+      { idKey: "populares_movie", catalog: { type: "movie", id: "populares_fenix", name: "Populares (Fenix)" } },
+      { idKey: "recentes_movie", catalog: { type: "movie", id: "recentes_servidor", name: "Recém Adicionado (Fenix)" } },
+      { idKey: "populares_series", catalog: { type: "series", id: "populares_fenix", name: "Populares (Fenix)" } },
+      { idKey: "recentes_series", catalog: { type: "series", id: "recentes_servidor", name: "Recém Adicionado (Fenix)" } },
     ];
+
+    if (!activeCatalogIds || activeCatalogIds.length === 0) {
+      return allCatalogs.map((c) => c.catalog);
+    }
+
+    return allCatalogs
+      .filter((c) => activeCatalogIds.includes(c.idKey))
+      .map((c) => c.catalog);
   }
 
-  async fetchCatalog(type: "movie" | "series", catalogId: string, extra?: string): Promise<StremioCatalogResponse> {
+  async fetchCatalog(
+    type: "movie" | "series",
+    catalogId: string,
+    extra?: string,
+    upstreamConfig?: string,
+  ): Promise<StremioCatalogResponse> {
     if (!this.enabled) {
       return { metas: [] };
     }
 
-    const cacheKey = `${type}:${catalogId}:${extra ?? ""}`;
+    const cacheKey = `${upstreamConfig ?? ""}:${type}:${catalogId}:${extra ?? ""}`;
     const cached = this.catalogCache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
       return cached.data;
     }
 
-    const url = `${this.upstreamUrl}/catalog/${type}/${encodeURIComponent(catalogId)}${extra ? `/${extra}` : ""}.json`;
+    const configPath = upstreamConfig ? `/${encodeURIComponent(upstreamConfig)}` : "";
+    const url = `${this.upstreamUrl}${configPath}/catalog/${type}/${encodeURIComponent(catalogId)}${extra ? `/${extra}` : ""}.json`;
 
     try {
       const controller = new AbortController();
@@ -95,18 +109,23 @@ export class FenixFlixClient {
     }
   }
 
-  async fetchStreams(type: "movie" | "series", id: string): Promise<StremioStreamResponse> {
+  async fetchStreams(
+    type: "movie" | "series",
+    id: string,
+    upstreamConfig?: string,
+  ): Promise<StremioStreamResponse> {
     if (!this.enabled) {
       return { streams: [] };
     }
 
-    const cacheKey = `${type}:${id}`;
+    const cacheKey = `${upstreamConfig ?? ""}:${type}:${id}`;
     const cached = this.streamCache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
       return cached.data;
     }
 
-    const url = `${this.upstreamUrl}/stream/${type}/${encodeURIComponent(id)}.json`;
+    const configPath = upstreamConfig ? `/${encodeURIComponent(upstreamConfig)}` : "";
+    const url = `${this.upstreamUrl}${configPath}/stream/${type}/${encodeURIComponent(id)}.json`;
 
     try {
       const controller = new AbortController();

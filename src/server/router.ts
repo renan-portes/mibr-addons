@@ -1,3 +1,4 @@
+import { parseAddonConfig, toFenixFlixUpstreamConfig } from "../addon/addonConfig.js";
 import { getManifest } from "../addon/manifest.js";
 import { FenixFlixClient, getDefaultFenixFlixClient } from "../providers/fenixflix/fenixflixClient.js";
 import { ChannelStore, getDefaultChannelStore } from "../tv/channelStore.js";
@@ -201,23 +202,34 @@ export async function routeRequest(
     configManifestMatch[1] &&
     !["stream", "catalog", "meta", "proxy"].includes(configManifestMatch[1])
   ) {
+    const config = parseAddonConfig(configManifestMatch[1]);
     return {
       status: 200,
       contentType: "application/json",
-      body: getManifest(cleanHost, channelStore.getGenres(), fenixflixClient),
+      body: getManifest(cleanHost, channelStore.getGenres(), fenixflixClient, config),
     };
   }
 
   // 3. Catalog (/catalog/:type/:id.json or /catalog/:type/:id/:extra.json)
   const catalogMatch = CATALOG_PATH_PATTERN.exec(pathname);
   if (catalogMatch) {
+    const configStr = catalogMatch[1];
+    const config = parseAddonConfig(configStr);
     const catalogType = catalogMatch[2];
     const catalogId = catalogMatch[3];
     const extra = catalogMatch[4];
 
     if ((catalogType === "movie" || catalogType === "series") && catalogId) {
-      const body = await fenixflixClient.fetchCatalog(catalogType, catalogId, extra);
+      if (!config.fenixEnabled) {
+        return { status: 200, contentType: "application/json", body: { metas: [] } };
+      }
+      const upstreamConfig = toFenixFlixUpstreamConfig(config);
+      const body = await fenixflixClient.fetchCatalog(catalogType, catalogId, extra, upstreamConfig);
       return { status: 200, contentType: "application/json", body };
+    }
+
+    if (catalogId === "mibr-tv-canais" && !config.tvAll) {
+      return { status: 200, contentType: "application/json", body: { metas: [] } };
     }
 
     let genre: string | undefined;
@@ -233,6 +245,10 @@ export async function routeRequest(
     else if (catalogId === "mibr-tv-documentarios") genre = "Documentários";
     else if (catalogId === "mibr-tv-entretenimento") genre = "Entretenimento";
 
+    if (genre && !config.tvGenres.includes(genre)) {
+      return { status: 200, contentType: "application/json", body: { metas: [] } };
+    }
+
     if (extra) {
       const extraParts = extra.split("&");
       for (const part of extraParts) {
@@ -243,7 +259,10 @@ export async function routeRequest(
       }
     }
 
-    const channels = channelStore.getChannels({ genre, search, skip });
+    let channels = channelStore.getChannels({ genre, search, skip });
+    if (catalogId === "mibr-tv-canais") {
+      channels = channels.filter((ch) => config.tvGenres.includes(ch.group));
+    }
     const metas: StremioMeta[] = channels.map((ch) => ({
       id: ch.id,
       type: "tv",
@@ -290,11 +309,17 @@ export async function routeRequest(
   // 5. Streams (/stream/:type/:id.json)
   const streamMatch = STREAM_PATH_PATTERN.exec(pathname);
   if (streamMatch && streamMatch[3]) {
+    const configStr = streamMatch[1];
+    const config = parseAddonConfig(configStr);
     const streamType = streamMatch[2];
     const rawId = decodeURIComponent(streamMatch[3]);
 
     if (streamType === "movie" || streamType === "series") {
-      const body = await fenixflixClient.fetchStreams(streamType, rawId);
+      if (!config.fenixEnabled) {
+        return { status: 200, contentType: "application/json", body: { streams: [] } };
+      }
+      const upstreamConfig = toFenixFlixUpstreamConfig(config);
+      const body = await fenixflixClient.fetchStreams(streamType, rawId, upstreamConfig);
       return { status: 200, contentType: "application/json", body };
     }
 

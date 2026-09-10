@@ -15,6 +15,11 @@ export interface StremioCatalog {
   extra?: StremioCatalogExtra[];
 }
 
+export interface StremioManifestBehaviorHints {
+  configurable?: boolean;
+  configurationRequired?: boolean;
+}
+
 export interface StremioManifest {
   id: string;
   version: string;
@@ -27,6 +32,7 @@ export interface StremioManifest {
   types: StremioType[];
   catalogs?: StremioCatalog[];
   idPrefixes: string[];
+  behaviorHints?: StremioManifestBehaviorHints;
 }
 
 export interface StremioStreamBehaviorHints {

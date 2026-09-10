@@ -96,4 +96,67 @@ describe("FenixFlix Router Integration", () => {
     assert.equal(calledStream, true);
     assert.equal(res.body.streams[0].name, "FenixFlix");
   });
+
+  it("filters catalogs when activeCatalogIds are specified", () => {
+    const client = new FenixFlixClient({ enabled: true });
+    const catalogs = client.getCatalogs(["populares_movie", "populares_series"]);
+    assert.equal(catalogs.length, 2);
+    assert.ok(catalogs.some((c) => c.type === "movie" && c.id === "populares_fenix"));
+    assert.ok(catalogs.some((c) => c.type === "series" && c.id === "populares_fenix"));
+    assert.ok(!catalogs.some((c) => c.id === "recentes_servidor"));
+  });
+
+  it("routes movie and series catalogs with forwarded upstreamConfig", async () => {
+    let capturedConfig: string | undefined;
+    const mockClient = new FenixFlixClient({ enabled: true });
+    mockClient.fetchCatalog = async (type, id, extra, upstreamConfig) => {
+      capturedConfig = upstreamConfig;
+      return {
+        metas: [{ id: "tt12345", type: "movie", name: "Mock Movie" }],
+      };
+    };
+
+    const configPath = encodeURIComponent("fenix_qualities=1080p|fenix_audio=dublado");
+    const res = await routeRequest(
+      "GET",
+      `/${configPath}/catalog/movie/populares_fenix.json`,
+      "http://127.0.0.1:7000",
+      channelStore,
+      mockClient,
+    );
+
+    assert.equal(res.status, 200);
+    assert.equal(capturedConfig, "qualities=1080p|audio=dublado|catalogs=populares_movie,populares_series,recentes_movie,recentes_series");
+  });
+
+  it("returns empty movie catalog and streams when fenix_enabled=false in config", async () => {
+    let called = false;
+    const mockClient = new FenixFlixClient({ enabled: true });
+    mockClient.fetchCatalog = async () => {
+      called = true;
+      return { metas: [] };
+    };
+
+    const configPath = encodeURIComponent("fenix_enabled=false");
+    const resCat = await routeRequest(
+      "GET",
+      `/${configPath}/catalog/movie/populares_fenix.json`,
+      "http://127.0.0.1:7000",
+      channelStore,
+      mockClient,
+    );
+    assert.equal(resCat.status, 200);
+    assert.deepEqual((resCat as any).body, { metas: [] });
+    assert.equal(called, false);
+
+    const resStream = await routeRequest(
+      "GET",
+      `/${configPath}/stream/movie/tt12345.json`,
+      "http://127.0.0.1:7000",
+      channelStore,
+      mockClient,
+    );
+    assert.equal(resStream.status, 200);
+    assert.deepEqual((resStream as any).body, { streams: [] });
+  });
 });

@@ -1,5 +1,6 @@
 import { FenixFlixClient, getDefaultFenixFlixClient } from "../providers/fenixflix/fenixflixClient.js";
 import type { StremioCatalog, StremioManifest } from "../types/stremio.js";
+import { type AddonConfig, DEFAULT_ADDON_CONFIG } from "./addonConfig.js";
 
 export const manifest: StremioManifest = {
   id: "community.mibr.tv",
@@ -12,6 +13,10 @@ export const manifest: StremioManifest = {
   resources: ["catalog", "meta", "stream"],
   types: ["tv", "channel"],
   idPrefixes: ["mibr:tv:"],
+  behaviorHints: {
+    configurable: true,
+    configurationRequired: false,
+  },
   catalogs: [
     {
       type: "tv",
@@ -30,23 +35,30 @@ export function getManifest(
   hostUrl?: string,
   genres?: string[],
   fenixflix: FenixFlixClient = getDefaultFenixFlixClient(),
+  config: AddonConfig = DEFAULT_ADDON_CONFIG,
 ): StremioManifest {
   const cleanHost = hostUrl ? hostUrl.replace(/\/$/, "") : "";
-  const fenixflixEnabled = fenixflix.isEnabled();
-  const catalogs: StremioCatalog[] = [
-    {
+  const fenixflixActive = fenixflix.isEnabled() && config.fenixEnabled;
+  const activeGenres = genres
+    ? genres.filter((g) => config.tvGenres.includes(g))
+    : config.tvGenres;
+
+  const catalogs: StremioCatalog[] = [];
+
+  if (config.tvAll) {
+    catalogs.push({
       type: "tv",
       id: "mibr-tv-canais",
       name: "⭐ Todos os Canais",
       extra: [
-        { name: "genre", options: genres && genres.length > 0 ? genres : undefined },
+        { name: "genre", options: activeGenres.length > 0 ? activeGenres : undefined },
         { name: "search" },
         { name: "skip" },
       ],
-    },
-  ];
+    });
+  }
 
-  if (genres?.includes("Abertos")) {
+  if (activeGenres.includes("Abertos")) {
     catalogs.push({
       type: "tv",
       id: "mibr-tv-abertos",
@@ -55,7 +67,7 @@ export function getManifest(
     });
   }
 
-  if (genres?.includes("Esportes")) {
+  if (activeGenres.includes("Esportes")) {
     catalogs.push({
       type: "tv",
       id: "mibr-tv-esportes",
@@ -64,7 +76,7 @@ export function getManifest(
     });
   }
 
-  if (genres?.includes("Streaming")) {
+  if (activeGenres.includes("Streaming")) {
     catalogs.push({
       type: "tv",
       id: "mibr-tv-streaming",
@@ -73,7 +85,7 @@ export function getManifest(
     });
   }
 
-  if (genres?.includes("Filmes & Séries")) {
+  if (activeGenres.includes("Filmes & Séries")) {
     catalogs.push({
       type: "tv",
       id: "mibr-tv-filmes",
@@ -82,7 +94,7 @@ export function getManifest(
     });
   }
 
-  if (genres?.includes("Notícias")) {
+  if (activeGenres.includes("Notícias")) {
     catalogs.push({
       type: "tv",
       id: "mibr-tv-noticias",
@@ -91,7 +103,7 @@ export function getManifest(
     });
   }
 
-  if (genres?.includes("Infantil")) {
+  if (activeGenres.includes("Infantil")) {
     catalogs.push({
       type: "tv",
       id: "mibr-tv-infantil",
@@ -100,7 +112,7 @@ export function getManifest(
     });
   }
 
-  if (genres?.includes("Documentários")) {
+  if (activeGenres.includes("Documentários")) {
     catalogs.push({
       type: "tv",
       id: "mibr-tv-documentarios",
@@ -109,7 +121,7 @@ export function getManifest(
     });
   }
 
-  if (genres?.includes("Entretenimento")) {
+  if (activeGenres.includes("Entretenimento")) {
     catalogs.push({
       type: "tv",
       id: "mibr-tv-entretenimento",
@@ -118,23 +130,23 @@ export function getManifest(
     });
   }
 
-  if (fenixflixEnabled) {
-    catalogs.push(...fenixflix.getCatalogs());
+  if (fenixflixActive) {
+    catalogs.push(...fenixflix.getCatalogs(config.fenixCatalogs));
   }
 
-  const types = fenixflixEnabled
+  const types = fenixflixActive
     ? (["tv", "channel", "movie", "series"] as const)
     : (["tv", "channel"] as const);
 
-  const idPrefixes = fenixflixEnabled
+  const idPrefixes = fenixflixActive
     ? ["mibr:tv:", "tt", "tmdb"]
     : ["mibr:tv:"];
 
   return {
     ...manifest,
-    description: fenixflixEnabled
+    description: fenixflixActive
       ? "Canais de TV Ao Vivo, Filmes e Séries em HD/FHD (100% PT-BR) - Made in Brasil."
-      : manifest.description,
+      : "Canais de TV Ao Vivo do Brasil em HD/FHD (100% PT-BR) - Made in Brasil.",
     types: [...types],
     idPrefixes,
     icon: cleanHost ? `${cleanHost}/mibr-logo.png` : manifest.icon,

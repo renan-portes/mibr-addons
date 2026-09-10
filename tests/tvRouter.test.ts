@@ -108,4 +108,54 @@ describe("TV Router", () => {
     assert.equal(stream.url, "http://example.com/globo.m3u8");
     assert.equal(stream.behaviorHints.notWebReady, true);
   });
+
+  it("serves configured manifest with only selected categories", async () => {
+    const configPath = encodeURIComponent("tv_genres=Esportes|tv_all=false");
+    const res = await routeRequest("GET", `/${configPath}/manifest.json`, hostUrl, channelStore);
+    assert.equal(res.status, 200);
+    assert.ok("body" in res);
+
+    const catalogIds = res.body.catalogs.map((c: any) => c.id);
+    assert.ok(catalogIds.includes("mibr-tv-esportes"));
+    assert.ok(!catalogIds.includes("mibr-tv-abertos"));
+    assert.ok(!catalogIds.includes("mibr-tv-canais"));
+  });
+
+  it("serves configured manifest with fenixflix disabled", async () => {
+    const configPath = encodeURIComponent("fenix_enabled=false");
+    const res = await routeRequest("GET", `/${configPath}/manifest.json`, hostUrl, channelStore);
+    assert.equal(res.status, 200);
+    assert.ok("body" in res);
+    assert.deepEqual(res.body.types, ["tv", "channel"]);
+    assert.deepEqual(res.body.idPrefixes, ["mibr:tv:"]);
+    const hasFenixCatalogs = res.body.catalogs.some((c: any) => c.type === "movie" || c.type === "series");
+    assert.equal(hasFenixCatalogs, false);
+  });
+
+  it("filters general channel catalog according to configured genres", async () => {
+    const configPath = encodeURIComponent("tv_genres=Esportes");
+    const res = await routeRequest(
+      "GET",
+      `/${configPath}/catalog/channel/mibr-tv-canais.json`,
+      hostUrl,
+      channelStore
+    );
+    assert.equal(res.status, 200);
+    assert.ok("body" in res);
+    assert.equal(res.body.metas.length, 1);
+    assert.equal(res.body.metas[0].name, "SporTV HD");
+  });
+
+  it("returns empty catalog when requesting a disabled category", async () => {
+    const configPath = encodeURIComponent("tv_genres=Esportes");
+    const res = await routeRequest(
+      "GET",
+      `/${configPath}/catalog/channel/mibr-tv-abertos.json`,
+      hostUrl,
+      channelStore
+    );
+    assert.equal(res.status, 200);
+    assert.ok("body" in res);
+    assert.equal(res.body.metas.length, 0);
+  });
 });

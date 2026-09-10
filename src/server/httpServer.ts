@@ -66,6 +66,19 @@ export function createAddonServer(): Server {
           }
         }
 
+        if (pathname === "/fenix-flix-logo.png" || pathname.endsWith("/fenix-flix-logo.png")) {
+          const logoPath = join(process.cwd(), "fenix-flix-logo.png");
+          if (existsSync(logoPath)) {
+            response.writeHead(200, {
+              "Content-Type": "image/png",
+              "Access-Control-Allow-Origin": "*",
+              "Cache-Control": "public, max-age=86400",
+            });
+            createReadStream(logoPath).pipe(response);
+            return;
+          }
+        }
+
         // Logo proxy: wraps logo in an SVG with padding so circular clip doesn't cut content
         if (pathname.startsWith("/logo-proxy/")) {
           const encodedUrl = pathname.replace("/logo-proxy/", "").split("?")[0] ?? "";
