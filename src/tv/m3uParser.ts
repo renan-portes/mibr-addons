@@ -19,6 +19,9 @@ function normalizeGroup(rawGroup: string): string {
   if (/esport|sport|futebol|premiere|espn|combate/i.test(lower)) {
     return "Esportes";
   }
+  if (/streaming|stream|vod/i.test(lower)) {
+    return "Streaming";
+  }
   if (/filme|serie|séries|cinema|telecine|hbo|max|paramount/i.test(lower)) {
     return "Filmes & Séries";
   }

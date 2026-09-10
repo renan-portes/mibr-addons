@@ -124,3 +124,73 @@ http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq8
 
 #EXTINF:-1 tvg-id="x.sports" tvg-name="X Sports" group-title="Esportes",X Sports HD
 http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Sec-Fetch-Dest%3Aempty&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Accept%3A*%2F*&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Sec-Fetch-Site%3Across-site&h=Sec-Fetch-Mode%3Acors&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F/xsports/index.m3u8
+
+# ==========================================
+# 🎬 STREAMING
+# ==========================================
+
+#EXTINF:-1 tvg-id="amazon.prime" tvg-name="Amazon Prime" group-title="Streaming",Amazon Prime Video 1
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Sec-Fetch-Site%3Across-site&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Sec-Fetch-Mode%3Acors&h=Sec-Fetch-Dest%3Aempty&h=Accept%3A*%2F*/amazonprime/index.m3u8
+
+#EXTINF:-1 tvg-id="amazon.prime.2" tvg-name="Amazon Prime 2" group-title="Streaming",Amazon Prime Video 2
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Sec-Fetch-Dest%3Aempty&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Accept%3A*%2F*&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Sec-Fetch-Mode%3Acors&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Sec-Fetch-Site%3Across-site/amazonprime02/index.m3u8
+
+#EXTINF:-1 tvg-id="amazon.prime.3" tvg-name="Amazon Prime 3" group-title="Streaming",Amazon Prime Video 3
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Sec-Fetch-Dest%3Aempty&h=Sec-Fetch-Site%3Across-site&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Sec-Fetch-Mode%3Acors&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Accept%3A*%2F*/amazonprime03/index.m3u8
+
+#EXTINF:-1 tvg-id="amazon.prime.4" tvg-name="Amazon Prime 4" group-title="Streaming",Amazon Prime Video 4
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Sec-Fetch-Dest%3Aempty&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Sec-Fetch-Site%3Across-site&h=Accept%3A*%2F*&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Sec-Fetch-Mode%3Acors/amazonprime04/index.m3u8
+
+#EXTINF:-1 tvg-id="amazon.prime.5" tvg-name="Amazon Prime 5" group-title="Streaming",Amazon Prime Video 5
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Sec-Fetch-Site%3Across-site&h=Accept%3A*%2F*&h=Sec-Fetch-Dest%3Aempty&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F/amazonprime05/index.m3u8
+
+#EXTINF:-1 tvg-id="apple.tv.1" tvg-name="Apple TV 1" group-title="Streaming",Apple TV+ 1
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Sec-Fetch-Site%3Across-site&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Sec-Fetch-Mode%3Acors&h=Accept%3A*%2F*&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Sec-Fetch-Dest%3Aempty/appletv01/index.m3u8
+
+#EXTINF:-1 tvg-id="apple.tv.2" tvg-name="Apple TV 2" group-title="Streaming",Apple TV+ 2
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Sec-Fetch-Mode%3Acors&h=Accept%3A*%2F*&h=Sec-Fetch-Dest%3Aempty&h=Sec-Fetch-Site%3Across-site&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F/appletv02/index.m3u8
+
+#EXTINF:-1 tvg-id="disney.plus" tvg-name="Disney Plus" group-title="Streaming",Disney+ 1
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Sec-Fetch-Mode%3Acors&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Accept%3A*%2F*&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Sec-Fetch-Site%3Across-site&h=Sec-Fetch-Dest%3Aempty/disneyplus/index.m3u8
+
+#EXTINF:-1 tvg-id="disney.plus.2" tvg-name="Disney Plus 2" group-title="Streaming",Disney+ 2
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Sec-Fetch-Mode%3Acors&h=Sec-Fetch-Site%3Across-site&h=Sec-Fetch-Dest%3Aempty&h=Accept%3A*%2F*&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8/disneyplus02/index.m3u8
+
+#EXTINF:-1 tvg-id="disney.plus.3" tvg-name="Disney Plus 3" group-title="Streaming",Disney+ 3
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Accept%3A*%2F*&h=Sec-Fetch-Dest%3Aempty&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Sec-Fetch-Site%3Across-site&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Sec-Fetch-Mode%3Acors/disneyplus03/index.m3u8
+
+#EXTINF:-1 tvg-id="disney.plus.4" tvg-name="Disney Plus 4" group-title="Streaming",Disney+ 4
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Sec-Fetch-Mode%3Acors&h=Sec-Fetch-Site%3Across-site&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Sec-Fetch-Dest%3Aempty&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Accept%3A*%2F*&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz/disneyplus04/index.m3u8
+
+#EXTINF:-1 tvg-id="disney.plus.5" tvg-name="Disney Plus 5" group-title="Streaming",Disney+ 5
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Sec-Fetch-Dest%3Aempty&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Sec-Fetch-Site%3Across-site&h=Sec-Fetch-Mode%3Acors&h=Accept%3A*%2F*&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8/disneyplus05/index.m3u8
+
+#EXTINF:-1 tvg-id="disney.plus.6" tvg-name="Disney Plus 6" group-title="Streaming",Disney+ 6
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Sec-Fetch-Dest%3Aempty&h=Sec-Fetch-Mode%3Acors&h=Sec-Fetch-Site%3Across-site&h=Accept%3A*%2F*&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F/disneyplus06/index.m3u8
+
+#EXTINF:-1 tvg-id="globoplay.novelas" tvg-name="Globoplay Novelas" group-title="Streaming",Globoplay Novelas
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Sec-Fetch-Site%3Across-site&h=Sec-Fetch-Mode%3Acors&h=Sec-Fetch-Dest%3Aempty&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Accept%3A*%2F*/globoplaynovelas/index.m3u8
+
+#EXTINF:-1 tvg-id="max" tvg-name="Max" group-title="Streaming",Max 1
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Sec-Fetch-Site%3Across-site&h=Sec-Fetch-Dest%3Aempty&h=Sec-Fetch-Mode%3Acors&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Accept%3A*%2F*&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8/max/index.m3u8
+
+#EXTINF:-1 tvg-id="max.2" tvg-name="Max 2" group-title="Streaming",Max 2
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Sec-Fetch-Site%3Across-site&h=Sec-Fetch-Dest%3Aempty&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Accept%3A*%2F*&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Sec-Fetch-Mode%3Acors/max02/index.m3u8
+
+#EXTINF:-1 tvg-id="max.3" tvg-name="Max 3" group-title="Streaming",Max 3
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Sec-Fetch-Site%3Across-site&h=Accept%3A*%2F*&h=Sec-Fetch-Dest%3Aempty&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Sec-Fetch-Mode%3Acors/max03/index.m3u8
+
+#EXTINF:-1 tvg-id="max.4" tvg-name="Max 4" group-title="Streaming",Max 4
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Sec-Fetch-Site%3Across-site&h=Sec-Fetch-Mode%3Acors&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Sec-Fetch-Dest%3Aempty&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Accept%3A*%2F*/max04/index.m3u8
+
+#EXTINF:-1 tvg-id="max.5" tvg-name="Max 5" group-title="Streaming",Max 5
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Sec-Fetch-Mode%3Acors&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Sec-Fetch-Site%3Across-site&h=Sec-Fetch-Dest%3Aempty&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Accept%3A*%2F*/max05/index.m3u8
+
+#EXTINF:-1 tvg-id="max.6" tvg-name="Max 6" group-title="Streaming",Max 6
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Sec-Fetch-Dest%3Aempty&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Sec-Fetch-Mode%3Acors&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Sec-Fetch-Site%3Across-site&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz/max06/index.m3u8
+
+#EXTINF:-1 tvg-id="paramount.plus" tvg-name="Paramount+" group-title="Streaming",Paramount+ 1
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Sec-Fetch-Site%3Across-site&h=Sec-Fetch-Dest%3Aempty&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Sec-Fetch-Mode%3Acors&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Accept%3A*%2F*&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8/paramountplus/index.m3u8
+
+#EXTINF:-1 tvg-id="paramount.plus.2" tvg-name="Paramount+ 2" group-title="Streaming",Paramount+ 2
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Accept%3A*%2F*&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Sec-Fetch-Mode%3Acors&h=Sec-Fetch-Dest%3Aempty&h=Sec-Fetch-Site%3Across-site/paramountplus02/index.m3u8

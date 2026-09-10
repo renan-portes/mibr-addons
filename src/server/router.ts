@@ -56,6 +56,14 @@ const CHANNEL_LOGOS: Record<string, string> = {
   sportv:          `${TV_LOGO_ROOT}/brazil/sportv-br.png`,
   "x-sports":      `${TV_LOGO_ROOT}/brazil/x-sports-br.png`,
 
+  // Streaming
+  "amazon-prime":  "local:amazonprime.svg",
+  "apple-tv":      "local:appletv.svg",
+  "disney-plus":   `${TV_LOGO_ROOT}/united-states/disney-plus-us.png`,
+  "globoplay-novelas": `${TV_LOGO_ROOT}/brazil/globoplay-novelas-br.png`,
+  max:             "local:max.svg",
+  "paramount-plus":`${TV_LOGO_ROOT}/united-states/paramount-plus-us.png`,
+
   // News
   "globo-news":    `${TV_LOGO_ROOT}/brazil/globo-news-br.png`,
   "record-news":   `${TV_LOGO_ROOT}/brazil/record-news-br.png`,
@@ -68,7 +76,6 @@ const CHANNEL_LOGOS: Record<string, string> = {
   multishow:       `${TV_LOGO_ROOT}/brazil/multishow-br.png`,
   hbo:             `${TV_LOGO_ROOT}/brazil/hbo-br.png`,
   "hbo-2":         `${TV_LOGO_ROOT}/brazil/hbo-2-br.png`,
-  max:             `${TV_LOGO_ROOT}/brazil/hbo-br.png`,
   tnt:             `${TV_LOGO_ROOT}/brazil/tnt-br.png`,
   "tnt-series":    `${TV_LOGO_ROOT}/brazil/tnt-series-br.png`,
   warner:          `${TV_LOGO_ROOT}/brazil/warner-channel-br.png`,
@@ -160,6 +167,7 @@ export async function routeRequest(
 
     if (catalogId === "mibr-tv-abertos") genre = "Abertos";
     else if (catalogId === "mibr-tv-esportes") genre = "Esportes";
+    else if (catalogId === "mibr-tv-streaming") genre = "Streaming";
     else if (catalogId === "mibr-tv-filmes") genre = "Filmes & Séries";
     else if (catalogId === "mibr-tv-noticias") genre = "Notícias";
     else if (catalogId === "mibr-tv-infantil") genre = "Infantil";

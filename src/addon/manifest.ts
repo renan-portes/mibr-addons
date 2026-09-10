@@ -58,6 +58,15 @@ export function getManifest(hostUrl?: string, genres?: string[]): StremioManifes
     });
   }
 
+  if (genres?.includes("Streaming")) {
+    catalogs.push({
+      type: "tv",
+      id: "mibr-tv-streaming",
+      name: "🎬 Streaming",
+      extra: [{ name: "search" }, { name: "skip" }],
+    });
+  }
+
   if (genres?.includes("Filmes & Séries")) {
     catalogs.push({
       type: "tv",
