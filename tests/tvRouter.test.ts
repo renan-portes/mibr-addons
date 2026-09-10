@@ -31,7 +31,7 @@ describe("TV Router", () => {
     assert.equal(res.status, 200);
     assert.ok("body" in res);
     assert.equal(res.body.id, "community.mibr.tv");
-    assert.deepEqual(res.body.types, ["channel"]);
+    assert.deepEqual(res.body.types, ["tv", "channel"]);
     assert.deepEqual(res.body.resources, ["catalog", "meta", "stream"]);
     assert.ok(res.body.catalogs[0].extra[0].options.includes("Abertos"));
     assert.ok(res.body.catalogs[0].extra[0].options.includes("Esportes"));
@@ -43,7 +43,7 @@ describe("TV Router", () => {
     assert.equal(resAll.status, 200);
     assert.ok("body" in resAll);
     assert.equal(resAll.body.metas.length, 2);
-    assert.equal(resAll.body.metas[0].type, "channel");
+    assert.equal(resAll.body.metas[0].type, "tv");
 
     // Filter by genre
     const resEsportes = await routeRequest(
@@ -95,16 +95,15 @@ describe("TV Router", () => {
     assert.equal(res.status, 404);
   });
 
-  it("serves masked stream URL pointing to proxy", async () => {
+  it("serves unmasked stream URL directly", async () => {
     const res = await routeRequest("GET", "/stream/channel/mibr:tv:globo.json", hostUrl, channelStore);
     assert.equal(res.status, 200);
     assert.ok("body" in res);
     assert.equal(res.body.streams.length, 1);
 
     const stream = res.body.streams[0];
-    assert.equal(stream.name, "MIBR TV 🇧🇷");
-    // Ensure stream URL points to our proxy and NOT origin URL
-    assert.equal(stream.url, `${hostUrl}/proxy/stream/${encodeURIComponent("mibr:tv:globo")}.m3u8`);
+    assert.equal(stream.name, "MIBR TV");
+    assert.equal(stream.url, "http://example.com/globo.m3u8");
     assert.equal(stream.behaviorHints.notWebReady, true);
   });
 });

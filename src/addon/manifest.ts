@@ -2,20 +2,20 @@ import type { StremioCatalog, StremioManifest } from "../types/stremio.js";
 
 export const manifest: StremioManifest = {
   id: "community.mibr.tv",
-  name: "MIBR TV 🇧🇷",
+  name: "MIBR TV",
   version: "1.0.0",
-  description: "Canais de TV Ao Vivo do Brasil em HD/FHD (100% PT-BR) — Made in Brasil.",
+  description: "Canais de TV Ao Vivo do Brasil em HD/FHD (100% PT-BR) - Made in Brasil.",
   icon: "https://mibr.servidor.xyz.br/mibr-logo.png",
   logo: "https://mibr.servidor.xyz.br/mibr-logo.png",
   background: "https://mibr.servidor.xyz.br/mibr-logo.png",
   resources: ["catalog", "meta", "stream"],
-  types: ["channel"],
+  types: ["tv", "channel"],
   idPrefixes: ["mibr:tv:"],
   catalogs: [
     {
-      type: "channel",
+      type: "tv",
       id: "mibr-tv-canais",
-      name: "🇧🇷 Canais de TV Ao Vivo",
+      name: "📺 Canais de TV Ao Vivo",
       extra: [
         { name: "genre" },
         { name: "search" },
@@ -29,7 +29,7 @@ export function getManifest(hostUrl?: string, genres?: string[]): StremioManifes
   const cleanHost = hostUrl ? hostUrl.replace(/\/$/, "") : "";
   const catalogs: StremioCatalog[] = [
     {
-      type: "channel",
+      type: "tv",
       id: "mibr-tv-canais",
       name: "⭐ Todos os Canais",
       extra: [
@@ -42,7 +42,7 @@ export function getManifest(hostUrl?: string, genres?: string[]): StremioManifes
 
   if (genres?.includes("Abertos")) {
     catalogs.push({
-      type: "channel",
+      type: "tv",
       id: "mibr-tv-abertos",
       name: "🇧🇷 TV Aberta",
       extra: [{ name: "search" }, { name: "skip" }],
@@ -51,7 +51,7 @@ export function getManifest(hostUrl?: string, genres?: string[]): StremioManifes
 
   if (genres?.includes("Esportes")) {
     catalogs.push({
-      type: "channel",
+      type: "tv",
       id: "mibr-tv-esportes",
       name: "⚽ Esportes & Futebol",
       extra: [{ name: "search" }, { name: "skip" }],
@@ -60,7 +60,7 @@ export function getManifest(hostUrl?: string, genres?: string[]): StremioManifes
 
   if (genres?.includes("Filmes & Séries")) {
     catalogs.push({
-      type: "channel",
+      type: "tv",
       id: "mibr-tv-filmes",
       name: "🍿 Filmes & Séries",
       extra: [{ name: "search" }, { name: "skip" }],
@@ -69,7 +69,7 @@ export function getManifest(hostUrl?: string, genres?: string[]): StremioManifes
 
   if (genres?.includes("Notícias")) {
     catalogs.push({
-      type: "channel",
+      type: "tv",
       id: "mibr-tv-noticias",
       name: "📰 Notícias",
       extra: [{ name: "search" }, { name: "skip" }],
@@ -78,9 +78,9 @@ export function getManifest(hostUrl?: string, genres?: string[]): StremioManifes
 
   if (genres?.includes("Infantil")) {
     catalogs.push({
-      type: "channel",
+      type: "tv",
       id: "mibr-tv-infantil",
-      name: "👶 Infantil",
+      name: "🧸 Infantil",
       extra: [{ name: "search" }, { name: "skip" }],
     });
   }

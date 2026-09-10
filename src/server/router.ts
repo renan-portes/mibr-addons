@@ -100,7 +100,7 @@ export async function routeRequest(
     const channels = channelStore.getChannels({ genre, search, skip });
     const metas: StremioMeta[] = channels.map((ch) => ({
       id: ch.id,
-      type: "channel",
+      type: "tv",
       name: ch.name,
       poster: ch.logo || `${cleanHost}/mibr-logo.png`,
       posterShape: "square",
@@ -126,7 +126,7 @@ export async function routeRequest(
 
     const meta: StremioMeta = {
       id: ch.id,
-      type: "channel",
+      type: "tv",
       name: ch.name,
       poster: ch.logo || `${cleanHost}/mibr-logo.png`,
       posterShape: "square",
@@ -151,7 +151,7 @@ export async function routeRequest(
       return { status: 200, contentType: "application/json", body: emptyResponse };
     }
 
-    const proxyEnabled = process.env.STREAM_PROXY_ENABLED !== "false";
+    const proxyEnabled = process.env.STREAM_PROXY_ENABLED === "true";
     const playUrl = proxyEnabled
       ? `${cleanHost}/proxy/stream/${encodeURIComponent(ch.id)}.m3u8`
       : ch.streamUrl;
@@ -159,7 +159,7 @@ export async function routeRequest(
     const body: StremioStreamResponse = {
       streams: [
         {
-          name: "MIBR TV 🇧🇷",
+          name: "MIBR TV",
           title: `${ch.name} • Ao Vivo HD`,
           url: playUrl,
           behaviorHints: {
