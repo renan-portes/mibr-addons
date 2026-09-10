@@ -1,3 +1,4 @@
+import { FenixFlixClient, getDefaultFenixFlixClient } from "../providers/fenixflix/fenixflixClient.js";
 import type { StremioCatalog, StremioManifest } from "../types/stremio.js";
 
 export const manifest: StremioManifest = {
@@ -25,8 +26,13 @@ export const manifest: StremioManifest = {
   ],
 };
 
-export function getManifest(hostUrl?: string, genres?: string[]): StremioManifest {
+export function getManifest(
+  hostUrl?: string,
+  genres?: string[],
+  fenixflix: FenixFlixClient = getDefaultFenixFlixClient(),
+): StremioManifest {
   const cleanHost = hostUrl ? hostUrl.replace(/\/$/, "") : "";
+  const fenixflixEnabled = fenixflix.isEnabled();
   const catalogs: StremioCatalog[] = [
     {
       type: "tv",
@@ -112,8 +118,25 @@ export function getManifest(hostUrl?: string, genres?: string[]): StremioManifes
     });
   }
 
+  if (fenixflixEnabled) {
+    catalogs.push(...fenixflix.getCatalogs());
+  }
+
+  const types = fenixflixEnabled
+    ? (["tv", "channel", "movie", "series"] as const)
+    : (["tv", "channel"] as const);
+
+  const idPrefixes = fenixflixEnabled
+    ? ["mibr:tv:", "tt", "tmdb"]
+    : ["mibr:tv:"];
+
   return {
     ...manifest,
+    description: fenixflixEnabled
+      ? "Canais de TV Ao Vivo, Filmes e Séries em HD/FHD (100% PT-BR) - Made in Brasil."
+      : manifest.description,
+    types: [...types],
+    idPrefixes,
     icon: cleanHost ? `${cleanHost}/mibr-logo.png` : manifest.icon,
     logo: cleanHost ? `${cleanHost}/mibr-logo.png` : manifest.logo,
     background: cleanHost ? `${cleanHost}/mibr-logo.png` : manifest.background,

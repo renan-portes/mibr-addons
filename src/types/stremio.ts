@@ -1,6 +1,6 @@
 export type StremioResource = "stream" | "catalog" | "meta";
 
-export type StremioType = "channel" | "tv";
+export type StremioType = "channel" | "tv" | "movie" | "series";
 
 export interface StremioCatalogExtra {
   name: string;

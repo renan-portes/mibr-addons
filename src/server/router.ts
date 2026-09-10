@@ -1,4 +1,5 @@
 import { getManifest } from "../addon/manifest.js";
+import { FenixFlixClient, getDefaultFenixFlixClient } from "../providers/fenixflix/fenixflixClient.js";
 import { ChannelStore, getDefaultChannelStore } from "../tv/channelStore.js";
 import { StreamProxy } from "../tv/streamProxy.js";
 import type {
@@ -21,9 +22,9 @@ export type RouteResult =
     }
   | { status: 400 | 404 | 500 | 502; body: ErrorResponse };
 
-const STREAM_PATH_PATTERN = /^(?:\/([^/]+))?\/stream\/(?:channel|tv)\/([^/]+)\.json$/;
+const STREAM_PATH_PATTERN = /^(?:\/([^/]+))?\/stream\/(channel|tv|movie|series)\/([^/]+)\.json$/;
 const CONFIG_MANIFEST_PATTERN = /^\/([^/]+)\/manifest\.json$/;
-const CATALOG_PATH_PATTERN = /^(?:\/([^/]+))?\/catalog\/(?:channel|tv)\/([^/]+?)(?:\/(.+))?\.json$/;
+const CATALOG_PATH_PATTERN = /^(?:\/([^/]+))?\/catalog\/(channel|tv|movie|series)\/([^/]+?)(?:\/(.+))?\.json$/;
 const META_PATH_PATTERN = /^(?:\/([^/]+))?\/meta\/(?:channel|tv)\/([^/]+)\.json$/;
 const PROXY_STREAM_PATTERN = /^\/proxy\/stream\/([^/]+)\.m3u8$/;
 
@@ -166,6 +167,7 @@ export async function routeRequest(
   rawUrl: string,
   hostUrl = "http://127.0.0.1:7000",
   channelStore: ChannelStore = getDefaultChannelStore(),
+  fenixflixClient: FenixFlixClient = getDefaultFenixFlixClient(),
 ): Promise<RouteResult> {
   if (method !== "GET") {
     return { status: 404, body: { error: "Not found" } };
@@ -189,7 +191,7 @@ export async function routeRequest(
     return {
       status: 200,
       contentType: "application/json",
-      body: getManifest(cleanHost, channelStore.getGenres()),
+      body: getManifest(cleanHost, channelStore.getGenres(), fenixflixClient),
     };
   }
 
@@ -202,15 +204,22 @@ export async function routeRequest(
     return {
       status: 200,
       contentType: "application/json",
-      body: getManifest(cleanHost, channelStore.getGenres()),
+      body: getManifest(cleanHost, channelStore.getGenres(), fenixflixClient),
     };
   }
 
-  // 3. Catalog (/catalog/channel/:id.json or /catalog/channel/:id/:extra.json)
+  // 3. Catalog (/catalog/:type/:id.json or /catalog/:type/:id/:extra.json)
   const catalogMatch = CATALOG_PATH_PATTERN.exec(pathname);
   if (catalogMatch) {
-    const catalogId = catalogMatch[2];
-    const extra = catalogMatch[3];
+    const catalogType = catalogMatch[2];
+    const catalogId = catalogMatch[3];
+    const extra = catalogMatch[4];
+
+    if ((catalogType === "movie" || catalogType === "series") && catalogId) {
+      const body = await fenixflixClient.fetchCatalog(catalogType, catalogId, extra);
+      return { status: 200, contentType: "application/json", body };
+    }
+
     let genre: string | undefined;
     let search: string | undefined;
     let skip: number | undefined;
@@ -278,10 +287,18 @@ export async function routeRequest(
     return { status: 200, contentType: "application/json", body };
   }
 
-  // 5. Streams (/stream/channel/:id.json)
+  // 5. Streams (/stream/:type/:id.json)
   const streamMatch = STREAM_PATH_PATTERN.exec(pathname);
-  if (streamMatch && streamMatch[2]) {
-    const id = decodeURIComponent(streamMatch[2]);
+  if (streamMatch && streamMatch[3]) {
+    const streamType = streamMatch[2];
+    const rawId = decodeURIComponent(streamMatch[3]);
+
+    if (streamType === "movie" || streamType === "series") {
+      const body = await fenixflixClient.fetchStreams(streamType, rawId);
+      return { status: 200, contentType: "application/json", body };
+    }
+
+    const id = rawId;
     const ch = channelStore.getChannelById(id);
     if (!ch) {
       const emptyResponse: StremioStreamResponse = { streams: [] };
