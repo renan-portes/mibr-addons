@@ -65,17 +65,31 @@ export function createAddonServer(): Server {
 
         if (pathname.startsWith("/logos/")) {
           const filename = pathname.replace("/logos/", "");
-          // Allow only word characters and .png to prevent path traversal
-          if (/^[\w.-]+\.png$/.test(filename)) {
+          // Allow only safe filenames to prevent path traversal
+          if (/^[\w.-]+\.(png|jpg|jpeg)$/.test(filename)) {
             const logoPath = join(process.cwd(), "data", "logos", filename);
             if (existsSync(logoPath)) {
+              const isJpeg = filename.endsWith(".jpg") || filename.endsWith(".jpeg");
               response.writeHead(200, {
-                "Content-Type": "image/png",
+                "Content-Type": isJpeg ? "image/jpeg" : "image/png",
                 "Access-Control-Allow-Origin": "*",
                 "Cache-Control": "public, max-age=86400",
               });
               createReadStream(logoPath).pipe(response);
               return;
+            }
+            // Fallback: try .jpg if .png not found
+            if (filename.endsWith(".png")) {
+              const jpgPath = join(process.cwd(), "data", "logos", filename.replace(".png", ".jpg"));
+              if (existsSync(jpgPath)) {
+                response.writeHead(200, {
+                  "Content-Type": "image/jpeg",
+                  "Access-Control-Allow-Origin": "*",
+                  "Cache-Control": "public, max-age=86400",
+                });
+                createReadStream(jpgPath).pipe(response);
+                return;
+              }
             }
           }
         }
