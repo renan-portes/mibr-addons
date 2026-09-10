@@ -49,8 +49,12 @@ export class FenixFlixClient {
       { idKey: "recentes_series", catalog: { type: "series", id: "recentes_servidor", name: "Recém Adicionado (Fenix)" } },
     ];
 
-    if (!activeCatalogIds || activeCatalogIds.length === 0) {
+    if (activeCatalogIds === undefined) {
       return allCatalogs.map((c) => c.catalog);
+    }
+
+    if (activeCatalogIds.length === 0) {
+      return [];
     }
 
     return allCatalogs

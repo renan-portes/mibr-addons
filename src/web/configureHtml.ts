@@ -704,18 +704,13 @@ export function renderConfigureHtml(hostUrl: string, channelStore?: ChannelStore
       if (!tvAll) {
         parts.push('tv_all=false');
       }
+
       if (!fenixEnabled) {
         parts.push('fenix_enabled=false');
       } else {
-        if (!isDefaultQualities) {
-          parts.push('fenix_qualities=' + qualities.join(','));
-        }
-        if (!isDefaultAudio) {
-          parts.push('fenix_audio=' + audio.join(','));
-        }
-        if (!isDefaultCatalogs) {
-          parts.push('fenix_catalogs=' + catalogs.join(','));
-        }
+        parts.push('qualities=' + (qualities.length > 0 ? qualities.join(',') : 'none'));
+        parts.push('audio=' + (audio.length > 0 ? audio.join(',') : 'none'));
+        parts.push('catalogs=' + (catalogs.length > 0 ? catalogs.join(',') : 'none'));
       }
 
       const configPath = encodeURIComponent(parts.join('|'));

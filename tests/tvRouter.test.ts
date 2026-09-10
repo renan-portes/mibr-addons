@@ -158,4 +158,19 @@ describe("TV Router", () => {
     assert.ok("body" in res);
     assert.equal(res.body.metas.length, 0);
   });
+
+  it("serves configured manifest with catalogs=none (no movie/series catalogs, but stream types preserved)", async () => {
+    const configPath = encodeURIComponent("qualities=4k,1080p,720p,sd|audio=dublado,legendado|catalogs=none");
+    const res = await routeRequest("GET", `/${configPath}/manifest.json`, hostUrl, channelStore);
+    assert.equal(res.status, 200);
+    assert.ok("body" in res);
+    assert.deepEqual(res.body.types, ["tv", "channel", "movie", "series"]);
+    assert.ok(res.body.idPrefixes.includes("tt"));
+    const hasFenixCatalogs = res.body.catalogs.some((c: any) => c.type === "movie" || c.type === "series");
+    assert.equal(hasFenixCatalogs, false);
+
+    const resCat = await routeRequest("GET", `/${configPath}/catalog/movie/populares_fenix.json`, hostUrl, channelStore);
+    assert.equal(resCat.status, 200);
+    assert.deepEqual((resCat as any).body, { metas: [] });
+  });
 });

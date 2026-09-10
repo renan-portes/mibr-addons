@@ -61,6 +61,13 @@ test("addonConfig", async (t) => {
     assert.deepEqual(config.fenixCatalogs, ["populares_series"]);
   });
 
+  await t.test("parses catalogs=none and generates upstream catalogs=none", () => {
+    const raw = "qualities=4k,1080p,720p,sd|audio=dublado,legendado|catalogs=none";
+    const config = parseAddonConfig(raw);
+    assert.deepEqual(config.fenixCatalogs, []);
+    assert.equal(toFenixFlixUpstreamConfig(config), "qualities=4k,1080p,720p,sd|audio=dublado,legendado|catalogs=none");
+  });
+
   await t.test("serializes config to pipe string", () => {
     const serialized = serializeAddonConfig({
       tvGenres: ["Abertos", "Esportes"],
@@ -73,7 +80,7 @@ test("addonConfig", async (t) => {
 
     assert.equal(
       serialized,
-      "tv_genres=Abertos,Esportes|tv_all=true|fenix_enabled=true|fenix_qualities=1080p|fenix_audio=dublado|fenix_catalogs=populares_movie",
+      "tv_genres=Abertos,Esportes|tv_all=true|fenix_enabled=true|qualities=1080p|audio=dublado|catalogs=populares_movie",
     );
   });
 });

@@ -97,10 +97,14 @@ export function parseAddonConfig(rawConfig?: string): AddonConfig {
         .map((a) => a.trim().toLowerCase())
         .filter((a) => DEFAULT_FENIX_AUDIO.includes(a as any));
     } else if (key === "fenix_catalogs" || key === "catalogs") {
-      config.fenixCatalogs = val
-        .split(",")
-        .map((c) => c.trim().toLowerCase())
-        .filter((c) => DEFAULT_FENIX_CATALOGS.includes(c as any));
+      if (val === "" || val === "none") {
+        config.fenixCatalogs = [];
+      } else {
+        config.fenixCatalogs = val
+          .split(",")
+          .map((c) => c.trim().toLowerCase())
+          .filter((c) => DEFAULT_FENIX_CATALOGS.includes(c as any));
+      }
     }
   }
 
@@ -124,14 +128,26 @@ export function serializeAddonConfig(config: Partial<AddonConfig>): string {
   }
 
   if (config.fenixEnabled !== false) {
-    if (config.fenixQualities && config.fenixQualities.length > 0) {
-      parts.push(`fenix_qualities=${config.fenixQualities.join(",")}`);
+    if (config.fenixQualities !== undefined) {
+      if (config.fenixQualities.length === 0) {
+        parts.push("qualities=none");
+      } else {
+        parts.push(`qualities=${config.fenixQualities.join(",")}`);
+      }
     }
-    if (config.fenixAudio && config.fenixAudio.length > 0) {
-      parts.push(`fenix_audio=${config.fenixAudio.join(",")}`);
+    if (config.fenixAudio !== undefined) {
+      if (config.fenixAudio.length === 0) {
+        parts.push("audio=none");
+      } else {
+        parts.push(`audio=${config.fenixAudio.join(",")}`);
+      }
     }
-    if (config.fenixCatalogs && config.fenixCatalogs.length > 0) {
-      parts.push(`fenix_catalogs=${config.fenixCatalogs.join(",")}`);
+    if (config.fenixCatalogs !== undefined) {
+      if (config.fenixCatalogs.length === 0) {
+        parts.push("catalogs=none");
+      } else {
+        parts.push(`catalogs=${config.fenixCatalogs.join(",")}`);
+      }
     }
   }
 
@@ -146,14 +162,26 @@ export function toFenixFlixUpstreamConfig(config: AddonConfig): string {
   if (!config.fenixEnabled) return "";
 
   const parts: string[] = [];
-  if (config.fenixQualities && config.fenixQualities.length > 0) {
-    parts.push(`qualities=${config.fenixQualities.join(",")}`);
+  if (config.fenixQualities) {
+    if (config.fenixQualities.length === 0) {
+      parts.push("qualities=none");
+    } else {
+      parts.push(`qualities=${config.fenixQualities.join(",")}`);
+    }
   }
-  if (config.fenixAudio && config.fenixAudio.length > 0) {
-    parts.push(`audio=${config.fenixAudio.join(",")}`);
+  if (config.fenixAudio) {
+    if (config.fenixAudio.length === 0) {
+      parts.push("audio=none");
+    } else {
+      parts.push(`audio=${config.fenixAudio.join(",")}`);
+    }
   }
-  if (config.fenixCatalogs && config.fenixCatalogs.length > 0) {
-    parts.push(`catalogs=${config.fenixCatalogs.join(",")}`);
+  if (config.fenixCatalogs) {
+    if (config.fenixCatalogs.length === 0) {
+      parts.push("catalogs=none");
+    } else {
+      parts.push(`catalogs=${config.fenixCatalogs.join(",")}`);
+    }
   }
 
   return parts.join("|");

@@ -220,7 +220,11 @@ export async function routeRequest(
     const extra = catalogMatch[4];
 
     if ((catalogType === "movie" || catalogType === "series") && catalogId) {
-      if (!config.fenixEnabled) {
+      if (!config.fenixEnabled || config.fenixCatalogs.length === 0) {
+        return { status: 200, contentType: "application/json", body: { metas: [] } };
+      }
+      const catalogKey = `${catalogId === "populares_fenix" ? "populares" : "recentes"}_${catalogType}`;
+      if (!config.fenixCatalogs.includes(catalogKey)) {
         return { status: 200, contentType: "application/json", body: { metas: [] } };
       }
       const upstreamConfig = toFenixFlixUpstreamConfig(config);
