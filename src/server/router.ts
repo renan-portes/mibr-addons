@@ -27,49 +27,62 @@ const CATALOG_PATH_PATTERN = /^(?:\/([^/]+))?\/catalog\/(?:channel|tv)\/([^/]+?)
 const META_PATH_PATTERN = /^(?:\/([^/]+))?\/meta\/(?:channel|tv)\/([^/]+)\.json$/;
 const PROXY_STREAM_PATTERN = /^\/proxy\/stream\/([^/]+)\.m3u8$/;
 
-const TV_LOGO_BASE = "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/brazil";
+const TV_LOGO_ROOT = "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries";
 
 const CHANNEL_LOGOS: Record<string, string> = {
-  // Globo
-  globo:      `${TV_LOGO_BASE}/globo-br.png`,
-  // SBT
-  sbt:        `${TV_LOGO_BASE}/sbt-br.png`,
-  // Band
-  band:       `${TV_LOGO_BASE}/band-br.png`,
-  // Record — rede-record-br is nearly square (512x514) so it fits the circular clip
-  record:     `${TV_LOGO_BASE}/rede-record-br.png`,
-  // Sports
-  sportv:     `${TV_LOGO_BASE}/sportv-br.png`,
+  // Abertos
+  globo:           `${TV_LOGO_ROOT}/brazil/globo-br.png`,
+  sbt:             `${TV_LOGO_ROOT}/brazil/sbt-br.png`,
+  band:            `${TV_LOGO_ROOT}/brazil/band-br.png`,
+  record:          `${TV_LOGO_ROOT}/brazil/rede-record-br.png`,
+
+  // Esportes
+  "band-sports":   `${TV_LOGO_ROOT}/brazil/band-sports-br.png`,
+  "caze-tv":       "local:cazetv.png",
+  combate:         "local:combate.svg",
+  dazn:            `${TV_LOGO_ROOT}/international/dazn-int.png`,
+  "espn-2":        `${TV_LOGO_ROOT}/world-latin-america/espn-2-lam.png`,
+  "espn-3":        `${TV_LOGO_ROOT}/world-latin-america/espn-3-lam.png`,
+  "espn-4":        `${TV_LOGO_ROOT}/brazil/espn-4-br.png`,
+  "espn-5":        `${TV_LOGO_ROOT}/brazil/espn-5-br.png`,
+  "espn-6":        `${TV_LOGO_ROOT}/world-latin-america/espn-6-lam.png`,
+  espn:            `${TV_LOGO_ROOT}/world-latin-america/espn-lam.png`,
+  "ge-tv":         `${TV_LOGO_ROOT}/brazil/ge-tv-br.png`,
+  nsports:         "local:nsports.svg",
+  "nosso-futebol": "local:nossofutebol.png",
+  premiere:        `${TV_LOGO_ROOT}/brazil/premiere-br.png`,
+  "sportv-2":      `${TV_LOGO_ROOT}/brazil/sportv2-br.png`,
+  "sportv-3":      `${TV_LOGO_ROOT}/brazil/sportv3-br.png`,
+  sportv:          `${TV_LOGO_ROOT}/brazil/sportv-br.png`,
+  "x-sports":      `${TV_LOGO_ROOT}/brazil/x-sports-br.png`,
+
   // News
-  "globo-news": `${TV_LOGO_BASE}/globo-news-br.png`,
-  "record-news": `${TV_LOGO_BASE}/record-news-br.png`,
-  "band-news": `${TV_LOGO_BASE}/band-news-br.png`,
-  "jovem-pan-news": `${TV_LOGO_BASE}/jovem-pan-news-br.png`,
-  "cnn-brasil": `${TV_LOGO_BASE}/cnn-brasil-br.png`,
-  // GNT / Multishow / Globosat
-  gnt:        `${TV_LOGO_BASE}/gnt-br.png`,
-  multishow:  `${TV_LOGO_BASE}/multishow-br.png`,
-  premiere:   `${TV_LOGO_BASE}/premiere-br.png`,
-  // Movies & Series
-  hbo:        `${TV_LOGO_BASE}/hbo-br.png`,
-  "hbo-2":    `${TV_LOGO_BASE}/hbo-2-br.png`,
-  max:        `${TV_LOGO_BASE}/hbo-br.png`,
-  tnt:        `${TV_LOGO_BASE}/tnt-br.png`,
-  "tnt-series": `${TV_LOGO_BASE}/tnt-series-br.png`,
-  warner:     `${TV_LOGO_BASE}/warner-channel-br.png`,
-  "sony-channel": `${TV_LOGO_BASE}/sony-channel-br.png`,
-  axn:        `${TV_LOGO_BASE}/axn-br.png`,
-  paramount:  `${TV_LOGO_BASE}/paramount-network-br.png`,
-  megapix:    `${TV_LOGO_BASE}/megapix-br.png`,
-  space:      `${TV_LOGO_BASE}/space-br.png`,
-  // Kids
-  cartoon:    `${TV_LOGO_BASE}/cartoon-network-br.png`,
-  discovery:  `${TV_LOGO_BASE}/discovery-kids-br.png`,
-  "discovery-kids": `${TV_LOGO_BASE}/discovery-kids-br.png`,
-  // Others
-  "rede-tv":  `${TV_LOGO_BASE}/rede-tv-br.png`,
-  "tv-cultura": `${TV_LOGO_BASE}/tv-cultura-br.png`,
-  "tv-brasil": `${TV_LOGO_BASE}/tv-brasil-br.png`,
+  "globo-news":    `${TV_LOGO_ROOT}/brazil/globo-news-br.png`,
+  "record-news":   `${TV_LOGO_ROOT}/brazil/record-news-br.png`,
+  "band-news":     `${TV_LOGO_ROOT}/brazil/band-news-br.png`,
+  "jovem-pan-news":`${TV_LOGO_ROOT}/brazil/jovem-pan-news-br.png`,
+  "cnn-brasil":    `${TV_LOGO_ROOT}/brazil/cnn-brasil-br.png`,
+
+  // Entretenimento / Filmes / Séries / Kids / Outros
+  gnt:             `${TV_LOGO_ROOT}/brazil/gnt-br.png`,
+  multishow:       `${TV_LOGO_ROOT}/brazil/multishow-br.png`,
+  hbo:             `${TV_LOGO_ROOT}/brazil/hbo-br.png`,
+  "hbo-2":         `${TV_LOGO_ROOT}/brazil/hbo-2-br.png`,
+  max:             `${TV_LOGO_ROOT}/brazil/hbo-br.png`,
+  tnt:             `${TV_LOGO_ROOT}/brazil/tnt-br.png`,
+  "tnt-series":    `${TV_LOGO_ROOT}/brazil/tnt-series-br.png`,
+  warner:          `${TV_LOGO_ROOT}/brazil/warner-channel-br.png`,
+  "sony-channel":  `${TV_LOGO_ROOT}/brazil/sony-channel-br.png`,
+  axn:             `${TV_LOGO_ROOT}/brazil/axn-br.png`,
+  paramount:       `${TV_LOGO_ROOT}/brazil/paramount-network-br.png`,
+  megapix:         `${TV_LOGO_ROOT}/brazil/megapix-br.png`,
+  space:           `${TV_LOGO_ROOT}/brazil/space-br.png`,
+  cartoon:         `${TV_LOGO_ROOT}/brazil/cartoon-network-br.png`,
+  discovery:       `${TV_LOGO_ROOT}/brazil/discovery-kids-br.png`,
+  "discovery-kids":`${TV_LOGO_ROOT}/brazil/discovery-kids-br.png`,
+  "rede-tv":       `${TV_LOGO_ROOT}/brazil/rede-tv-br.png`,
+  "tv-cultura":    `${TV_LOGO_ROOT}/brazil/tv-cultura-br.png`,
+  "tv-brasil":     `${TV_LOGO_ROOT}/brazil/tv-brasil-br.png`,
 };
 
 function getLocalLogo(channelId: string, cleanHost: string): string | undefined {

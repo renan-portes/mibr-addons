@@ -1,9 +1,11 @@
 import { createServer, type Server } from "node:http";
 import https from "node:https";
-import { createReadStream, existsSync } from "node:fs";
+import { createReadStream, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { AddressInfo } from "node:net";
 import { routeRequest } from "./router.js";
+
+const logoProxyCache = new Map<string, string>();
 
 function sendJson(
   response: import("node:http").ServerResponse,
@@ -64,10 +66,47 @@ export function createAddonServer(): Server {
           }
         }
 
-        // Logo proxy: wraps external logo in an SVG with padding so circular clip doesn't cut content
+        // Logo proxy: wraps logo in an SVG with padding so circular clip doesn't cut content
         if (pathname.startsWith("/logo-proxy/")) {
           const encodedUrl = pathname.replace("/logo-proxy/", "").split("?")[0] ?? "";
           const targetUrl = decodeURIComponent(encodedUrl);
+
+          // Return from memory cache if available
+          const cachedSvg = logoProxyCache.get(targetUrl);
+          if (cachedSvg) {
+            response.writeHead(200, {
+              "Content-Type": "image/svg+xml",
+              "Access-Control-Allow-Origin": "*",
+              "Cache-Control": "public, max-age=604800",
+            });
+            response.end(cachedSvg);
+            return;
+          }
+
+          // Handle local files (e.g. local:cazetv.png or local:combate.svg)
+          if (targetUrl.startsWith("local:")) {
+            const localFile = targetUrl.slice("local:".length).trim();
+            if (/^[\w.-]+\.(png|jpg|jpeg|svg)$/.test(localFile)) {
+              const localPath = join(process.cwd(), "data", "logos", localFile);
+              if (existsSync(localPath)) {
+                const imgBuf = readFileSync(localPath);
+                const b64 = imgBuf.toString("base64");
+                const isSvg = localFile.endsWith(".svg");
+                const mime = isSvg ? "image/svg+xml" : "image/png";
+                const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" width="512" height="512"><image xlink:href="data:${mime};base64,${b64}" x="51" y="51" width="410" height="410" preserveAspectRatio="xMidYMid meet"/></svg>`;
+                logoProxyCache.set(targetUrl, svg);
+                response.writeHead(200, {
+                  "Content-Type": "image/svg+xml",
+                  "Access-Control-Allow-Origin": "*",
+                  "Cache-Control": "public, max-age=604800",
+                });
+                response.end(svg);
+                return;
+              }
+            }
+          }
+
+          // Handle remote GitHub logos
           if (targetUrl.startsWith("https://raw.githubusercontent.com/tv-logo/")) {
             try {
               await new Promise<void>((resolve, reject) => {
@@ -83,6 +122,7 @@ export function createAddonServer(): Server {
                     const b64 = img.toString("base64");
                     // Wrap in SVG with 10% padding on each side so circular clip doesn't cut edges
                     const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" width="512" height="512"><image xlink:href="data:image/png;base64,${b64}" x="51" y="51" width="410" height="410" preserveAspectRatio="xMidYMid meet"/></svg>`;
+                    logoProxyCache.set(targetUrl, svg);
                     response.writeHead(200, {
                       "Content-Type": "image/svg+xml",
                       "Access-Control-Allow-Origin": "*",

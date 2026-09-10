@@ -45,3 +45,82 @@ http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq8
 
 #EXTINF:-1 tvg-id="record.es" tvg-name="Record ES" tvg-logo="https://upload.wikimedia.org/wikipedia/pt/thumb/a/a9/Logotipo_da_Record_2023.png/512px-Logotipo_da_Record_2023.png" group-title="Abertos",Record ES HD
 http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Sec-Fetch-Site%3Across-site&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Sec-Fetch-Mode%3Acors&h=Accept%3A*%2F*&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Sec-Fetch-Dest%3Aempty&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8/recordes/index.m3u8
+
+# ==========================================
+# ⚽ ESPORTES & FUTEBOL
+# ==========================================
+
+#EXTINF:-1 tvg-id="band.sports" tvg-name="Band Sports" group-title="Esportes",Band Sports HD
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Accept%3A*%2F*&h=Sec-Fetch-Site%3Across-site&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Sec-Fetch-Mode%3Acors&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Sec-Fetch-Dest%3Aempty&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8/bandsports/index.m3u8
+
+#EXTINF:-1 tvg-id="caze.tv" tvg-name="Cazé TV" group-title="Esportes",Cazé TV HD
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Sec-Fetch-Mode%3Acors&h=Sec-Fetch-Dest%3Aempty&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Accept%3A*%2F*&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Sec-Fetch-Site%3Across-site/cazetv/index.m3u8
+
+#EXTINF:-1 tvg-id="combate" tvg-name="Combate" group-title="Esportes",Combate HD
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Sec-Fetch-Dest%3Aempty&h=Sec-Fetch-Site%3Across-site&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Sec-Fetch-Mode%3Acors&h=Accept%3A*%2F*&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8/combate/index.m3u8
+
+#EXTINF:-1 tvg-id="dazn" tvg-name="DAZN" group-title="Esportes",DAZN HD
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Sec-Fetch-Dest%3Aempty&h=Sec-Fetch-Site%3Across-site&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Sec-Fetch-Mode%3Acors&h=Accept%3A*%2F*&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8/combate/index.m3u8
+
+#EXTINF:-1 tvg-id="espn" tvg-name="ESPN" group-title="Esportes",ESPN HD
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Sec-Fetch-Site%3Across-site&h=Sec-Fetch-Mode%3Acors&h=Accept%3A*%2F*&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Sec-Fetch-Dest%3Aempty&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F/espn/index.m3u8
+
+#EXTINF:-1 tvg-id="espn.2" tvg-name="ESPN 2" group-title="Esportes",ESPN 2 HD
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Sec-Fetch-Site%3Across-site&h=Accept%3A*%2F*&h=Sec-Fetch-Dest%3Aempty&h=Sec-Fetch-Mode%3Acors&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz/espn2/index.m3u8
+
+#EXTINF:-1 tvg-id="espn.3" tvg-name="ESPN 3" group-title="Esportes",ESPN 3 HD
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Sec-Fetch-Site%3Across-site&h=Accept%3A*%2F*&h=Sec-Fetch-Dest%3Aempty&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Sec-Fetch-Mode%3Acors&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8/espn3/index.m3u8
+
+#EXTINF:-1 tvg-id="espn.4" tvg-name="ESPN 4" group-title="Esportes",ESPN 4 HD
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Sec-Fetch-Mode%3Acors&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Accept%3A*%2F*&h=Sec-Fetch-Site%3Across-site&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Sec-Fetch-Dest%3Aempty/espn4/index.m3u8
+
+#EXTINF:-1 tvg-id="espn.5" tvg-name="ESPN 5" group-title="Esportes",ESPN 5 HD
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Sec-Fetch-Site%3Across-site&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Sec-Fetch-Dest%3Aempty&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Sec-Fetch-Mode%3Acors&h=Accept%3A*%2F*&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8/espn5/index.m3u8
+
+#EXTINF:-1 tvg-id="espn.6" tvg-name="ESPN 6" group-title="Esportes",ESPN 6 HD
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Accept%3A*%2F*&h=Sec-Fetch-Dest%3Aempty&h=Sec-Fetch-Site%3Across-site&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Sec-Fetch-Mode%3Acors&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz/espn6/index.m3u8
+
+#EXTINF:-1 tvg-id="ge.tv" tvg-name="GE TV" group-title="Esportes",GE TV HD
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Accept%3A*%2F*&h=Sec-Fetch-Dest%3Aempty&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Sec-Fetch-Mode%3Acors&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Sec-Fetch-Site%3Across-site/getv/index.m3u8
+
+#EXTINF:-1 tvg-id="nsports" tvg-name="N Sports" group-title="Esportes",N Sports HD
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Sec-Fetch-Site%3Across-site&h=Sec-Fetch-Dest%3Aempty&h=Sec-Fetch-Mode%3Acors&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Accept%3A*%2F*/nsports/index.m3u8
+
+#EXTINF:-1 tvg-id="nosso.futebol" tvg-name="Nosso Futebol" group-title="Esportes",Nosso Futebol HD
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Sec-Fetch-Site%3Across-site&h=Sec-Fetch-Mode%3Acors&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Sec-Fetch-Dest%3Aempty&h=Accept%3A*%2F*/nossofutebol/index.m3u8
+
+#EXTINF:-1 tvg-id="premiere.clubes" tvg-name="Premiere Clubes" group-title="Esportes",Premiere Clubes HD
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Sec-Fetch-Dest%3Aempty&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Sec-Fetch-Mode%3Acors&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Accept%3A*%2F*&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Sec-Fetch-Site%3Across-site/premiereclubes/index.m3u8
+
+#EXTINF:-1 tvg-id="premiere.2" tvg-name="Premiere 2" group-title="Esportes",Premiere 2 HD
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Sec-Fetch-Dest%3Aempty&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Accept%3A*%2F*&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Sec-Fetch-Site%3Across-site&h=Sec-Fetch-Mode%3Acors&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36/premiere2/index.m3u8
+
+#EXTINF:-1 tvg-id="premiere.3" tvg-name="Premiere 3" group-title="Esportes",Premiere 3 HD
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Sec-Fetch-Dest%3Aempty&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Sec-Fetch-Site%3Across-site&h=Accept%3A*%2F*&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Sec-Fetch-Mode%3Acors/premiere3/index.m3u8
+
+#EXTINF:-1 tvg-id="premiere.4" tvg-name="Premiere 4" group-title="Esportes",Premiere 4 HD
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Sec-Fetch-Mode%3Acors&h=Sec-Fetch-Site%3Across-site&h=Sec-Fetch-Dest%3Aempty&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Accept%3A*%2F*/premiere4/index.m3u8
+
+#EXTINF:-1 tvg-id="premiere.5" tvg-name="Premiere 5" group-title="Esportes",Premiere 5 HD
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Sec-Fetch-Mode%3Acors&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Sec-Fetch-Site%3Across-site&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Sec-Fetch-Dest%3Aempty&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Accept%3A*%2F*/premiere5/index.m3u8
+
+#EXTINF:-1 tvg-id="premiere.6" tvg-name="Premiere 6" group-title="Esportes",Premiere 6 HD
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Sec-Fetch-Mode%3Acors&h=Accept%3A*%2F*&h=Sec-Fetch-Site%3Across-site&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Sec-Fetch-Dest%3Aempty&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F/premiere6/index.m3u8
+
+#EXTINF:-1 tvg-id="premiere.7" tvg-name="Premiere 7" group-title="Esportes",Premiere 7 HD
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Sec-Fetch-Dest%3Aempty&h=Sec-Fetch-Site%3Across-site&h=Accept%3A*%2F*&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Sec-Fetch-Mode%3Acors&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36/premiere7/index.m3u8
+
+#EXTINF:-1 tvg-id="premiere.8" tvg-name="Premiere 8" group-title="Esportes",Premiere 8 HD
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Sec-Fetch-Dest%3Aempty&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Accept%3A*%2F*&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Sec-Fetch-Site%3Across-site&h=Sec-Fetch-Mode%3Acors&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F/premiere8/index.m3u8
+
+#EXTINF:-1 tvg-id="sportv" tvg-name="SporTV" group-title="Esportes",SporTV HD
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Accept%3A*%2F*&h=Sec-Fetch-Dest%3Aempty&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Sec-Fetch-Mode%3Acors&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Sec-Fetch-Site%3Across-site&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36/sportv/index.m3u8
+
+#EXTINF:-1 tvg-id="sportv.2" tvg-name="SporTV 2" group-title="Esportes",SporTV 2 HD
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Sec-Fetch-Site%3Across-site&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Sec-Fetch-Dest%3Aempty&h=Sec-Fetch-Mode%3Acors&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Accept%3A*%2F*/sportv2/index.m3u8
+
+#EXTINF:-1 tvg-id="sportv.3" tvg-name="SporTV 3" group-title="Esportes",SporTV 3 HD
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Sec-Fetch-Dest%3Aempty&h=Sec-Fetch-Site%3Across-site&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Accept%3A*%2F*&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F&h=Sec-Fetch-Mode%3Acors/sportv3/index.m3u8
+
+#EXTINF:-1 tvg-id="x.sports" tvg-name="X Sports" group-title="Esportes",X Sports HD
+http://127.0.0.1:11470/proxy/d=https%3A%2F%2Fywppjexvlyulasvmgzjdftfjikth0909oq80soveui6lkbi2iza2al.cdn12embed.xyz&h=Sec-Fetch-Dest%3Aempty&h=Accept-Language%3Apt-BR%2Cpt%3Bq%3D0.9%2Cen%3Bq%3D0.8&h=Origin%3Ahttps%3A%2F%2Fcdnembedcanais.xyz&h=Accept%3A*%2F*&h=User-Agent%3AMozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F126.0.0.0+Safari%2F537.36&h=Sec-Fetch-Site%3Across-site&h=Sec-Fetch-Mode%3Acors&h=Referer%3Ahttps%3A%2F%2Fcdnembedcanais.xyz%2F/xsports/index.m3u8

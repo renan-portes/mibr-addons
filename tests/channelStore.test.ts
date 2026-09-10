@@ -74,13 +74,16 @@ describe("ChannelStore", () => {
     assert.equal(channel?.streamUrl, "http://example.com/globo.m3u8");
   });
 
-  it("loads 14 open TV channels as default fallback when file is missing", () => {
+  it("loads 39 channels (open TV + sports) as default fallback when file is missing", () => {
     const store = new ChannelStore({ m3uPath: "./non-existent-path.m3u" });
     const channels = store.getChannels();
-    assert.equal(channels.length, 14);
+    assert.equal(channels.length, 39);
     assert.ok(channels.some((c) => c.name.includes("Globo SP")));
     assert.ok(channels.some((c) => c.name.includes("SBT SP")));
     assert.ok(channels.some((c) => c.name.includes("Band SP")));
     assert.ok(channels.some((c) => c.name.includes("Record SP")));
+    assert.ok(channels.some((c) => c.name.includes("SporTV")));
+    assert.ok(channels.some((c) => c.name.includes("ESPN")));
+    assert.ok(channels.some((c) => c.name.includes("Cazé TV")));
   });
 });
