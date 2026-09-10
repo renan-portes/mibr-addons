@@ -21,10 +21,10 @@ export type RouteResult =
     }
   | { status: 400 | 404 | 500 | 502; body: ErrorResponse };
 
-const STREAM_PATH_PATTERN = /^(?:\/([^/]+))?\/stream\/channel\/([^/]+)\.json$/;
+const STREAM_PATH_PATTERN = /^(?:\/([^/]+))?\/stream\/(?:channel|tv)\/([^/]+)\.json$/;
 const CONFIG_MANIFEST_PATTERN = /^\/([^/]+)\/manifest\.json$/;
-const CATALOG_PATH_PATTERN = /^(?:\/([^/]+))?\/catalog\/channel\/([^/]+?)(?:\/(.+))?\.json$/;
-const META_PATH_PATTERN = /^(?:\/([^/]+))?\/meta\/channel\/([^/]+)\.json$/;
+const CATALOG_PATH_PATTERN = /^(?:\/([^/]+))?\/catalog\/(?:channel|tv)\/([^/]+?)(?:\/(.+))?\.json$/;
+const META_PATH_PATTERN = /^(?:\/([^/]+))?\/meta\/(?:channel|tv)\/([^/]+)\.json$/;
 const PROXY_STREAM_PATTERN = /^\/proxy\/stream\/([^/]+)\.m3u8$/;
 
 export async function routeRequest(
