@@ -28,10 +28,11 @@ const META_PATH_PATTERN = /^(?:\/([^/]+))?\/meta\/(?:channel|tv)\/([^/]+)\.json$
 const PROXY_STREAM_PATTERN = /^\/proxy\/stream\/([^/]+)\.m3u8$/;
 
 function getLocalLogo(channelId: string, cleanHost: string): string | undefined {
-  if (channelId.includes("globo")) return `${cleanHost}/logos/globo.png`;
-  if (channelId.includes("sbt")) return `${cleanHost}/logos/sbt.png`;
-  if (channelId.includes("band")) return `${cleanHost}/logos/band.png`;
-  if (channelId.includes("record")) return `${cleanHost}/logos/record.png`;
+  const v = "?v=2";
+  if (channelId.includes("globo")) return `${cleanHost}/logos/globo.png${v}`;
+  if (channelId.includes("sbt")) return `${cleanHost}/logos/sbt.png${v}`;
+  if (channelId.includes("band")) return `${cleanHost}/logos/band.png${v}`;
+  if (channelId.includes("record")) return `${cleanHost}/logos/record.png${v}`;
   return undefined;
 }
 

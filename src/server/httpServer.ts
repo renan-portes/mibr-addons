@@ -64,33 +64,40 @@ export function createAddonServer(): Server {
         }
 
         if (pathname.startsWith("/logos/")) {
-          const filename = pathname.replace("/logos/", "");
-          // Allow only safe filenames to prevent path traversal
-          if (/^[\w.-]+\.(png|jpg|jpeg)$/.test(filename)) {
-            const logoPath = join(process.cwd(), "data", "logos", filename);
+          const rawFile = (pathname.replace("/logos/", "").split("?")[0] ?? "").trim();
+
+          // Serve file if it exists on disk
+          if (rawFile && /^[\w.-]+\.(png|jpg|jpeg|svg)$/.test(rawFile)) {
+            const logoPath = join(process.cwd(), "data", "logos", rawFile);
             if (existsSync(logoPath)) {
-              const isJpeg = filename.endsWith(".jpg") || filename.endsWith(".jpeg");
-              response.writeHead(200, {
-                "Content-Type": isJpeg ? "image/jpeg" : "image/png",
-                "Access-Control-Allow-Origin": "*",
-                "Cache-Control": "public, max-age=86400",
-              });
+              const dotIdx = rawFile.lastIndexOf(".");
+              const ext = dotIdx >= 0 ? rawFile.slice(dotIdx + 1) : "png";
+              const ct = ext === "svg" ? "image/svg+xml" : ext === "jpg" || ext === "jpeg" ? "image/jpeg" : "image/png";
+              response.writeHead(200, { "Content-Type": ct, "Access-Control-Allow-Origin": "*", "Cache-Control": "public, max-age=86400" });
               createReadStream(logoPath).pipe(response);
               return;
             }
-            // Fallback: try .jpg if .png not found
-            if (filename.endsWith(".png")) {
-              const jpgPath = join(process.cwd(), "data", "logos", filename.replace(".png", ".jpg"));
-              if (existsSync(jpgPath)) {
-                response.writeHead(200, {
-                  "Content-Type": "image/jpeg",
-                  "Access-Control-Allow-Origin": "*",
-                  "Cache-Control": "public, max-age=86400",
-                });
-                createReadStream(jpgPath).pipe(response);
-                return;
-              }
-            }
+          }
+
+          // Inline SVG fallback for known channels (512×512, always available)
+          const svgMap: Record<string, { bg: string; fg: string; text: string; sub?: string }> = {
+            globo:  { bg: "#003087", fg: "#FFFFFF", text: "G",   sub: "GLOBO"  },
+            sbt:    { bg: "#00A859", fg: "#FFFFFF", text: "SBT"               },
+            band:   { bg: "#FF6600", fg: "#FFFFFF", text: "B",   sub: "BAND"  },
+            record: { bg: "#CC0000", fg: "#FFFFFF", text: "R7",  sub: "RECORD" },
+          };
+          const stem = rawFile.replace(/\.\w+$/, "");
+          const def = svgMap[stem];
+          if (def) {
+            const { bg, fg, text, sub } = def;
+            const fs2 = text.length > 3 ? 140 : 180;
+            const ty = sub ? Math.round(256 + fs2 * 0.35 - 40) : Math.round(256 + fs2 * 0.35);
+            const sy = Math.round(256 + fs2 * 0.35 + 56);
+            const subEl = sub ? `<text x="256" y="${sy}" font-family="Arial,sans-serif" font-weight="700" font-size="56" fill="${fg}" text-anchor="middle" opacity="0.85">${sub}</text>` : "";
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"><rect width="512" height="512" fill="${bg}" rx="64"/><text x="256" y="${ty}" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="${fs2}" fill="${fg}" text-anchor="middle">${text}</text>${subEl}</svg>`;
+            response.writeHead(200, { "Content-Type": "image/svg+xml", "Access-Control-Allow-Origin": "*", "Cache-Control": "public, max-age=86400" });
+            response.end(svg);
+            return;
           }
         }
 
