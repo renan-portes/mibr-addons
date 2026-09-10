@@ -94,6 +94,24 @@ export function getManifest(hostUrl?: string, genres?: string[]): StremioManifes
     });
   }
 
+  if (genres?.includes("Documentários")) {
+    catalogs.push({
+      type: "tv",
+      id: "mibr-tv-documentarios",
+      name: "🌍 Documentários",
+      extra: [{ name: "search" }, { name: "skip" }],
+    });
+  }
+
+  if (genres?.includes("Entretenimento")) {
+    catalogs.push({
+      type: "tv",
+      id: "mibr-tv-entretenimento",
+      name: "🎭 Entretenimento",
+      extra: [{ name: "search" }, { name: "skip" }],
+    });
+  }
+
   return {
     ...manifest,
     icon: cleanHost ? `${cleanHost}/mibr-logo.png` : manifest.icon,

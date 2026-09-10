@@ -64,29 +64,79 @@ const CHANNEL_LOGOS: Record<string, string> = {
   max:             "local:max.svg",
   "paramount-plus":`${TV_LOGO_ROOT}/united-states/paramount-plus-us.png`,
 
-  // News
-  "globo-news":    `${TV_LOGO_ROOT}/brazil/globo-news-br.png`,
-  "record-news":   `${TV_LOGO_ROOT}/brazil/record-news-br.png`,
+  // Notícias
   "band-news":     `${TV_LOGO_ROOT}/brazil/band-news-br.png`,
-  "jovem-pan-news":`${TV_LOGO_ROOT}/brazil/jovem-pan-news-br.png`,
   "cnn-brasil":    `${TV_LOGO_ROOT}/brazil/cnn-brasil-br.png`,
+  "globo-news":    `${TV_LOGO_ROOT}/brazil/globo-news-br.png`,
+  "jovem-pan-news":`${TV_LOGO_ROOT}/brazil/jovem-pan-news-br.png`,
+  "record-news":   `${TV_LOGO_ROOT}/brazil/record-news-br.png`,
 
-  // Entretenimento / Filmes / Séries / Kids / Outros
-  gnt:             `${TV_LOGO_ROOT}/brazil/gnt-br.png`,
-  multishow:       `${TV_LOGO_ROOT}/brazil/multishow-br.png`,
-  hbo:             `${TV_LOGO_ROOT}/brazil/hbo-br.png`,
-  "hbo-2":         `${TV_LOGO_ROOT}/brazil/hbo-2-br.png`,
-  tnt:             `${TV_LOGO_ROOT}/brazil/tnt-br.png`,
-  "tnt-series":    `${TV_LOGO_ROOT}/brazil/tnt-series-br.png`,
-  warner:          `${TV_LOGO_ROOT}/brazil/warner-channel-br.png`,
-  "sony-channel":  `${TV_LOGO_ROOT}/brazil/sony-channel-br.png`,
-  axn:             `${TV_LOGO_ROOT}/brazil/axn-br.png`,
-  paramount:       `${TV_LOGO_ROOT}/brazil/paramount-network-br.png`,
-  megapix:         `${TV_LOGO_ROOT}/brazil/megapix-br.png`,
-  space:           `${TV_LOGO_ROOT}/brazil/space-br.png`,
-  cartoon:         `${TV_LOGO_ROOT}/brazil/cartoon-network-br.png`,
-  discovery:       `${TV_LOGO_ROOT}/brazil/discovery-kids-br.png`,
+  // Infantil
+  cartoonito:      `${TV_LOGO_ROOT}/brazil/cartoonito-br.png`,
+  "cartoon-network": `${TV_LOGO_ROOT}/brazil/cartoon-network-br.png`,
   "discovery-kids":`${TV_LOGO_ROOT}/brazil/discovery-kids-br.png`,
+  gloob:           `${TV_LOGO_ROOT}/brazil/gloob-br.png`,
+  gloobinho:       `${TV_LOGO_ROOT}/brazil/gloobinho-br.png`,
+  nickelodeon:     `${TV_LOGO_ROOT}/world-latin-america/nickelodeon-lam.png`,
+  "nick-jr":       `${TV_LOGO_ROOT}/united-states/nick-jr-us.png`,
+  tooncast:        `${TV_LOGO_ROOT}/brazil/tooncast-br.png`,
+
+  // Documentários
+  "animal-planet": `${TV_LOGO_ROOT}/world-latin-america/animal-planet-lam.png`,
+  "canal-off":     `${TV_LOGO_ROOT}/brazil/canal-off-br.png`,
+  "discovery-channel": `${TV_LOGO_ROOT}/argentina/discovery-channel-ar.png`,
+  "discovery-hh":  `${TV_LOGO_ROOT}/world-latin-america/discovery-home-and-health-lam.png`,
+  "discovery-home-and-health": `${TV_LOGO_ROOT}/world-latin-america/discovery-home-and-health-lam.png`,
+  "discovery-id":  `${TV_LOGO_ROOT}/international/investigation-discovery-int.png`,
+  "investigation-discovery": `${TV_LOGO_ROOT}/international/investigation-discovery-int.png`,
+  "discovery-science": `${TV_LOGO_ROOT}/argentina/discovery-science-ar.png`,
+  "discovery-theater": `${TV_LOGO_ROOT}/world-latin-america/discovery-theater-hd-lam.png`,
+  "discovery-turbo": `${TV_LOGO_ROOT}/brazil/discovery-turbo-br.png`,
+  "discovery-world": `${TV_LOGO_ROOT}/argentina/discovery-world-hd-ar.png`,
+  "food-network":  `${TV_LOGO_ROOT}/argentina/food-network-ar.png`,
+  history:         `${TV_LOGO_ROOT}/argentina/history-channel-ar.png`,
+  "history-2":     `${TV_LOGO_ROOT}/world-latin-america/history-channel-2-lam.png`,
+
+  // Filmes & Séries
+  ae:              `${TV_LOGO_ROOT}/brazil/a-and-e-br.png`,
+  amc:             `${TV_LOGO_ROOT}/united-states/amc-us.png`,
+  axn:             `${TV_LOGO_ROOT}/brazil/axn-br.png`,
+  cinemax:         `${TV_LOGO_ROOT}/brazil/cinemax-br.png`,
+  "hbo-2":         `${TV_LOGO_ROOT}/brazil/hbo-2-br.png`,
+  "hbo-family":    `${TV_LOGO_ROOT}/brazil/hbo-family-br.png`,
+  "hbo-mundi":     `${TV_LOGO_ROOT}/brazil/hbo-mundi-br.png`,
+  "hbo-plus":      `${TV_LOGO_ROOT}/brazil/hbo-plus-br.png`,
+  "hbo-pop":       `${TV_LOGO_ROOT}/brazil/hbo-pop-br.png`,
+  "hbo-signature": `${TV_LOGO_ROOT}/brazil/hbo-signature-br.png`,
+  "hbo-xtreme":    `${TV_LOGO_ROOT}/brazil/hbo-xtreme-br.png`,
+  hbo:             `${TV_LOGO_ROOT}/brazil/hbo-br.png`,
+  megapix:         `${TV_LOGO_ROOT}/brazil/megapix-br.png`,
+  "paramount-network": `${TV_LOGO_ROOT}/brazil/paramount-network-br.png`,
+  paramount:       `${TV_LOGO_ROOT}/brazil/paramount-network-br.png`,
+  "sony-channel":  `${TV_LOGO_ROOT}/brazil/sony-channel-br.png`,
+  space:           `${TV_LOGO_ROOT}/brazil/space-br.png`,
+  "studio-universal": `${TV_LOGO_ROOT}/brazil/studio-universal-br.png`,
+  "telecine-action": `${TV_LOGO_ROOT}/brazil/tele-cine-action-br.png`,
+  "telecine-cult": `${TV_LOGO_ROOT}/brazil/tele-cine-cult-br.png`,
+  "telecine-fun":  `${TV_LOGO_ROOT}/brazil/tele-cine-fun-br.png`,
+  "telecine-pipoca": `${TV_LOGO_ROOT}/brazil/tele-cine-pipoca-br.png`,
+  "telecine-premium": `${TV_LOGO_ROOT}/brazil/tele-cine-premium-br.png`,
+  "telecine-touch": `${TV_LOGO_ROOT}/brazil/tele-cine-touch-br.png`,
+  "tnt-novelas":   `${TV_LOGO_ROOT}/world-latin-america/tnt-novelas-lam.png`,
+  "tnt-series":    `${TV_LOGO_ROOT}/brazil/tnt-series-br.png`,
+  tnt:             `${TV_LOGO_ROOT}/brazil/tnt-br.png`,
+  "universal-tv":  `${TV_LOGO_ROOT}/brazil/universal-tv-br.png`,
+  "warner-channel": `${TV_LOGO_ROOT}/brazil/warner-channel-br.png`,
+  warner:          `${TV_LOGO_ROOT}/brazil/warner-channel-br.png`,
+
+  // Entretenimento
+  "adult-swim":    `${TV_LOGO_ROOT}/united-states/adult-swim-us.png`,
+  "comedy-central": `${TV_LOGO_ROOT}/argentina/comedy-central-ar.png`,
+  gnt:             `${TV_LOGO_ROOT}/brazil/gnt-br.png`,
+  mtv:             `${TV_LOGO_ROOT}/united-states/mtv-us.png`,
+  multishow:       `${TV_LOGO_ROOT}/brazil/multishow-br.png`,
+
+  // Outros
   "rede-tv":       `${TV_LOGO_ROOT}/brazil/rede-tv-br.png`,
   "tv-cultura":    `${TV_LOGO_ROOT}/brazil/tv-cultura-br.png`,
   "tv-brasil":     `${TV_LOGO_ROOT}/brazil/tv-brasil-br.png`,
@@ -171,6 +221,8 @@ export async function routeRequest(
     else if (catalogId === "mibr-tv-filmes") genre = "Filmes & Séries";
     else if (catalogId === "mibr-tv-noticias") genre = "Notícias";
     else if (catalogId === "mibr-tv-infantil") genre = "Infantil";
+    else if (catalogId === "mibr-tv-documentarios") genre = "Documentários";
+    else if (catalogId === "mibr-tv-entretenimento") genre = "Entretenimento";
 
     if (extra) {
       const extraParts = extra.split("&");
